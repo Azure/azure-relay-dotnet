@@ -1,0 +1,15 @@
+<StyleCopSettings Version="105">
+  <Parsers>
+    <Parser ParserId="StyleCop.CSharp.CsParser">
+      <ParserSettings>
+        <!-- No Rules enforced on *.Designer.cs files -->
+        <BooleanProperty Name="AnalyzeDesignerFiles">False</BooleanProperty>
+      </ParserSettings>
+    </Parser>
+  </Parsers>
+  <GlobalSettings>
+    <BooleanProperty Name="RulesEnabledByDefault">True</BooleanProperty>
+    <StringProperty Name="LinkedSettingsFile">%REPOROOT%\src\Legacy.StyleCop</StringProperty>
+    <StringProperty Name="MergeSettingsFiles">Linked</StringProperty>
+  </GlobalSettings>
+</StyleCopSettings>
