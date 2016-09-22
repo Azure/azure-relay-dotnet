@@ -213,4 +213,10 @@
   <data name="TokenMissingAudience" xml:space="preserve">
     <value>The provided token does not specify the 'Audience' value.</value>
   </data>
+  <data name="net_InvalidStatus" xml:space="preserve">
+    <value>The status code must be between 100 and 999 inclusive.</value>
+  </data>
+  <data name="net_WebHeaderInvalidControlChars" xml:space="preserve">
+    <value>Specified value has invalid Control characters.</value>
+  </data>
 </root>

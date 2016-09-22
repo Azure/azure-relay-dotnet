@@ -50,6 +50,7 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -61,7 +62,6 @@
     <Compile Include="Common\AsyncProducerConsumerCollection.cs" />
     <Compile Include="AuthorizationFailedException.cs" />
     <Compile Include="ConnectionLostException.cs" />
-    <Compile Include="RelayEnvironment.cs" />
     <Compile Include="Common\UriHelper.cs" />
     <Compile Include="Common\Fx.cs" />
     <Compile Include="RelayException.cs" />

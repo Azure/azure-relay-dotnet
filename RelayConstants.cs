@@ -10,8 +10,6 @@ namespace Microsoft.Azure.Relay
     {
         public const string HybridConnectionScheme = "sb";
         public const string ServiceBusAuthorizationHeaderName = "ServiceBusAuthorization";
-        public const string HybridConnectionRequestUri = "/$servicebus/hybridconnection";
-        public const string SecureWebSocketScheme = "wss";
         public static readonly TimeSpan ClientMinimumTokenRefreshInterval = TimeSpan.FromMinutes(4);
 
         internal static class Claims

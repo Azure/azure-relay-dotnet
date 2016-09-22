@@ -53,6 +53,7 @@ namespace Microsoft.Azure.Relay
             this.Address = address;
             this.TokenProvider = tokenProvider;
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
+            this.proxy = WebRequest.DefaultWebProxy;
             this.TrackingContext = TrackingContext.Create(this.Address);
 
             this.clientConnections = new Dictionary<string, DataConnection>();
@@ -459,16 +460,14 @@ namespace Microsoft.Azure.Relay
                     var token = await this.tokenRenewer.GetTokenAsync(TimeSpan.FromMinutes(1));
                     this.clientWebSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenValue.ToString());
 
-                    // Build the query string, e.g. "action=listen&path=myhybridconnection&id=SOME-GUID"
-                    string queryString = HybridConnectionConstants.BuildQueryString(HybridConnectionConstants.Listen, path, this.listener.TrackingContext.TrackingId);
-                    var webSocketUri = new UriBuilder
-                    {
-                        Scheme = RelayConstants.SecureWebSocketScheme,
-                        Host = this.address.Host,
-                        Port = RelayEnvironment.RelayHttpsPort,
-                        Path = RelayConstants.HybridConnectionRequestUri,
-                        Query = queryString
-                    }.Uri;
+                    // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$servicebus/hybridconnection/endpoint1?sb-hc-action=listen&sb-hc-id=E2E_TRACKING_ID"
+                    var webSocketUri = HybridConnectionUtility.BuildUri(
+                        this.address.Host,
+                        this.address.Port,
+                        this.address.AbsolutePath,
+                        this.address.Query,
+                        HybridConnectionConstants.Actions.Listen,
+                        this.listener.TrackingContext.TrackingId);
 
                     await this.clientWebSocket.ConnectAsync(webSocketUri, cancellationToken);
 

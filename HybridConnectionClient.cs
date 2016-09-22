@@ -92,19 +92,14 @@ namespace Microsoft.Azure.Relay
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenValue.ToString());
                 }
 
-                string path = this.Address.AbsolutePath.TrimStart('/');
-
-                // Build the query string, e.g. "action=connect&path=myhybridconnection&id=SOME-TRACKING-ID"
-                string queryString = HybridConnectionConstants.BuildQueryString(HybridConnectionConstants.Connect, path, trackingContext.TrackingId);
-
-                Uri webSocketUri = new UriBuilder
-                {
-                    Scheme = RelayConstants.SecureWebSocketScheme,
-                    Host = this.Address.Host,
-                    Port = RelayEnvironment.RelayHttpsPort,
-                    Path = RelayConstants.HybridConnectionRequestUri,
-                    Query = queryString
-                }.Uri;
+                // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$servicebus/hybridconnection/endpoint1?sb-hc-action=connect&sb-hc-id=E2E_TRACKING_ID"
+                Uri webSocketUri = HybridConnectionUtility.BuildUri(
+                    this.Address.Host,
+                    this.Address.Port,
+                    this.Address.AbsolutePath,
+                    this.Address.Query,
+                    HybridConnectionConstants.Actions.Connect,
+                    trackingContext.TrackingId);
 
                 using (var cancelSource = new CancellationTokenSource(timeoutHelper.RemainingTime()))
                 {

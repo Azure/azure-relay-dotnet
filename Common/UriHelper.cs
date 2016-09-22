@@ -8,7 +8,7 @@ namespace Microsoft.Azure.Relay
 
     static class UriHelper
     {
-        internal static string NormalizeUri(string uri, string scheme, bool stripQueryParameters = true, bool stripPath = false, bool ensureTrailingSlash = false)
+        public static Uri NormalizeUri(string uri, string scheme, bool stripQueryParameters = true, bool stripPath = false, bool ensureTrailingSlash = false)
         {
             UriBuilder uriBuilder = new UriBuilder(uri)
             {
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Relay
                 }
             }
 
-            return uriBuilder.Uri.AbsoluteUri;
+            return uriBuilder.Uri;
         }
     }
 }

@@ -67,7 +67,7 @@ namespace Microsoft.Azure.Relay
 
         protected virtual string NormalizeAppliesTo(string appliesTo)
         {
-            return UriHelper.NormalizeUri(appliesTo, "http", true, stripPath: false, ensureTrailingSlash: true);
+            return UriHelper.NormalizeUri(appliesTo, Uri.UriSchemeHttp, true, stripPath: false, ensureTrailingSlash: true).AbsoluteUri;
         }
     }
 }

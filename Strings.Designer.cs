@@ -142,6 +142,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The status code must be between 100 and 999 inclusive..
+        /// </summary>
+        internal static string net_InvalidStatus {
+            get {
+                return ResourceManager.GetString("net_InvalidStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Exception in {0}::{1} - {2}..
         /// </summary>
         internal static string net_log_exception {
@@ -156,6 +165,15 @@ namespace Microsoft.Azure.Relay {
         internal static string net_uri_NotAbsolute {
             get {
                 return ResourceManager.GetString("net_uri_NotAbsolute", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Specified value has invalid Control characters..
+        /// </summary>
+        internal static string net_WebHeaderInvalidControlChars {
+            get {
+                return ResourceManager.GetString("net_WebHeaderInvalidControlChars", resourceCulture);
             }
         }
         
