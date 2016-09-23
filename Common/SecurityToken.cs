@@ -6,63 +6,52 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Net;
 
     public class SecurityToken
     {
         // per Simple Web Token draft specification
-        internal const string TokenAudience = "Audience";
-        internal const string TokenExpiresOn = "ExpiresOn";
-        internal const string TokenIssuer = "Issuer";
-        internal const string TokenDigest256 = "HMACSHA256";
+        const string TokenAudience = "Audience";
+        const string TokenExpiresOn = "ExpiresOn";
 
-        const string InternalExpiresOnFieldName = "ExpiresOn";
-        const string InternalAudienceFieldName = TokenAudience;
-        const string InternalKeyValueSeparator = "=";
-        const string InternalPairSeparator = "&";
+        const string KeyValueSeparator = "=";
+        const string PairSeparator = "&";
         static readonly Func<string, string> Decoder = WebUtility.UrlDecode;
         static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         readonly string token;
         readonly DateTime expiresAtUtc;
         readonly string audience;
+        readonly string audienceFieldName;
+        readonly string expiresOnFieldName;
+        readonly string keyValueSeparator;
+        readonly string pairSeparator;
 
-        public SecurityToken(string tokenString, DateTime expiresAtUtc, string audience)
+        protected SecurityToken(string tokenString)
+            : this(
+                  tokenString,
+                  audienceFieldName: TokenAudience,
+                  expiresOnFieldName: TokenExpiresOn,
+                  keyValueSeparator: KeyValueSeparator,
+                  pairSeparator: PairSeparator)
         {
-            if (tokenString == null || audience == null)
-            {
-                throw RelayEventSource.Log.ArgumentNull(tokenString == null ? nameof(tokenString) : nameof(audience));
-            }
-
-            this.token = tokenString;
-            this.expiresAtUtc = expiresAtUtc;
-            this.audience = audience;
         }
 
-        [SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors", Justification = "Existing public class, changes will be breaking. Current usage is safe.")]
-        public SecurityToken(string tokenString, DateTime expiresAtUtc)
+        protected SecurityToken(string tokenString, string audienceFieldName, string expiresOnFieldName, string keyValueSeparator, string pairSeparator)
         {
+            Fx.Assert(
+                audienceFieldName != null && expiresOnFieldName != null && keyValueSeparator != null && pairSeparator != null,
+                "audienceFieldName, expiresOnFieldName, keyValueSeparator, and pairSeparator are all required");
             if (tokenString == null)
             {
                 throw RelayEventSource.Log.ArgumentNull(nameof(tokenString));
             }
 
             this.token = tokenString;
-            this.expiresAtUtc = expiresAtUtc;
-            this.audience = GetAudienceFromToken(tokenString);
-        }
-
-        [SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors",
-            Justification = "Existing public class, changes will be breaking. Current usage is safe.")]
-        public SecurityToken(string tokenString)
-        {
-            if (tokenString == null)
-            {
-                throw RelayEventSource.Log.ArgumentNull(nameof(tokenString));
-            }
-
-            this.token = tokenString;
+            this.audienceFieldName = audienceFieldName;
+            this.expiresOnFieldName = expiresOnFieldName;
+            this.keyValueSeparator = keyValueSeparator;
+            this.pairSeparator = pairSeparator;
             GetExpirationDateAndAudienceFromToken(tokenString, out this.expiresAtUtc, out this.audience);
         }
 
@@ -82,39 +71,7 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-        protected virtual string ExpiresOnFieldName
-        {
-            get
-            {
-                return InternalExpiresOnFieldName;
-            }
-        }
-
-        protected virtual string AudienceFieldName
-        {
-            get
-            {
-                return InternalAudienceFieldName;
-            }
-        }
-
-        protected virtual string KeyValueSeparator
-        {
-            get
-            {
-                return InternalKeyValueSeparator;
-            }
-        }
-
-        protected virtual string PairSeparator
-        {
-            get
-            {
-                return InternalPairSeparator;
-            }
-        }
-
-        public object TokenValue
+        public string TokenString
         {
             get { return this.token; }
         }
@@ -122,8 +79,8 @@ namespace Microsoft.Azure.Relay
         string GetAudienceFromToken(string tokenString)
         {
             string audience;
-            IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, this.KeyValueSeparator, this.PairSeparator);
-            if (!decodedToken.TryGetValue(AudienceFieldName, out audience))
+            IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, this.keyValueSeparator, this.pairSeparator);
+            if (!decodedToken.TryGetValue(this.audienceFieldName, out audience))
             {
                 throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingAudience);
             }
@@ -134,13 +91,13 @@ namespace Microsoft.Azure.Relay
         void GetExpirationDateAndAudienceFromToken(string tokenString, out DateTime expiresOn, out string audience)
         {
             string expiresIn;
-            IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, this.KeyValueSeparator, this.PairSeparator);
-            if (!decodedToken.TryGetValue(ExpiresOnFieldName, out expiresIn))
+            IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, this.keyValueSeparator, this.pairSeparator);
+            if (!decodedToken.TryGetValue(this.expiresOnFieldName, out expiresIn))
             {
                 throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingExpiresOn);
             }
 
-            if (!decodedToken.TryGetValue(AudienceFieldName, out audience))
+            if (!decodedToken.TryGetValue(this.audienceFieldName, out audience))
             {
                 throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingAudience);
             }
@@ -166,5 +123,4 @@ namespace Microsoft.Azure.Relay
             return dictionary;
         }
     }
-
 }

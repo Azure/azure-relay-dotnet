@@ -401,7 +401,8 @@ namespace Microsoft.Azure.Relay
                 this.shutdownCancellationSource = new CancellationTokenSource();
                 this.receiveBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);
                 this.clientWebSocket = new ClientWebSocket45();
-                this.tokenRenewer = new TokenRenewer(this.listener.TokenProvider, this.address.AbsoluteUri, RelayConstants.Claims.Listen, this.listener);
+                this.tokenRenewer = new TokenRenewer(
+                    this.listener.TokenProvider, this.address.AbsoluteUri, TokenProvider.DefaultTokenTimeout, this.listener);
             }
 
             public event EventHandler Connecting;
@@ -457,10 +458,10 @@ namespace Microsoft.Azure.Relay
                     this.clientWebSocket.Options.Proxy = this.listener.Proxy;
                     this.clientWebSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
 
-                    var token = await this.tokenRenewer.GetTokenAsync(TimeSpan.FromMinutes(1));
-                    this.clientWebSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenValue.ToString());
+                    var token = await this.tokenRenewer.GetTokenAsync();
+                    this.clientWebSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
 
-                    // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$servicebus/hybridconnection/endpoint1?sb-hc-action=listen&sb-hc-id=E2E_TRACKING_ID"
+                    // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$hc/endpoint1?sb-hc-action=listen&sb-hc-id=E2E_TRACKING_ID"
                     var webSocketUri = HybridConnectionUtility.BuildUri(
                         this.address.Host,
                         this.address.Port,
@@ -611,7 +612,7 @@ namespace Microsoft.Azure.Relay
                 {
                     var listenerCommand = new ListenerCommand();
                     listenerCommand.RenewToken = new ListenerCommand.RenewTokenCommand();
-                    listenerCommand.RenewToken.Token = eventArgs.Token.TokenValue.ToString();
+                    listenerCommand.RenewToken.Token = eventArgs.Token.TokenString;
 
                     byte[] buffer;
                     using (var stream = new MemoryStream())

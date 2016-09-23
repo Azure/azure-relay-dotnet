@@ -16,7 +16,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading;
     using System.Threading.Tasks;
 
-    public sealed class ClientWebSocket45 : WebSocket
+    sealed class ClientWebSocket45 : WebSocket
     {
         const string UriSchemeWs = "ws";
         const string UriSchemeWss = "wss";
@@ -408,7 +408,7 @@ namespace Microsoft.Azure.Relay.WebSockets
         }
     }
 
-    public sealed class ClientWebSocketOptions45
+    sealed class ClientWebSocketOptions45
     {
         private bool isReadOnly; // After ConnectAsync is called the options cannot be modified.
         private readonly IList<string> requestedSubProtocols;

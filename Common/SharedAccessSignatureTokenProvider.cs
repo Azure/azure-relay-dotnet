@@ -22,7 +22,6 @@ namespace Microsoft.Azure.Relay
         public static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         readonly byte[] encodedSharedAccessKey;
         readonly string keyName;
-        readonly TimeSpan tokenTimeToLive;
         readonly string sharedAccessSignature;
 
         internal SharedAccessSignatureTokenProvider(string sharedAccessSignature)
@@ -31,12 +30,12 @@ namespace Microsoft.Azure.Relay
             this.sharedAccessSignature = sharedAccessSignature;
         }
 
-        internal SharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey, TimeSpan tokenTimeToLive)
-            : this(keyName, sharedAccessKey, MessagingTokenProviderKeyEncoder, tokenTimeToLive)
+        internal SharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey)
+            : this(keyName, sharedAccessKey, MessagingTokenProviderKeyEncoder)
         {
         }
 
-        protected SharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey, Func<string, byte[]> customKeyEncoder, TimeSpan tokenTimeToLive)
+        protected SharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey, Func<string, byte[]> customKeyEncoder)
         {
             if (string.IsNullOrEmpty(keyName) || string.IsNullOrEmpty(sharedAccessKey))
             {
@@ -60,28 +59,26 @@ namespace Microsoft.Azure.Relay
             }
 
             this.keyName = keyName;
-            this.tokenTimeToLive = tokenTimeToLive;
             this.encodedSharedAccessKey = customKeyEncoder != null ?
                 customKeyEncoder(sharedAccessKey) :
                 MessagingTokenProviderKeyEncoder(sharedAccessKey);
         }
 
-        protected override Task<SecurityToken> OnGetTokenAsync(string appliesTo, string action, TimeSpan timeout)
+        protected override Task<SecurityToken> OnGetTokenAsync(string resource, TimeSpan validFor)
         {
-            string tokenString = this.BuildSignature(appliesTo);
+            string tokenString = this.BuildSignature(resource, validFor);
             var securityToken = new SharedAccessSignatureToken(tokenString);
             return Task.FromResult<SecurityToken>(securityToken);
         }
 
-        protected virtual string BuildSignature(string targetUri)
+        protected virtual string BuildSignature(string resource, TimeSpan validFor)
         {
-            return string.IsNullOrWhiteSpace(this.sharedAccessSignature) ?
-                SharedAccessSignatureBuilder.BuildSignature(
-                    this.keyName,
-                    this.encodedSharedAccessKey,
-                    targetUri,
-                    this.tokenTimeToLive)
-                : this.sharedAccessSignature;
+            if (string.IsNullOrWhiteSpace(this.sharedAccessSignature))
+            {
+                return SharedAccessSignatureBuilder.BuildSignature(this.keyName, this.encodedSharedAccessKey, resource, validFor);
+            }
+
+            return this.sharedAccessSignature;
         }
 
         static class SharedAccessSignatureBuilder
@@ -90,13 +87,13 @@ namespace Microsoft.Azure.Relay
             public static string BuildSignature(
                 string keyName,
                 byte[] encodedSharedAccessKey,
-                string targetUri,
+                string resource,
                 TimeSpan timeToLive)
             {
                 // Note that target URI is not normalized because in IoT scenario it 
                 // is case sensitive.
                 string expiresOn = BuildExpiresOn(timeToLive);
-                string audienceUri = WebUtility.UrlEncode(targetUri);
+                string audienceUri = WebUtility.UrlEncode(resource);
                 List<string> fields = new List<string> { audienceUri, expiresOn };
 
                 // Example string to be signed:
@@ -150,40 +147,13 @@ namespace Microsoft.Azure.Relay
             public const string SasPairSeparator = "&";
 
             public SharedAccessSignatureToken(string tokenString)
-                : base(tokenString)
+                : base(
+                      tokenString,
+                      audienceFieldName: SignedResourceFullFieldName,
+                      expiresOnFieldName: SignedExpiry,
+                      keyValueSeparator: SasKeyValueSeparator,
+                      pairSeparator: SasPairSeparator)
             {
-            }
-
-            protected override string AudienceFieldName
-            {
-                get
-                {
-                    return SignedResourceFullFieldName;
-                }
-            }
-
-            protected override string ExpiresOnFieldName
-            {
-                get
-                {
-                    return SignedExpiry;
-                }
-            }
-
-            protected override string KeyValueSeparator
-            {
-                get
-                {
-                    return SasKeyValueSeparator;
-                }
-            }
-
-            protected override string PairSeparator
-            {
-                get
-                {
-                    return SasPairSeparator;
-                }
             }
 
             internal static void Validate(string sharedAccessSignature)

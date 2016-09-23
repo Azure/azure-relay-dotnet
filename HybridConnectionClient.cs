@@ -86,13 +86,13 @@ namespace Microsoft.Azure.Relay
                 if (this.TokenProvider != null)
                 {
                     RelayEventSource.Log.GetTokenStart(traceSource);
-                    var token = await this.TokenProvider.GetTokenAsync(this.Address.GetLeftPart(UriPartial.Path), RelayConstants.Claims.Send, timeoutHelper.RemainingTime());
+                    var token = await this.TokenProvider.GetTokenAsync(this.Address.GetLeftPart(UriPartial.Path), TokenProvider.DefaultTokenTimeout);
                     RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
 
-                    webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenValue.ToString());
+                    webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
                 }
 
-                // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$servicebus/hybridconnection/endpoint1?sb-hc-action=connect&sb-hc-id=E2E_TRACKING_ID"
+                // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$hc/endpoint1?sb-hc-action=connect&sb-hc-id=E2E_TRACKING_ID"
                 Uri webSocketUri = HybridConnectionUtility.BuildUri(
                     this.Address.Host,
                     this.Address.Port,

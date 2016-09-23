@@ -18,20 +18,19 @@ namespace Microsoft.Azure.Relay
 
     class TokenRenewer
     {
-        static readonly TimeSpan GetTokenTimeout = TimeSpan.FromMinutes(1);
         readonly Timer renewTimer;
         readonly TokenProvider tokenProvider;
-        readonly string action;
         readonly string appliesTo;
+        readonly TimeSpan tokenValidFor;
         readonly object traceSource;
 
-        public TokenRenewer(TokenProvider tokenProvider, string appliesTo, string action, object traceSource)
+        public TokenRenewer(TokenProvider tokenProvider, string appliesTo, TimeSpan tokenValidFor, object traceSource)
         {
             Fx.Assert(tokenProvider != null, "tokenProvider is required");
             Fx.Assert(!string.IsNullOrEmpty(appliesTo), "appliesTo is required");
             this.tokenProvider = tokenProvider;
             this.appliesTo = appliesTo;
-            this.action = action;
+            this.tokenValidFor = tokenValidFor;
             this.traceSource = traceSource;
             this.renewTimer = new Timer(s => OnRenewTimer(s), this, Timeout.Infinite, Timeout.Infinite);
         }
@@ -45,12 +44,12 @@ namespace Microsoft.Azure.Relay
             get { return this.renewTimer; }
         }
 
-        public async Task<SecurityToken> GetTokenAsync(TimeSpan timeout)
+        public async Task<SecurityToken> GetTokenAsync()
         {
             try
             {
                 RelayEventSource.Log.GetTokenStart(this.traceSource);
-                var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.action, timeout);
+                var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor);
                 RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
                 this.OnTokenRenewed(token);
                 return token;
@@ -76,7 +75,7 @@ namespace Microsoft.Azure.Relay
             var thisPtr = (TokenRenewer)state;
             try
             {
-                await thisPtr.GetTokenAsync(GetTokenTimeout);
+                await thisPtr.GetTokenAsync();
             }
             catch (Exception exception)
             {

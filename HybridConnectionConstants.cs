@@ -11,7 +11,7 @@ namespace Microsoft.Azure.Relay
 
     static class HybridConnectionConstants
     {
-        public const string HybridConnectionRequestUri = "/$servicebus/hybridconnection";
+        public const string HybridConnectionRequestUri = "/$hc";
         public const string SecureWebSocketScheme = "wss";
 
         // Names of query string options
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Relay
 
         /// <summary>
         /// Build the websocket uri for use with HybridConnection WebSockets.
-        /// Results in a Uri such as "wss://HOST:PORT/$servicebus/hybridconnection/PATH?QUERY&amp;sb-hc-action=listen&amp;sb-hc-id=ID"
+        /// Results in a Uri such as "wss://HOST:PORT/$hc/PATH?QUERY&amp;sb-hc-action=listen&amp;sb-hc-id=ID"
         /// </summary>
         /// <param name="host">The host name (required).</param>
         /// <param name="port">The port (-1 is allowed).</param>

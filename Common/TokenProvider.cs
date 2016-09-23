@@ -41,33 +41,26 @@ namespace Microsoft.Azure.Relay
         /// <returns>A TokenProvider initialized with the provided RuleId and Password</returns>
         public static TokenProvider CreateSharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey)
         {
-            return new SharedAccessSignatureTokenProvider(keyName, sharedAccessKey, DefaultTokenTimeout);
+            return new SharedAccessSignatureTokenProvider(keyName, sharedAccessKey);
         }
 
-        /// <summary>
-        /// Construct a TokenProvider based on the provided Key Name and Shared Access Key.
-        /// </summary>
-        /// <param name="keyName">The key name of the corresponding SharedAccessKeyAuthorizationRule.</param>
-        /// <param name="sharedAccessKey">The key associated with the SharedAccessKeyAuthorizationRule</param>
-        /// <param name="tokenTimeToLive">The token time to live</param>
-        /// <returns>A TokenProvider initialized with the provided RuleId and Password</returns>
-        public static TokenProvider CreateSharedAccessSignatureTokenProvider(string keyName, string sharedAccessKey, TimeSpan tokenTimeToLive)
+        public Task<SecurityToken> GetTokenAsync(string audience, TimeSpan validFor)
         {
-            return new SharedAccessSignatureTokenProvider(keyName, sharedAccessKey, tokenTimeToLive);
+            if (string.IsNullOrEmpty(audience))
+            {
+                throw RelayEventSource.Log.ArgumentNull(nameof(audience), this);
+            }
+
+            TimeoutHelper.ThrowIfNegativeArgument(validFor, nameof(validFor));
+            audience = NormalizeAudience(audience);
+            return this.OnGetTokenAsync(audience, validFor);
         }
 
-        public Task<SecurityToken> GetTokenAsync(string appliesTo, string action, TimeSpan timeout)
-        {
-            TimeoutHelper.ThrowIfNegativeArgument(timeout);
-            appliesTo = NormalizeAppliesTo(appliesTo);
-            return this.OnGetTokenAsync(appliesTo, action, timeout);
-        }
+        protected abstract Task<SecurityToken> OnGetTokenAsync(string audience, TimeSpan validFor);
 
-        protected abstract Task<SecurityToken> OnGetTokenAsync(string appliesTo, string action, TimeSpan timeout);
-
-        protected virtual string NormalizeAppliesTo(string appliesTo)
+        protected virtual string NormalizeAudience(string audience)
         {
-            return UriHelper.NormalizeUri(appliesTo, Uri.UriSchemeHttp, true, stripPath: false, ensureTrailingSlash: true).AbsoluteUri;
+            return UriHelper.NormalizeUri(audience, Uri.UriSchemeHttp, true, stripPath: false, ensureTrailingSlash: true).AbsoluteUri;
         }
     }
 }
