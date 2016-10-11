@@ -10,12 +10,24 @@ namespace Microsoft.Azure.Relay
     [Serializable]
     public class EndpointNotFoundException : RelayException
     {
-        public EndpointNotFoundException() { }
+        public EndpointNotFoundException()
+        {
+            this.IsTransient = false;
+        }
 
-        public EndpointNotFoundException(string message) : base(message) { }
+        public EndpointNotFoundException(string message) : base(message)
+        {
+            this.IsTransient = false;
+        }
 
-        public EndpointNotFoundException(string message, Exception inner) : base(message, inner) { }
+        public EndpointNotFoundException(string message, Exception inner) : base(message, inner)
+        {
+            this.IsTransient = false;
+        }
 
-        protected EndpointNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        protected EndpointNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+            this.IsTransient = false;
+        }
     }
 }

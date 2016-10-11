@@ -219,4 +219,16 @@
   <data name="net_WebHeaderInvalidControlChars" xml:space="preserve">
     <value>Specified value has invalid Control characters.</value>
   </data>
+  <data name="EntityNameLengthExceedsLimit" xml:space="preserve">
+    <value>The entity path/name '{0}' exceeds the {1} character limit.</value>
+  </data>
+  <data name="InvalidAddressPath" xml:space="preserve">
+    <value>The Uri address given contains a path which is not allowed. Remove the path from the supplied Uri '{0}'.</value>
+  </data>
+  <data name="InvalidEntityNameFormatWithSlash" xml:space="preserve">
+    <value>The entity name or path cannot contain '/' as prefix or suffix. The supplied value is '{0}'.</value>
+  </data>
+  <data name="RequestTimedOut" xml:space="preserve">
+    <value>The request has timed out after {0} milliseconds. The successful completion of the request cannot be determined. Additional queries should be made to determine whether or not the operation has succeeded. For more information on exception types and proper exception handling, please refer to http://go.microsoft.com/fwlink/?LinkId=761101</value>
+  </data>
 </root>

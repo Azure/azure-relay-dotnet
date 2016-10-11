@@ -106,11 +106,29 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The entity path/name &apos;{0}&apos; exceeds the {1} character limit..
+        /// </summary>
+        internal static string EntityNameLengthExceedsLimit {
+            get {
+                return ResourceManager.GetString("EntityNameLengthExceedsLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This &apos;{0}&apos; instance has already been started once. To start another instance, please create a new &apos;{0}&apos; object and start that..
         /// </summary>
         internal static string InstanceAlreadyRunning {
             get {
                 return ResourceManager.GetString("InstanceAlreadyRunning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Uri address given contains a path which is not allowed. Remove the path from the supplied Uri &apos;{0}&apos;..
+        /// </summary>
+        internal static string InvalidAddressPath {
+            get {
+                return ResourceManager.GetString("InvalidAddressPath", resourceCulture);
             }
         }
         
@@ -129,6 +147,15 @@ namespace Microsoft.Azure.Relay {
         internal static string InvalidEncoding {
             get {
                 return ResourceManager.GetString("InvalidEncoding", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The entity name or path cannot contain &apos;/&apos; as prefix or suffix. The supplied value is &apos;{0}&apos;..
+        /// </summary>
+        internal static string InvalidEntityNameFormatWithSlash {
+            get {
+                return ResourceManager.GetString("InvalidEntityNameFormatWithSlash", resourceCulture);
             }
         }
         
@@ -327,6 +354,15 @@ namespace Microsoft.Azure.Relay {
         internal static string ObjectNotOpened {
             get {
                 return ResourceManager.GetString("ObjectNotOpened", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The request has timed out after {0} milliseconds. The successful completion of the request cannot be determined. Additional queries should be made to determine whether or not the operation has succeeded. For more information on exception types and proper exception handling, please refer to http://go.microsoft.com/fwlink/?LinkId=761101.
+        /// </summary>
+        internal static string RequestTimedOut {
+            get {
+                return ResourceManager.GetString("RequestTimedOut", resourceCulture);
             }
         }
         

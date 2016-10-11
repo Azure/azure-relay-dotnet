@@ -59,6 +59,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EndpointAlreadyExistsException.cs" />
+    <Compile Include="QuotaExceededException.cs" />
+    <Compile Include="ServerBusyException.cs" />
     <Compile Include="AuthorizationFailedException.cs" />
     <Compile Include="Common\InputQueue.cs" />
     <Compile Include="ConnectionLostException.cs" />

@@ -39,5 +39,18 @@ namespace Microsoft.Azure.Relay
 
             return uriBuilder.Uri;
         }
+
+        public static void ThrowIfNullAddressOrPathExists(Uri address, string paramName)
+        {
+            if (address == null)
+            {
+                throw RelayEventSource.Log.ArgumentNull(paramName);
+            }
+
+            if (!string.IsNullOrEmpty(address.AbsolutePath) && address.Segments.Length > 1)
+            {
+                throw RelayEventSource.Log.Argument(paramName, SR.GetString(SR.InvalidAddressPath, address.AbsoluteUri));
+            }
+        }
     }
 }

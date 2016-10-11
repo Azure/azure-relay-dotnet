@@ -10,12 +10,29 @@ namespace Microsoft.Azure.Relay
     [Serializable]
     public class RelayException : Exception
     {
-        public RelayException() { }
+        public RelayException()
+        {
+            this.IsTransient = true;
+        }
 
-        public RelayException(string message) : base(message) { }
+        public RelayException(string message) : base(message)
+        {
+            this.IsTransient = true;
+        }
 
-        public RelayException(string message, Exception inner) : base(message, inner) { }
+        public RelayException(string message, Exception inner) : base(message, inner)
+        {
+            this.IsTransient = true;
+        }
 
-        protected RelayException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        protected RelayException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+            this.IsTransient = true;
+        }
+
+        /// <summary>Gets a value indicating whether the exception is transient. Check this property
+        /// to determine if the operation should be retried.</summary> 
+        /// <value>true if the exception is transient; otherwise, false.</value>
+        public bool IsTransient { get; protected set; }
     }
 }
