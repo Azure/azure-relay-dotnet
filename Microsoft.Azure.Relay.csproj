@@ -59,8 +59,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common\AsyncProducerConsumerCollection.cs" />
     <Compile Include="AuthorizationFailedException.cs" />
+    <Compile Include="Common\InputQueue.cs" />
     <Compile Include="ConnectionLostException.cs" />
     <Compile Include="Common\UriHelper.cs" />
     <Compile Include="Common\Fx.cs" />

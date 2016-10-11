@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Relay
 
         const int DefaultConnectionBufferSize = 64 * 1024;
         readonly Dictionary<string, DataConnection> clientConnections;
-        readonly AsyncProducerConsumerCollection<HybridConnectionStream> connectionInputQueue;
+        readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
         IWebProxy proxy;
         string cachedToString;
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
 
             this.clientConnections = new Dictionary<string, DataConnection>();
-            this.connectionInputQueue = new AsyncProducerConsumerCollection<HybridConnectionStream>();
+            this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
         }
 
@@ -239,7 +239,7 @@ namespace Microsoft.Azure.Relay
                 }
             }
 
-            return this.connectionInputQueue.TakeAsync();
+            return this.connectionInputQueue.DequeueAsync(CancellationToken.None);
         }
 
         public override string ToString()
@@ -279,7 +279,7 @@ namespace Microsoft.Azure.Relay
                 this.clientConnections.Remove(session.Id);
             }
 
-            this.connectionInputQueue.Add(connection);
+            this.connectionInputQueue.EnqueueAndDispatch(connection, null, false);
             session.Close();
         }
 
