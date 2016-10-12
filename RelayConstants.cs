@@ -10,6 +10,7 @@ namespace Microsoft.Azure.Relay
     {
         public const string HybridConnectionScheme = "sb";
         public const string ServiceBusAuthorizationHeaderName = "ServiceBusAuthorization";
+        public static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(1);
         public static readonly TimeSpan ClientMinimumTokenRefreshInterval = TimeSpan.FromMinutes(4);
 
         internal static class Claims

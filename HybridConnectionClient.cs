@@ -41,6 +41,71 @@ namespace Microsoft.Azure.Relay
             this.Initialize(address, tokenProvider, tokenProviderRequired: true);
         }
 
+        /// <summary>Creates a new instance of <see cref="HybridConnectionClient" /> using the specified connection string.</summary>
+        /// <param name="connectionString">The connection string to use.  This connection string must include the EntityPath property.</param>
+        /// <returns>The newly created <see cref="HybridConnectionClient" /> instance.</returns>
+        /// <exception cref="System.ArgumentException">Thrown when the format of the <paramref name="connectionString" /> parameter is incorrect.</exception>
+        public HybridConnectionClient(string connectionString)
+            : this(connectionString, null, pathFromConnectionString: true)
+        {
+        }
+
+        /// <summary>Creates a new instance of <see cref="HybridConnectionClient" /> from a connection string and
+        /// the specified HybridConection path. Use this overload only when the connection string does not use the 
+        /// <see cref="RelayConnectionStringBuilder.EntityPath" /> property.</summary> 
+        /// <param name="connectionString">The connection string used. This connection string must not include the EntityPath property.</param>
+        /// <param name="path">The path to the HybridConnection.</param>
+        /// <returns>The created <see cref="HybridConnectionClient" />.</returns>
+        /// <exception cref="System.ArgumentException">Thrown when the format of the <paramref name="connectionString" /> parameter is incorrect.</exception>
+        public HybridConnectionClient(string connectionString, string path)
+            : this(connectionString, path, pathFromConnectionString: false)
+        {
+        }
+
+        // This private .ctor handles both of the public overloads which take connectionString
+        HybridConnectionClient(string connectionString, string path, bool pathFromConnectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw RelayEventSource.Log.ArgumentNull(nameof(connectionString), this);
+            }
+
+            var builder = new RelayConnectionStringBuilder(connectionString);
+            builder.Validate();
+
+            if (pathFromConnectionString)
+            {
+                if (string.IsNullOrWhiteSpace(builder.EntityPath))
+                {
+                    // EntityPath is required in connectionString.
+                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringMustIncludeEntityPath, nameof(HybridConnectionClient)), this);
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    // path is required outside of connectionString
+                    throw RelayEventSource.Log.ArgumentNull(nameof(path));
+                }
+                else if (!string.IsNullOrWhiteSpace(builder.EntityPath))
+                {
+                    // connectionString is not allowed to include EntityPath
+                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringMustNotIncludeEntityPath, nameof(HybridConnectionClient)), this);
+                }
+
+                builder.EntityPath = path;
+            }
+
+            TokenProvider tokenProvider = null;
+            if (!string.IsNullOrEmpty(builder.SharedAccessSignature) || !string.IsNullOrEmpty(builder.SharedAccessKeyName))
+            {
+                tokenProvider = builder.CreateTokenProvider();
+            }
+
+            this.Initialize(new Uri(builder.Endpoint, builder.EntityPath), tokenProvider, tokenProvider != null);
+        }
+
         /// <summary>
         /// Gets the address of this HybridConnection to connect through. The address on which to listen for HybridConnections.
         /// This address should be of the format "sb://contoso.servicebus.windows.net/yourhybridconnection".
@@ -150,16 +215,15 @@ namespace Microsoft.Azure.Relay
         {
             if (address == null)
             {
-                throw RelayEventSource.Log.ThrowingException(new ArgumentNullException("address"), this);
-            }
-            else if (tokenProviderRequired && tokenProvider == null)
-            {
-                throw RelayEventSource.Log.ThrowingException(new ArgumentNullException("tokenProvider"), this);
+                throw RelayEventSource.Log.ArgumentNull(nameof(address), this);
             }
             else if (address.Scheme != RelayConstants.HybridConnectionScheme)
             {
-                throw RelayEventSource.Log.ThrowingException(
-                    new ArgumentException(SR.InvalidUriScheme.FormatInvariant(address.Scheme, RelayConstants.HybridConnectionScheme), "address"));
+                throw RelayEventSource.Log.Argument(nameof(address), SR.GetString(SR.InvalidUriScheme, address.Scheme, RelayConstants.HybridConnectionScheme), this);
+            }
+            else if (tokenProviderRequired && tokenProvider == null)
+            {
+                throw RelayEventSource.Log.ArgumentNull(nameof(tokenProvider), this);
             }
 
             this.Address = address;

@@ -219,6 +219,21 @@
   <data name="net_WebHeaderInvalidControlChars" xml:space="preserve">
     <value>Specified value has invalid Control characters.</value>
   </data>
+  <data name="ArgumentInvalidCombination" xml:space="preserve">
+    <value>Ensure either all or none of the following arguments are defined: '{0}'.</value>
+  </data>
+  <data name="SasTokenShouldBeAlone" xml:space="preserve">
+    <value>{0} cannot be specified along with {1}. {0} alone should be sufficient to Authenticate the request.</value>
+  </data>
+  <data name="ConnectionStringMustIncludeEntityPath" xml:space="preserve">
+    <value>{0} name should be specified as EntityPath in connectionString.</value>
+  </data>
+  <data name="ConnectionStringMustIncludeTokenProviderSettings" xml:space="preserve">
+    <value>The connectionString must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey.</value>
+  </data>
+  <data name="ConnectionStringMustNotIncludeEntityPath" xml:space="preserve">
+    <value>{0} name should not be specified as EntityPath in the connectionString while using this overload. Instead, use the 'path' parameter.</value>
+  </data>
   <data name="EntityNameLengthExceedsLimit" xml:space="preserve">
     <value>The entity path/name '{0}' exceeds the {1} character limit.</value>
   </data>
@@ -230,5 +245,17 @@
   </data>
   <data name="RequestTimedOut" xml:space="preserve">
     <value>The request has timed out after {0} milliseconds. The successful completion of the request cannot be determined. Additional queries should be made to determine whether or not the operation has succeeded. For more information on exception types and proper exception handling, please refer to http://go.microsoft.com/fwlink/?LinkId=761101</value>
+  </data>
+  <data name="ConnectionStringParameterValueMissing" xml:space="preserve">
+    <value>The value for the connection string parameter '{0}' is empty or missing.</value>
+  </data>
+  <data name="NotValidAbsoluteUri" xml:space="preserve">
+    <value>'{0}' is not a valid Absolute Uri.</value>
+  </data>
+  <data name="NotValidTimeSpan" xml:space="preserve">
+    <value>'{0}' is not a valid TimeSpan.</value>
+  </data>
+  <data name="ConnectionStringUnknownParameter" xml:space="preserve">
+    <value>The connection string contains unknown parameter '{0}'.</value>
   </data>
 </root>

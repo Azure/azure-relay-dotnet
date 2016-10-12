@@ -61,6 +61,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Ensure either all or none of the following arguments are defined: &apos;{0}&apos;..
+        /// </summary>
+        internal static string ArgumentInvalidCombination {
+            get {
+                return ResourceManager.GetString("ArgumentInvalidCombination", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The argument is out of range. It should be between {0} and {1}..
         /// </summary>
         internal static string ArgumentOutOfRange {
@@ -84,6 +93,51 @@ namespace Microsoft.Azure.Relay {
         internal static string CharacterReservedForUriScheme {
             get {
                 return ResourceManager.GetString("CharacterReservedForUriScheme", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} name should be specified as EntityPath in connectionString..
+        /// </summary>
+        internal static string ConnectionStringMustIncludeEntityPath {
+            get {
+                return ResourceManager.GetString("ConnectionStringMustIncludeEntityPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The connectionString must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey..
+        /// </summary>
+        internal static string ConnectionStringMustIncludeTokenProviderSettings {
+            get {
+                return ResourceManager.GetString("ConnectionStringMustIncludeTokenProviderSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} name should not be specified as EntityPath in the connectionString while using this overload. Instead, use the &apos;path&apos; parameter..
+        /// </summary>
+        internal static string ConnectionStringMustNotIncludeEntityPath {
+            get {
+                return ResourceManager.GetString("ConnectionStringMustNotIncludeEntityPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The value for the connection string parameter &apos;{0}&apos; is empty or missing..
+        /// </summary>
+        internal static string ConnectionStringParameterValueMissing {
+            get {
+                return ResourceManager.GetString("ConnectionStringParameterValueMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The connection string contains unknown parameter &apos;{0}&apos;..
+        /// </summary>
+        internal static string ConnectionStringUnknownParameter {
+            get {
+                return ResourceManager.GetString("ConnectionStringUnknownParameter", resourceCulture);
             }
         }
         
@@ -331,6 +385,24 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; is not a valid Absolute Uri..
+        /// </summary>
+        internal static string NotValidAbsoluteUri {
+            get {
+                return ResourceManager.GetString("NotValidAbsoluteUri", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; is not a valid TimeSpan..
+        /// </summary>
+        internal static string NotValidTimeSpan {
+            get {
+                return ResourceManager.GetString("NotValidTimeSpan", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The operation cannot be performed because the object has been closed or aborted..
         /// </summary>
         internal static string ObjectClosedOrAborted {
@@ -363,6 +435,15 @@ namespace Microsoft.Azure.Relay {
         internal static string RequestTimedOut {
             get {
                 return ResourceManager.GetString("RequestTimedOut", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} cannot be specified along with {1}. {0} alone should be sufficient to Authenticate the request..
+        /// </summary>
+        internal static string SasTokenShouldBeAlone {
+            get {
+                return ResourceManager.GetString("SasTokenShouldBeAlone", resourceCulture);
             }
         }
         

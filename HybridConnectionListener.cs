@@ -61,6 +61,73 @@ namespace Microsoft.Azure.Relay
             this.controlConnection = new ControlConnection(this);
         }
 
+        /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> using the specified connection string.</summary>
+        /// <param name="connectionString">The connection string to use.  This connection string must include the EntityPath property.</param>
+        /// <returns>The newly created <see cref="HybridConnectionListener" /> instance.</returns>
+        /// <exception cref="System.ArgumentException">Thrown when the format of the <paramref name="connectionString" /> parameter is incorrect.</exception>
+        public HybridConnectionListener(string connectionString)
+            : this(connectionString, null, pathFromConnectionString: true)
+        {
+        }
+
+        /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> from a connection string and
+        /// the specified HybridConection path. Use this overload only when the connection string does not use the 
+        /// <see cref="RelayConnectionStringBuilder.EntityPath" /> property.</summary> 
+        /// <param name="connectionString">The connection string used. This connection string must not include the EntityPath property.</param>
+        /// <param name="path">The path to the HybridConnection.</param>
+        /// <returns>The created <see cref="HybridConnectionListener" />.</returns>
+        /// <exception cref="System.ArgumentException">Thrown when the format of the <paramref name="connectionString" /> parameter is incorrect.</exception>
+        public HybridConnectionListener(string connectionString, string path)
+            : this(connectionString, path, pathFromConnectionString: false)
+        {
+        }
+
+        // This private .ctor handles both of the public overloads which take connectionString
+        HybridConnectionListener(string connectionString, string path, bool pathFromConnectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw RelayEventSource.Log.ArgumentNull(nameof(connectionString), this);
+            }
+
+            var builder = new RelayConnectionStringBuilder(connectionString);
+            builder.Validate();
+
+            if (pathFromConnectionString)
+            {
+                if (string.IsNullOrWhiteSpace(builder.EntityPath))
+                {
+                    // connectionString did not have required EntityPath
+                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringMustIncludeEntityPath, nameof(HybridConnectionClient)), this);
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    // path parameter is required
+                    throw RelayEventSource.Log.ArgumentNull(nameof(path), this);
+                }
+                else if (!string.IsNullOrWhiteSpace(builder.EntityPath))
+                {
+                    // EntityPath must not appear in connectionString
+                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringMustNotIncludeEntityPath, nameof(HybridConnectionListener)), this);
+                }
+
+                builder.EntityPath = path;
+            }
+
+            this.Address = new Uri(builder.Endpoint, builder.EntityPath);
+            this.TokenProvider = builder.CreateTokenProvider();
+            this.ConnectionBufferSize = DefaultConnectionBufferSize;
+            this.proxy = WebRequest.DefaultWebProxy;
+            this.TrackingContext = TrackingContext.Create(this.Address);
+
+            this.clientConnections = new Dictionary<string, DataConnection>();
+            this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
+            this.controlConnection = new ControlConnection(this);
+        }
+
         /// <summary>
         /// Raised when the Listener is attempting to reconnect with ServiceBus after a connection loss.
         /// </summary>

@@ -67,6 +67,7 @@
     <Compile Include="ConnectionLostException.cs" />
     <Compile Include="Common\UriHelper.cs" />
     <Compile Include="Common\Fx.cs" />
+    <Compile Include="RelayConnectionStringBuilder.cs" />
     <Compile Include="RelayException.cs" />
     <Compile Include="EndpointNotFoundException.cs" />
     <Compile Include="RelayConstants.cs" />
