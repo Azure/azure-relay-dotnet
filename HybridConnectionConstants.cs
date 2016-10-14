@@ -23,6 +23,8 @@ namespace Microsoft.Azure.Relay
         public const string StatusDescription = QueryStringKeyPrefix + "statusDescription"; // sb-hc-statusDescription
         public const string Token = QueryStringKeyPrefix + "token"; // sb-hc-token
 
+        public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromMinutes(3.5);
+
         public static class Actions
         {
             public const string Listen = "listen";

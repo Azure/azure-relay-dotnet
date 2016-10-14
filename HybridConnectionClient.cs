@@ -146,6 +146,7 @@ namespace Microsoft.Azure.Relay
             {
                 var webSocket = new ClientWebSocket45();
                 webSocket.Options.Proxy = this.Proxy;
+                webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
 
                 if (this.TokenProvider != null)

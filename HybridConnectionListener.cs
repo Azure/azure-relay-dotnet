@@ -523,6 +523,7 @@ namespace Microsoft.Azure.Relay
 
                     this.clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     this.clientWebSocket.Options.Proxy = this.listener.Proxy;
+                    this.clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                     this.clientWebSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
 
                     var token = await this.tokenRenewer.GetTokenAsync();
@@ -800,6 +801,7 @@ namespace Microsoft.Azure.Relay
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     clientWebSocket.Options.Host = this.Address.Host;
                     clientWebSocket.Options.Proxy = this.listener.Proxy;
+                    clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
 
                     using (var cancelSource = new CancellationTokenSource(timeoutHelper.RemainingTime()))
                     {
