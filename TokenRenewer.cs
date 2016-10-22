@@ -44,14 +44,25 @@ namespace Microsoft.Azure.Relay
             get { return this.renewTimer; }
         }
 
-        public async Task<SecurityToken> GetTokenAsync()
+        public Task<SecurityToken> GetTokenAsync()
+        {
+            return this.GetTokenAsync(false);
+        }
+
+        async Task<SecurityToken> GetTokenAsync(bool raiseTokenRenewedEvent)
         {
             try
             {
                 RelayEventSource.Log.GetTokenStart(this.traceSource);
                 var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor);
                 RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
-                this.OnTokenRenewed(token);
+
+                if (raiseTokenRenewedEvent)
+                {
+                    this.TokenRenewed?.Invoke(this, new TokenEventArgs { Token = token });
+                }
+
+                this.ScheduleRenewTimer(token);
                 return token;
             }
             catch (Exception e)
@@ -75,7 +86,7 @@ namespace Microsoft.Azure.Relay
             var thisPtr = (TokenRenewer)state;
             try
             {
-                await thisPtr.GetTokenAsync();
+                await thisPtr.GetTokenAsync(true);
             }
             catch (Exception exception)
             {
@@ -102,12 +113,6 @@ namespace Microsoft.Azure.Relay
 
             RelayEventSource.Log.TokenRenewScheduled(interval, this.traceSource);
             this.renewTimer.Change(interval, Timeout.InfiniteTimeSpan);
-        }
-
-        void OnTokenRenewed(SecurityToken token)
-        {
-            this.TokenRenewed?.Invoke(this, new TokenEventArgs { Token = token });
-            this.ScheduleRenewTimer(token);
         }
 
         void OnTokenRenewException(Exception exception)

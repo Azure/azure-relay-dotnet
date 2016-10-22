@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Net;
     using System.Net.WebSockets;
@@ -319,6 +320,12 @@ namespace Microsoft.Azure.Relay
             return this.cachedToString;
         }
 
+        [Conditional("DEBUG")]
+        internal void SendControlCommand(ListenerCommand listenerCommand, CancellationToken cancellationToken)
+        {
+            this.controlConnection.SendCommandAsync(listenerCommand, cancellationToken).GetAwaiter().GetResult();
+        }
+
         static string LookupFileVersion()
         {
             var a = Assembly.GetExecutingAssembly();
@@ -443,9 +450,15 @@ namespace Microsoft.Azure.Relay
 
         sealed class ControlConnection : IConnectionStatus
         {
-            // This results in retries after 0.9375, 1.875, 3.75, 7.5, 15, 30, and 60 seconds.
-            static readonly TimeSpan MinumumReconnectInterval = TimeSpan.FromTicks(9375000);
-            static readonly TimeSpan MaximumReconnectInterval = TimeSpan.FromSeconds(60);
+            // Retries after 0, 1, 2, 5, 10, 30 seconds
+            static readonly TimeSpan[] ConnectDelayIntervals = {
+                TimeSpan.Zero,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromSeconds(30)
+            };
 
             readonly HybridConnectionListener listener;
             readonly Uri address;
@@ -453,11 +466,13 @@ namespace Microsoft.Azure.Relay
             readonly string path;
             readonly TokenRenewer tokenRenewer;
             readonly CancellationTokenSource shutdownCancellationSource;
-            readonly ClientWebSocket45 clientWebSocket;
+            readonly AsyncLock sendLock;
+            Task<WebSocket> connectAsyncTask;
             Task receivePumpTask;
             ArraySegment<byte> receiveBuffer;
-            bool closeCalled;
             CancellationToken closeCancellationToken;
+            int connectDelayIndex;
+            volatile bool closeCalled;
 
             public ControlConnection(HybridConnectionListener listener)
             {
@@ -467,7 +482,7 @@ namespace Microsoft.Azure.Relay
                 this.path = address.AbsolutePath.TrimStart('/');
                 this.shutdownCancellationSource = new CancellationTokenSource();
                 this.receiveBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);
-                this.clientWebSocket = new ClientWebSocket45();
+                this.sendLock = new AsyncLock();
                 this.tokenRenewer = new TokenRenewer(
                     this.listener.TokenProvider, this.address.AbsoluteUri, TokenProvider.DefaultTokenTimeout, this.listener);
             }
@@ -485,13 +500,29 @@ namespace Microsoft.Azure.Relay
             public async Task OpenAsync(CancellationToken cancellationToken)
             {
                 // Esstablish a WebSocket connection right now so we can detect any fatal errors
-                await this.ConnectWebSocketAsync(cancellationToken);
-                this.tokenRenewer.TokenRenewed += this.OnTokenRenewed;
-                this.receivePumpTask = this.ReceivePumpAsync(this.shutdownCancellationSource.Token);
+                var connectTask = this.EnsureConnectTask(cancellationToken);
+                bool succeeded = false;
+                try
+                {
+                    // Block so we surface any errors to the user right away.
+                    await connectTask;
+
+                    this.tokenRenewer.TokenRenewed += this.OnTokenRenewed;
+                    this.receivePumpTask = this.ReceivePumpAsync();
+                    succeeded = true;
+                }
+                finally
+                {
+                    if (!succeeded)
+                    {
+                        await this.CloseOrAbortWebSocketAsync(connectTask, abort: true);
+                    }
+                }
             }
 
             public async Task CloseAsync(CancellationToken cancellationToken)
             {
+                Task<WebSocket> connectTask;
                 lock (this.ThisLock)
                 {
                     if (this.closeCalled)
@@ -500,6 +531,8 @@ namespace Microsoft.Azure.Relay
                     }
 
                     this.closeCancellationToken = cancellationToken;
+                    connectTask = this.connectAsyncTask;
+                    this.connectAsyncTask = null;
                     this.closeCalled = true;
                 }
 
@@ -508,26 +541,72 @@ namespace Microsoft.Azure.Relay
 
                 // Start a clean close by first calling CloseOutputAsync.  The finish (CloseAsync) happens when
                 // the receive pump task finishes working.
-                await this.clientWebSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Normal Closure", cancellationToken);
+                if (connectTask != null)
+                {
+                    var webSocket = await connectTask;
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Normal Closure", cancellationToken);
+                }
+
                 if (this.receivePumpTask != null)
                 {
                     await this.receivePumpTask;
                 }
             }
 
-            async Task ConnectWebSocketAsync(CancellationToken cancellationToken)
+            internal async Task SendCommandAsync(ListenerCommand listenerCommand, CancellationToken cancellationToken)
             {
+                Task<WebSocket> connectTask = this.EnsureConnectTask(cancellationToken);
+                var webSocket = await connectTask;
+                using (var stream = new MemoryStream())
+                {
+                    listenerCommand.WriteObject(stream);
+                    byte[] buffer = stream.GetBuffer();
+                    using (await this.sendLock.LockAsync(cancellationToken))
+                    {
+                        await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, (int)stream.Length), WebSocketMessageType.Binary, true, cancellationToken);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Gets or potentially creates a viable Task&lt;WebSocket&gt;.  If the existing one is faulted or canceled a new one is created.
+            /// </summary>
+            Task<WebSocket> EnsureConnectTask(CancellationToken cancellationToken)
+            {
+                lock (this.ThisLock)
+                {
+                    if (this.connectAsyncTask == null || this.connectAsyncTask.IsFaulted || this.connectAsyncTask.IsCanceled)
+                    {
+                        this.connectAsyncTask = this.ConnectAsync(cancellationToken);
+                    }
+
+                    return this.connectAsyncTask;
+                }
+            }
+
+            async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
+            {
+                Fx.Assert(!this.closeCalled, "Shouldn't call ConnectWebSocketAsync if CloseAsync was called.");
                 try
                 {
-                    RelayEventSource.Log.RelayClientConnectStart(this.listener);
+                    var connectDelay = ConnectDelayIntervals[this.connectDelayIndex];
+                    if (connectDelay != TimeSpan.Zero)
+                    {
+                        await Task.Delay(connectDelay, cancellationToken);
+                    }
 
-                    this.clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
-                    this.clientWebSocket.Options.Proxy = this.listener.Proxy;
-                    this.clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
-                    this.clientWebSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
+                    RelayEventSource.Log.RelayClientConnectStart(this.listener);
+                    var webSocket = new ClientWebSocket45();
+                    webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
+                    webSocket.Options.Proxy = this.listener.Proxy;
+                    webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+                    webSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
 
                     var token = await this.tokenRenewer.GetTokenAsync();
-                    this.clientWebSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
+                    webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
+
+                    // When we reconnect we need to remove the "_GXX" suffix otherwise trackingId gets longer after each reconnect
+                    string trackingId = TrackingContext.RemoveSuffix(this.listener.TrackingContext.TrackingId);
 
                     // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$hc/endpoint1?sb-hc-action=listen&sb-hc-id=E2E_TRACKING_ID"
                     var webSocketUri = HybridConnectionUtility.BuildUri(
@@ -536,11 +615,11 @@ namespace Microsoft.Azure.Relay
                         this.address.AbsolutePath,
                         this.address.Query,
                         HybridConnectionConstants.Actions.Listen,
-                        this.listener.TrackingContext.TrackingId);
+                        trackingId);
 
-                    await this.clientWebSocket.ConnectAsync(webSocketUri, cancellationToken);
+                    await webSocket.ConnectAsync(webSocketUri, cancellationToken);
 
-                    var trackingId = this.clientWebSocket.ResponseHeaders[TrackingContext.TrackingIdName];
+                    trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                     if (!string.IsNullOrEmpty(trackingId))
                     {
                         // Update to the flown trackingId (which has _GX suffix)
@@ -548,10 +627,11 @@ namespace Microsoft.Azure.Relay
                     }
 
                     this.OnOnline();
+                    return webSocket;
                 }
                 catch (WebSocketException wsException)
                 {
-                    throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToIoContract(wsException), this.listener);
+                    throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), this.listener);
                 }
                 finally
                 {
@@ -559,12 +639,36 @@ namespace Microsoft.Azure.Relay
                 }
             }
 
-            async Task CloseWebSocketAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
+            async Task CloseOrAbortWebSocketAsync(
+                Task<WebSocket> connectTask,
+                bool abort,
+                WebSocketCloseStatus closeStatus = WebSocketCloseStatus.Empty,
+                string statusDescription = null,
+                CancellationToken cancellationToken = default(CancellationToken))
             {
+                Fx.Assert(connectTask != null, "CloseWebSocketAsync was called with null connectTask");
+                Fx.Assert(connectTask.IsCompleted || !abort, "CloseOrAbortWebSocketAsync(abort=true) should only be called with a completed connectTask");
+                lock (this.ThisLock)
+                {
+                    if (object.ReferenceEquals(connectTask, this.connectAsyncTask))
+                    {
+                        this.connectAsyncTask = null;
+                    }
+                }
+
+                WebSocket webSocket = null;
                 try
                 {
-                    await this.clientWebSocket.CloseOutputAsync(closeStatus, statusDescription, cancellationToken);
-                    await this.clientWebSocket.CloseAsync(closeStatus, statusDescription, cancellationToken);
+                    webSocket = await connectTask;
+                    if (abort)
+                    {
+                        webSocket.Abort();
+                    }
+                    else
+                    {
+                        await webSocket.CloseOutputAsync(closeStatus, statusDescription, cancellationToken);
+                        await webSocket.CloseAsync(closeStatus, statusDescription, cancellationToken);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -574,22 +678,21 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.HandledExceptionAsWarning(this.listener, e);
-                    this.clientWebSocket.Abort();
+                    webSocket?.Abort();
                 }
             }
 
-            async Task ReceivePumpAsync(CancellationToken shutdownToken)
+            async Task ReceivePumpAsync()
             {
+                Exception exception = null;
                 try
                 {
-                    while (!shutdownToken.IsCancellationRequested)
+                    bool keepGoing;
+                    do
                     {
-                        await this.ReceivePumpCoreAsync(shutdownToken);
+                        keepGoing = await this.ReceivePumpCoreAsync();
                     }
-
-                    // Since we're out of the above while loop we must be shutting down (closing or faulted)
-                    await this.CloseWebSocketAsync(WebSocketCloseStatus.NormalClosure, "Closing", this.closeCancellationToken);
-                    this.OnOffline(null);
+                    while (keepGoing && !this.shutdownCancellationSource.IsCancellationRequested);
                 }
                 catch (Exception e)
                 {
@@ -599,24 +702,63 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.HandledExceptionAsWarning(this.listener, e);
+                    exception = e;
+                }
+                finally
+                {
+                    this.OnOffline(exception);
                 }
             }
 
             /// <summary>
-            /// Ensure we have a connected webSocket, listen for a command message, and handle that message.
+            /// Ensure we have a connected webSocket, listens for command messages, and handles those messages.
             /// </summary>
-            async Task ReceivePumpCoreAsync(CancellationToken shutdownToken)
+            /// <returns>A bool indicating whether or not the receive pump should keep running.</returns>
+            async Task<bool> ReceivePumpCoreAsync()
             {
-                var receiveResult = await this.clientWebSocket.ReceiveAsync(this.receiveBuffer, CancellationToken.None);
-                if (receiveResult.MessageType == WebSocketMessageType.Close)
+                bool keepGoing = true;
+                CancellationToken shutdownToken = this.shutdownCancellationSource.Token;
+                Task<WebSocket> connectTask = this.EnsureConnectTask(shutdownToken);
+                try
                 {
-                    await this.CloseWebSocketAsync(receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, shutdownToken);
-                    this.OnDisconnect(receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription);
-                    return;
+                    WebSocket webSocket = await connectTask;
+                    do
+                    {
+                        WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(this.receiveBuffer, CancellationToken.None);
+                        if (receiveResult.MessageType == WebSocketMessageType.Close)
+                        {
+                            await this.CloseOrAbortWebSocketAsync(connectTask, false, receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, shutdownToken);
+                            if (this.closeCalled)
+                            {
+                                // This is the cloud service responding to our clean shutdown.
+                                keepGoing = false;
+                            }
+                            else
+                            {
+                                keepGoing = this.OnDisconnect(new ConnectionLostException(receiveResult.CloseStatus.Value + ": " + receiveResult.CloseStatusDescription));
+                            }
+
+                            break;
+                        }
+
+                        Fx.Assert(receiveResult.Count > 0, "Expected a non-zero count of bytes received.");
+                        this.listener.OnCommandAsync(new ArraySegment<byte>(this.receiveBuffer.Array, this.receiveBuffer.Offset, receiveResult.Count)).Fork(this.listener);
+                    }
+                    while (!shutdownToken.IsCancellationRequested);
+                }
+                catch (Exception exception)
+                {
+                    if (Fx.IsFatal(exception))
+                    {
+                        throw;
+                    }
+
+                    RelayEventSource.Log.HandledExceptionAsWarning(this.listener, exception);
+                    await this.CloseOrAbortWebSocketAsync(connectTask, abort: true);
+                    keepGoing = this.OnDisconnect(WebSocketExceptionHelper.ConvertToRelayContract(exception));
                 }
 
-                Fx.Assert(receiveResult.Count > 0, "Expected a non-zero count of bytes received.");
-                this.listener.OnCommandAsync(new ArraySegment<byte>(this.receiveBuffer.Array, this.receiveBuffer.Offset, receiveResult.Count)).Fork(this.listener);
+                return keepGoing;
             }
 
             void OnOnline()
@@ -630,14 +772,11 @@ namespace Microsoft.Azure.Relay
 
                     this.LastError = null;
                     this.IsOnline = true;
+                    this.connectDelayIndex = -1;
                 }
 
                 RelayEventSource.Log.RelayClientGoingOnline(this.listener.ToString());
-                var handler = this.Online;
-                if (handler != null)
-                {
-                    handler(this, EventArgs.Empty);
-                }
+                this.Online?.Invoke(this, EventArgs.Empty);
             }
 
             void OnOffline(Exception lastError)
@@ -650,28 +789,39 @@ namespace Microsoft.Azure.Relay
 
                 // Stop attempting to connect
                 RelayEventSource.Log.RelayClientStopConnecting(this.listener.ToString(), "HybridConnection");
-                var handler = this.Offline;
-                if (handler != null)
-                {
-                    handler(this, EventArgs.Empty);
-                }
+                this.Offline?.Invoke(this, EventArgs.Empty);
             }
 
-            void OnDisconnect(WebSocketCloseStatus closeStatus, string closeDescription)
+            // Returns true if this control connection should attempt to reconnect after this exception.
+            bool OnDisconnect(Exception lastError)
             {
                 lock (this.ThisLock)
                 {
-                    this.LastError = new ConnectionLostException(closeStatus + ": " + closeDescription);
+                    this.LastError = lastError;
                     this.IsOnline = false;
+
+                    if (this.connectDelayIndex < ConnectDelayIntervals.Length - 1)
+                    {
+                        this.connectDelayIndex++;
+                    }
                 }
 
-                // TODO: Inspect the close status/description to see if this is a terminal case
+                // Inspect the close status/description to see if this is a terminal case
                 // or we should attempt to reconnect.
-                var handler = this.Connecting;
-                if (handler != null)
+                bool shouldReconnect = ShouldReconnect(lastError);
+                if (shouldReconnect)
                 {
-                    handler(this, EventArgs.Empty);
+                    this.Connecting?.Invoke(this, EventArgs.Empty);
                 }
+
+                return shouldReconnect;
+            }
+
+            bool ShouldReconnect(Exception exception)
+            {
+                // TODO: Figure out exceptions where we shouldn't reconnect.
+                // Examples would be expired token or the HybridConnection management object was deleted.
+                return true;
             }
 
             async void OnTokenRenewed(object sender, TokenEventArgs eventArgs)
@@ -682,13 +832,7 @@ namespace Microsoft.Azure.Relay
                     listenerCommand.RenewToken = new ListenerCommand.RenewTokenCommand();
                     listenerCommand.RenewToken.Token = eventArgs.Token.TokenString;
 
-                    byte[] buffer;
-                    using (var stream = new MemoryStream())
-                    {
-                        listenerCommand.WriteObject(stream);
-                        buffer = stream.GetBuffer();
-                        await this.clientWebSocket.SendAsync(new ArraySegment<byte>(buffer, 0, (int)stream.Length), WebSocketMessageType.Binary, true, CancellationToken.None);
-                    }
+                    await this.SendCommandAsync(listenerCommand, CancellationToken.None);
                 }
                 catch (Exception exception)
                 {

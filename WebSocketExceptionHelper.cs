@@ -11,51 +11,54 @@ namespace Microsoft.Azure.Relay
 
     static class WebSocketExceptionHelper
     {
-        public static Exception ConvertToIoContract(WebSocketException webSocketException)
+        public static Exception ConvertToRelayContract(Exception exception)
         {
-            string message = webSocketException.Message;
-            Exception innerException = webSocketException;
+            string message = exception.Message;
+            Exception innerException = exception;
 
-            WebException innerWebException;
-            IOException innerIOException;
-            if ((innerWebException = webSocketException.InnerException as WebException) != null)
+            if (exception is WebSocketException)
             {
-                innerException = innerWebException;
-                HttpWebResponse httpWebResponse;
-                if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
+                WebException innerWebException;
+                IOException innerIOException;
+                if ((innerWebException = exception.InnerException as WebException) != null)
                 {
-                    message = httpWebResponse.StatusDescription;
-                    switch (httpWebResponse.StatusCode)
+                    innerException = innerWebException;
+                    HttpWebResponse httpWebResponse;
+                    if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
                     {
-                        case HttpStatusCode.BadRequest:
-                            return new RelayException(httpWebResponse.StatusCode + ": " + httpWebResponse.StatusDescription, innerWebException);
-                        case HttpStatusCode.Unauthorized:
-                            return new AuthorizationFailedException(httpWebResponse.StatusDescription, innerWebException);
-                        case HttpStatusCode.NotFound:
-                            return new EndpointNotFoundException(httpWebResponse.StatusDescription, innerWebException);
-                        case HttpStatusCode.GatewayTimeout:
-                        case HttpStatusCode.RequestTimeout:
-                            // TODO: Add a way to tell if the listener failed to rendezvous or if the timeout was the application.
-                            return new TimeoutException(httpWebResponse.StatusDescription, innerWebException);
-                        // Other values we might care about
-                        case HttpStatusCode.InternalServerError:
-                        case HttpStatusCode.NotImplemented:
-                        case HttpStatusCode.BadGateway:
-                        case HttpStatusCode.ServiceUnavailable:
-                            break;
-                        default:
-                            break;
+                        message = httpWebResponse.StatusDescription;
+                        switch (httpWebResponse.StatusCode)
+                        {
+                            case HttpStatusCode.BadRequest:
+                                return new RelayException(httpWebResponse.StatusCode + ": " + httpWebResponse.StatusDescription, innerWebException);
+                            case HttpStatusCode.Unauthorized:
+                                return new AuthorizationFailedException(httpWebResponse.StatusDescription, innerWebException);
+                            case HttpStatusCode.NotFound:
+                                return new EndpointNotFoundException(httpWebResponse.StatusDescription, innerWebException);
+                            case HttpStatusCode.GatewayTimeout:
+                            case HttpStatusCode.RequestTimeout:
+                                // TODO: Add a way to tell if the listener failed to rendezvous or if the timeout was the application.
+                                return new TimeoutException(httpWebResponse.StatusDescription, innerWebException);
+                            // Other values we might care about
+                            case HttpStatusCode.InternalServerError:
+                            case HttpStatusCode.NotImplemented:
+                            case HttpStatusCode.BadGateway:
+                            case HttpStatusCode.ServiceUnavailable:
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
-            }
-            else if ((innerIOException = webSocketException.InnerException as IOException) != null)
-            {
-                innerException = innerIOException;
-                message = innerIOException.Message;
+                else if ((innerIOException = exception.InnerException as IOException) != null)
+                {
+                    innerException = innerIOException;
+                    message = innerIOException.Message;
+                }
+
             }
 
-            return new IOException(message, innerException);
+            return new RelayException(message, innerException);
         }
-
     }
 }

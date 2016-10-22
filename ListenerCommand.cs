@@ -48,6 +48,11 @@ namespace Microsoft.Azure.Relay
         [DataMember(Name = "renewToken", EmitDefaultValue = false)]
         public RenewTokenCommand RenewToken { get; set; }
 
+#if DEBUG
+        [DataMember(Name = "injectFault", EmitDefaultValue = false)]
+        public InjectFaultCommand InjectFault { get; set; }
+#endif
+
         public static ListenerCommand ReadObject(Stream stream)
         {
             return (ListenerCommand)serializer.ReadObject(stream);
@@ -127,6 +132,23 @@ namespace Microsoft.Azure.Relay
             [DataMember(Name = "token", Order = 0)]
             public string Token { get; set; }
         }
+
+#if DEBUG
+        /// <summary>
+        /// DataContract for JSON such as the following:
+        /// {
+        ///   "injectFault" : {
+        ///     "delay" : "00:01:00"
+        ///   }
+        /// }
+        /// </summary>
+        [DataContract]
+        public class InjectFaultCommand
+        {
+            [DataMember(Name = "delay", Order = 0)]
+            public TimeSpan Delay { get; set; }
+        }
+#endif // DEBUG
 
         /// <summary>
         /// Does some custom serialization to avoid having "Key": and "Value": entries for every single Http Header in the resulting JSON

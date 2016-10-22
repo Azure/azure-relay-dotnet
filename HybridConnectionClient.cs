@@ -184,7 +184,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException wsException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToIoContract(wsException), traceSource);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), traceSource);
             }
             finally
             {

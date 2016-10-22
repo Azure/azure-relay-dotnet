@@ -59,6 +59,21 @@ namespace Microsoft.Azure.Relay
             return new TrackingContext(trackingId, subsystemId.GetLeftPart(UriPartial.Path));
         }
 
+        /// <summary>
+        /// Given a trackingId string with "_GXX" suffix remove that suffix.
+        /// Example: "1c048eb5-77c4-4b85-96fd-fa526801af35_G0" becomes "1c048eb5-77c4-4b85-96fd-fa526801af35"
+        /// </summary>
+        internal static string RemoveSuffix(string trackingId)
+        {
+            int roleSuffixIndex = trackingId.IndexOf("_");
+            if (roleSuffixIndex == -1)
+            {
+                return trackingId;
+            }
+
+            return trackingId.Substring(0, roleSuffixIndex);
+        }
+
         public override string ToString()
         {
             if (this.cachedToString == null)

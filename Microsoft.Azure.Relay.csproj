@@ -59,6 +59,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\AsyncLock.cs" />
+    <Compile Include="Common\ExceptionExtensions.cs" />
     <Compile Include="EndpointAlreadyExistsException.cs" />
     <Compile Include="QuotaExceededException.cs" />
     <Compile Include="ServerBusyException.cs" />
