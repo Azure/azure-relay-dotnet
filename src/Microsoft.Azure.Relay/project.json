@@ -1,12 +1,15 @@
 {
-	"version": "0.1.0-*",
+	"version": "0.2.0-preview",
 	"title": "Microsoft.Azure.Relay",
 	"description": "Microsoft.Azure.Relay Class Library",
 	"authors": [ "Microsoft" ],
 
 	"buildOptions": {
+		"allowUnsafe": true,
 		"warningsAsErrors": true,
-		"allowUnsafe": true
+		"delaySign": true,
+		"publicSign": false,
+		"keyFile": "../../build/MSSharedLibSN1024.snk"
 	},
 
 	"packOptions": {
