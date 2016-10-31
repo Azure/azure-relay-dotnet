@@ -17,7 +17,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// The SharedAccessSignatureTokenProvider generates tokens using a shared access key or existing signature.
     /// </summary>
-    public class SharedAccessSignatureTokenProvider : TokenProvider
+    class SharedAccessSignatureTokenProvider : TokenProvider
     {
         public static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         readonly byte[] encodedSharedAccessKey;

@@ -310,6 +310,9 @@ namespace Microsoft.Azure.Relay
             return this.connectionInputQueue.DequeueAsync(CancellationToken.None);
         }
 
+        /// <summary>
+        /// Returns a string that represents the current object.
+        /// </summary>
         public override string ToString()
         {
             if (this.cachedToString == null)

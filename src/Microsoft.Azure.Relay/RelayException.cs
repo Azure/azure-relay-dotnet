@@ -7,24 +7,39 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.Runtime.Serialization;
 
+    /// <summary>
+    /// Represents exceptions thrown for for relay errors.
+    /// </summary>
     [Serializable]
     public class RelayException : Exception
     {
+        /// <summary>
+        /// Creates a new instance of the <see cref="RelayException"/> class.
+        /// </summary>
         public RelayException()
         {
             this.IsTransient = true;
         }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="RelayException"/> class.
+        /// </summary>
         public RelayException(string message) : base(message)
         {
             this.IsTransient = true;
         }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="RelayException"/> class.
+        /// </summary>
         public RelayException(string message, Exception inner) : base(message, inner)
         {
             this.IsTransient = true;
         }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="RelayException"/> class.
+        /// </summary>
         protected RelayException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             this.IsTransient = true;
