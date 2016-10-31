@@ -11,14 +11,26 @@ namespace Microsoft.Azure.Relay
     [Serializable]
     public class ServerBusyException : RelayException
     {
+        /// <summary>
+        /// Creates a new instance of the <see cref="ServerBusyException"/> class.
+        /// </summary>
         public ServerBusyException() { }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="ServerBusyException"/> class.
+        /// </summary>
         public ServerBusyException(string message)
             : base(message) { }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="ServerBusyException"/> class.
+        /// </summary>
         public ServerBusyException(string message, Exception inner)
             : base(message, inner) { }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="ServerBusyException"/> class.
+        /// </summary>
         protected ServerBusyException(SerializationInfo info, StreamingContext context)
             : base(info, context) { }
     }

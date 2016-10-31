@@ -4,10 +4,11 @@
 	"description": "Microsoft.Azure.Relay Class Library",
 	"authors": [ "Microsoft" ],
 
-	"buildOptions": {
-		"warningsAsErrors": true,
-		"allowUnsafe": true
-	},
+  "buildOptions": {
+    "warningsAsErrors": true,
+    "allowUnsafe": true,
+    "xmlDoc": true
+  },
 
 	"packOptions": {
 		"tags": [ "Azure", "Relay", ".NET", "Web socket", "websocket", "hybrid connection", "hybrid connections" ],

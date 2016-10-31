@@ -9,6 +9,9 @@ namespace Microsoft.Azure.Relay
     using System.Globalization;
     using System.Net;
 
+    /// <summary>
+    /// Provides information about a security token such as audience, expiry time, and the string token value.
+    /// </summary>
     public class SecurityToken
     {
         // per Simple Web Token draft specification
@@ -27,6 +30,9 @@ namespace Microsoft.Azure.Relay
         readonly string keyValueSeparator;
         readonly string pairSeparator;
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="SecurityToken"/> class.
+        /// </summary>
         protected SecurityToken(string tokenString)
             : this(
                   tokenString,
@@ -37,6 +43,9 @@ namespace Microsoft.Azure.Relay
         {
         }
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="SecurityToken"/> class.
+        /// </summary>
         protected SecurityToken(string tokenString, string audienceFieldName, string expiresOnFieldName, string keyValueSeparator, string pairSeparator)
         {
             Fx.Assert(
@@ -55,6 +64,9 @@ namespace Microsoft.Azure.Relay
             GetExpirationDateAndAudienceFromToken(tokenString, out this.expiresAtUtc, out this.audience);
         }
 
+        /// <summary>
+        /// Gets the audience of this token.
+        /// </summary>
         public string Audience
         {
             get
@@ -63,6 +75,9 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+        /// <summary>
+        /// Gets the expiration time of this token.
+        /// </summary>
         public DateTime ExpiresAtUtc
         {
             get
@@ -71,6 +86,9 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+        /// <summary>
+        /// Gets the actual token as a string.
+        /// </summary>
         public string TokenString
         {
             get { return this.token; }

@@ -46,6 +46,9 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+        /// <summary>
+        /// Closes this <see cref="HybridConnectionStream"/> instance.
+        /// </summary>
         public override void Close()
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.ReadTimeout)))
@@ -57,9 +60,7 @@ namespace Microsoft.Azure.Relay
         }
 
         /// <summary>
-        /// Initiates a graceful close process by shutting down sending through this 
-        /// <see cref="HybridConnectionStream"/>. To disconnect cleanly and asynchronously, call ShutdownAsync,
-        /// wait for Read/ReadAsync to complete with a 0 byte read, then finally call Stream.CloseAsync();
+        /// Closes this <see cref="HybridConnectionStream"/> instance asynchronously using a <see cref="CancellationToken"/>.
         /// </summary>
         public async Task CloseAsync(CancellationToken cancellationToken)
         {
@@ -79,8 +80,14 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+        /// <summary>
+        /// Derived classes implement shutdown logic in this method.
+        /// </summary>
         protected abstract Task OnShutdownAsync(CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Derived classes implement close logic in this method.
+        /// </summary>
         protected abstract Task OnCloseAsync(CancellationToken cancellationToken);
     }
 }
