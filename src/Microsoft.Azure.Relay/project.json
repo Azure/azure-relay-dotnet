@@ -1,0 +1,32 @@
+{
+	"version": "0.1.0-*",
+	"title": "Microsoft.Azure.Relay",
+	"description": "Microsoft.Azure.Relay Class Library",
+	"authors": [ "Microsoft" ],
+
+	"buildOptions": {
+		"warningsAsErrors": true,
+		"allowUnsafe": true
+	},
+
+	"packOptions": {
+		"tags": [ "Azure", "Relay", ".NET", "Web socket", "websocket", "hybrid connection", "hybrid connections" ],
+		"projectUrl": "https://github.com/Azure/azure-relay-dotnet",
+		"licenseUrl": "https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/LICENSE",
+		"iconUrl": "https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/relay.png",
+		"releaseNotes": "https://github.com/Azure/azure-relay-dotnet/releases",
+		"requireLicenseAcceptance": true
+	},
+
+	"dependencies": {
+	},
+
+	"frameworks": {
+		"net451": {
+			"frameworkAssemblies": {
+				"System.Runtime.Serialization": "4.0.0",
+				"System.Xml": "4.0.0.0"
+			}
+		}
+	}
+}
