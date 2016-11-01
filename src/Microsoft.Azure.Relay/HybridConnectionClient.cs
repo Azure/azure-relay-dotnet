@@ -152,7 +152,8 @@ namespace Microsoft.Azure.Relay
                 if (this.TokenProvider != null)
                 {
                     RelayEventSource.Log.GetTokenStart(traceSource);
-                    var token = await this.TokenProvider.GetTokenAsync(this.Address.GetLeftPart(UriPartial.Path), TokenProvider.DefaultTokenTimeout);
+                    var token = await this.TokenProvider.GetTokenAsync(
+                        this.Address.GetLeftPart(UriPartial.Path), TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
                     RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
 
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
@@ -169,7 +170,7 @@ namespace Microsoft.Azure.Relay
 
                 using (var cancelSource = new CancellationTokenSource(timeoutHelper.RemainingTime()))
                 {
-                    await webSocket.ConnectAsync(webSocketUri, cancelSource.Token);
+                    await webSocket.ConnectAsync(webSocketUri, cancelSource.Token).ConfigureAwait(false);
                 }
 
                 var trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
