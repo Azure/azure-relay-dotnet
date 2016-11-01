@@ -57,7 +57,7 @@ namespace Microsoft.Azure.Relay
         /// <param name="id">The tracking id.</param>
         public static Uri BuildUri(string host, int port, string path, string query, string action, string id)
         {
-            if (!path.StartsWith("/"))
+            if (!path.StartsWith("/", StringComparison.Ordinal))
             {
                 path = "/" + path;
             }
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.Relay
             var sb = new StringBuilder(256);
             foreach (string key in queryString.Keys)
             {
-                if (key != null && key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix))
+                if (key != null && key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix, StringComparison.Ordinal))
                 {
                     continue;
                 }
