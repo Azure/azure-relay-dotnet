@@ -250,7 +250,7 @@ namespace Microsoft.Azure.Relay
         {
             if (exception == null)
             {
-                throw RelayEventSource.Log.ArgumentNull("exception");
+                throw RelayEventSource.Log.ArgumentNull(nameof(exception));
             }
 
             var completionSource = new TaskCompletionSource<TResult>();

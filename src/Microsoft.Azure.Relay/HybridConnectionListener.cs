@@ -43,12 +43,12 @@ namespace Microsoft.Azure.Relay
         {
             if (address == null || tokenProvider == null)
             {
-                throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(address == null ? "address" : "tokenProvider"), this);
+                throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(address == null ? nameof(address) : nameof(tokenProvider)), this);
             }
             else if (address.Scheme != RelayConstants.HybridConnectionScheme)
             {
                 throw RelayEventSource.Log.ThrowingException(
-                    new ArgumentException(SR.InvalidUriScheme.FormatInvariant(address.Scheme, RelayConstants.HybridConnectionScheme), "address"), this);
+                    new ArgumentException(SR.InvalidUriScheme.FormatInvariant(address.Scheme, RelayConstants.HybridConnectionScheme), nameof(address)), this);
             }
 
             this.Address = address;
