@@ -54,7 +54,7 @@ namespace Microsoft.Azure.Relay
             try
             {
                 RelayEventSource.Log.GetTokenStart(this.traceSource);
-                var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor);
+                var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor).ConfigureAwait(false);
                 RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
 
                 if (raiseTokenRenewedEvent)
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.Relay
             var thisPtr = (TokenRenewer)state;
             try
             {
-                await thisPtr.GetTokenAsync(true);
+                await thisPtr.GetTokenAsync(true).ConfigureAwait(false);
             }
             catch (Exception exception)
             {

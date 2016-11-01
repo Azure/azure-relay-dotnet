@@ -363,7 +363,7 @@ namespace Microsoft.Azure.Relay
             }
 
             // using GetAwaiter/GetResult will avoid exceptions being wrapped in AggregateException
-            task.GetAwaiter().GetResult();
+            task.ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public static TResult EndAsyncResult<TResult>(IAsyncResult asyncResult)
@@ -375,7 +375,7 @@ namespace Microsoft.Azure.Relay
             }
 
             // using GetAwaiter/GetResult will avoid exceptions being wrapped in AggregateException
-            return task.GetAwaiter().GetResult();
+            return task.ConfigureAwait(false).GetAwaiter().GetResult();
         }
     }
 }

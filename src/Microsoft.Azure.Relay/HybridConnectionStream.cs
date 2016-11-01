@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Relay
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.WriteTimeout)))
             {
-                this.ShutdownAsync(cts.Token).GetAwaiter().GetResult();
+                this.ShutdownAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.Relay
             try
             {
                 RelayEventSource.Log.RelayClientShutdownStart(this);
-                await this.OnShutdownAsync(cancellationToken);
+                await this.OnShutdownAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.Relay
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.ReadTimeout)))
             {
-                this.CloseAsync(cts.Token).GetAwaiter().GetResult();
+                this.CloseAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
             }
 
             base.Close();
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.Relay
             try
             {
                 RelayEventSource.Log.RelayClientCloseStart(this);
-                await this.OnCloseAsync(cancellationToken);
+                await this.OnCloseAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {

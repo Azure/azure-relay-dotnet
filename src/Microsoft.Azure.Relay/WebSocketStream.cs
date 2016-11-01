@@ -91,7 +91,7 @@ namespace Microsoft.Azure.Relay
                 using (var timeoutCancelSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.ReadTimeout)))
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancellationToken))
                 {
-                    await this.webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "CloseAsync", linkedCancelSource.Token);
+                    await this.webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "CloseAsync", linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (Exception exception)
@@ -117,7 +117,7 @@ namespace Microsoft.Azure.Relay
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            return this.ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+            return this.ReadAsync(buffer, offset, count, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancelToken)
@@ -129,7 +129,7 @@ namespace Microsoft.Azure.Relay
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancelToken))
                 {
                     WebSocketReceiveResult result = await this.webSocket.ReceiveAsync(
-                        new ArraySegment<byte>(buffer, offset, count), linkedCancelSource.Token);
+                        new ArraySegment<byte>(buffer, offset, count), linkedCancelSource.Token).ConfigureAwait(false);
                     return result.Count;
                 }
             }
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.Relay
                 using (var timeoutCancelSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.WriteTimeout)))
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancellationToken))
                 {
-                    await this.webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Shutdown", linkedCancelSource.Token);
+                    await this.webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Shutdown", linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (WebSocketException webSocketException)
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.Relay
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            this.WriteAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+            this.WriteAsync(buffer, offset, count, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancelToken)
@@ -190,7 +190,7 @@ namespace Microsoft.Azure.Relay
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancelToken))
                 {
                     await this.webSocket.SendAsync(
-                        new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, true, linkedCancelSource.Token);
+                        new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, true, linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (WebSocketException webSocketException)
