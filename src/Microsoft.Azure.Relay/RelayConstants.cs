@@ -8,6 +8,8 @@ namespace Microsoft.Azure.Relay
 
     class RelayConstants
     {
+        public const string ManagementApiVersion = "2016-07";
+        public const string ManagementNamespace = "http://schemas.microsoft.com/netservices/2010/10/servicebus/connect";
         public const string HybridConnectionScheme = "sb";
         public const string ServiceBusAuthorizationHeaderName = "ServiceBusAuthorization";
         public static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(1);
