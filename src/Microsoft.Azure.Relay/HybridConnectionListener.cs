@@ -54,6 +54,7 @@ namespace Microsoft.Azure.Relay
             this.Address = address;
             this.TokenProvider = tokenProvider;
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
+            this.OperationTimeout = RelayConstants.DefaultOperationTimeout;
             this.proxy = WebRequest.DefaultWebProxy;
             this.TrackingContext = TrackingContext.Create(this.Address);
 
@@ -121,6 +122,7 @@ namespace Microsoft.Azure.Relay
             this.Address = new Uri(builder.Endpoint, builder.EntityPath);
             this.TokenProvider = builder.CreateTokenProvider();
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
+            this.OperationTimeout = builder.OperationTimeout;
             this.proxy = WebRequest.DefaultWebProxy;
             this.TrackingContext = TrackingContext.Create(this.Address);
 
@@ -185,6 +187,8 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         int ConnectionBufferSize { get; set; }
 
+        TimeSpan OperationTimeout { get; set; }
+
         TrackingContext TrackingContext
         {
             get
@@ -201,6 +205,15 @@ namespace Microsoft.Azure.Relay
         }
 
         object ThisLock { get { return this.connectionInputQueue; } }
+
+        /// <summary>
+        /// Opens the <see cref="HybridConnectionListener"/> and registers it as a listener in ServiceBus.
+        /// Unless specified in the connection string the default is 1 minute.
+        /// </summary>
+        public Task OpenAsync()
+        {
+            return this.OpenAsync(this.OperationTimeout);
+        }
 
         /// <summary>
         /// Opens the <see cref="HybridConnectionListener"/> and registers it as a listener in ServiceBus.
@@ -239,6 +252,15 @@ namespace Microsoft.Azure.Relay
             this.controlConnection.Offline += (s, e) => this.OnConnectionStatus(this.Offline, s, e);
 
             await this.controlConnection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Closes the <see cref="HybridConnectionListener"/> using the default timeout.
+        /// Unless specified in the connection string the default is 1 minute.
+        /// </summary>
+        public Task CloseAsync()
+        {
+            return this.CloseAsync(this.OperationTimeout);
         }
 
         /// <summary>
@@ -321,6 +343,26 @@ namespace Microsoft.Azure.Relay
             }
 
             return this.cachedToString;
+        }
+
+        /// <summary>
+        /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the default timeout.
+        /// Unless specified in the connection string the default is 1 minute.
+        /// </summary>
+        public async Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync()
+        {
+            using (var cancelSource = new CancellationTokenSource(this.OperationTimeout))
+            {
+                return await this.GetRuntimeInformationAsync(cancelSource.Token).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the provided CancellationToken.
+        /// </summary>
+        public Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync(CancellationToken cancellationToken)
+        {
+            return ManagementOperations.GetAsync<HybridConnectionRuntimeInformation>(this.Address, this.TokenProvider, cancellationToken);
         }
 
         [Conditional("DEBUG")]

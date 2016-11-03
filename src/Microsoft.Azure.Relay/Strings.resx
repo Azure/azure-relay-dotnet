@@ -258,4 +258,7 @@
   <data name="ConnectionStringUnknownParameter" xml:space="preserve">
     <value>The connection string contains unknown parameter '{0}'.</value>
   </data>
+  <data name="TokenProviderRequired" xml:space="preserve">
+    <value>A TokenProvider is required to perform management operations.  If a connection string was provided it must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey.</value>
+  </data>
 </root>

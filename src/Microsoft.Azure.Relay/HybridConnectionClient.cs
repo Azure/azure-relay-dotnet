@@ -27,7 +27,7 @@ namespace Microsoft.Azure.Relay
         /// be of the format "sb://contoso.servicebus.windows.net/yourhybridconnection".</param>
         public HybridConnectionClient(Uri address)
         {
-            this.Initialize(address, null, tokenProviderRequired: false);
+            this.Initialize(address, DefaultConnectTimeout, null, tokenProviderRequired: false);
         }
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.Relay
         /// <param name="tokenProvider">The TokenProvider for connecting to ServiceBus.</param>
         public HybridConnectionClient(Uri address, TokenProvider tokenProvider)
         {
-            this.Initialize(address, tokenProvider, tokenProviderRequired: true);
+            this.Initialize(address, DefaultConnectTimeout, tokenProvider, tokenProviderRequired: true);
         }
 
         /// <summary>Creates a new instance of <see cref="HybridConnectionClient" /> using the specified connection string.</summary>
@@ -103,7 +103,14 @@ namespace Microsoft.Azure.Relay
                 tokenProvider = builder.CreateTokenProvider();
             }
 
-            this.Initialize(new Uri(builder.Endpoint, builder.EntityPath), tokenProvider, tokenProvider != null);
+            TimeSpan connectTimeout = DefaultConnectTimeout;
+            if (builder.OperationTimeout != RelayConstants.DefaultOperationTimeout)
+            {
+                // Only change from our default (70 seconds) if it appears user has changed the OperationTimeout in the connectionString.
+                connectTimeout = builder.OperationTimeout;
+            }
+
+            this.Initialize(new Uri(builder.Endpoint, builder.EntityPath), connectTimeout, tokenProvider, tokenProvider != null);
         }
 
         /// <summary>
@@ -125,7 +132,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Gets or sets the timeout used when connecting a HybridConnection.  Default value is 70 seconds.
         /// </summary>
-        public TimeSpan ConnectTimeout { get; set; }
+        public TimeSpan OperationTimeout { get; set; }
 
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
@@ -139,7 +146,7 @@ namespace Microsoft.Azure.Relay
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
             string traceSource = this.GetType().Name + "(" + trackingContext + ")";
-            var timeoutHelper = new TimeoutHelper(this.ConnectTimeout);
+            var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
 
             RelayEventSource.Log.RelayClientConnectStart(traceSource);
             try
@@ -193,6 +200,31 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+        /// <summary>
+        /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the default timeout.
+        /// Unless specified in the connection string the default is 1 minute.
+        /// </summary>
+        public async Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync()
+        {
+            using (var cancelSource = new CancellationTokenSource(this.OperationTimeout))
+            {
+                return await this.GetRuntimeInformationAsync(cancelSource.Token).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the provided CancellationToken.
+        /// </summary>
+        public Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync(CancellationToken cancellationToken)
+        {
+            if (this.TokenProvider == null)
+            {
+                throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.TokenProviderRequired), this);
+            }
+
+            return ManagementOperations.GetAsync<HybridConnectionRuntimeInformation>(this.Address, this.TokenProvider, cancellationToken);
+        }
+
         static TrackingContext CreateTrackingContext(Uri address)
         {
 #if DEBUG
@@ -213,7 +245,7 @@ namespace Microsoft.Azure.Relay
             return TrackingContext.Create(address);
         }
 
-        void Initialize(Uri address, TokenProvider tokenProvider, bool tokenProviderRequired = false)
+        void Initialize(Uri address, TimeSpan operationTimeout, TokenProvider tokenProvider, bool tokenProviderRequired)
         {
             if (address == null)
             {
@@ -231,7 +263,7 @@ namespace Microsoft.Azure.Relay
             this.Address = address;
             this.TokenProvider = tokenProvider;
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
-            this.ConnectTimeout = DefaultConnectTimeout;
+            this.OperationTimeout = operationTimeout;
             this.Proxy = WebRequest.DefaultWebProxy;
         }
     }

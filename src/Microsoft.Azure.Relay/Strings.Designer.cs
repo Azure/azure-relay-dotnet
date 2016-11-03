@@ -482,5 +482,14 @@ namespace Microsoft.Azure.Relay {
                 return ResourceManager.GetString("TokenMissingExpiresOn", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to A TokenProvider is required to perform management operations.  If a connection string was provided it must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey..
+        /// </summary>
+        internal static string TokenProviderRequired {
+            get {
+                return ResourceManager.GetString("TokenProviderRequired", resourceCulture);
+            }
+        }
     }
 }
