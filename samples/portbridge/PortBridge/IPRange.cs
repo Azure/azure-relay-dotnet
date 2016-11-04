@@ -45,7 +45,7 @@ namespace PortBridge
         {
             byte[] ab = address.GetAddressBytes();
             long result = (((long)ab[0] << 24) + ((long)ab[1] << 16) + ((long)ab[2] << 8) + ab[3]);
-			return result;
+            return result;
         }
     }
 }
