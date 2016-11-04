@@ -44,8 +44,8 @@ namespace PortBridge
         long IPAddressToInt(IPAddress address)
         {
             byte[] ab = address.GetAddressBytes();
-            long result = ((ab[0] << 24) + (ab[1] << 16) + (ab[2] << 8) + ab[3]);
-            return result;
+			long result = (((long)ab[0] << 24) + ((long)ab[1] << 16) + ((long)ab[2] << 8) + ab[3]);
+			return result;
         }
     }
 }
