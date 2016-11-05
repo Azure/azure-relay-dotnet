@@ -66,7 +66,7 @@ namespace Microsoft.Azure.Relay
         static Uri CreateManagementUri(Uri uri)
         {
             // Create an HTTPS Uri for the REST operation
-            var builder = new UriBuilder(uri) { Scheme = Uri.UriSchemeHttps };
+            var builder = new UriBuilder(uri) { Scheme = "https" };
             builder.Query = AddQueryParameter(builder.Query, "api-version", RelayConstants.ManagementApiVersion);
             return builder.Uri;
         }
@@ -89,7 +89,7 @@ namespace Microsoft.Azure.Relay
             //   <content type="application/xml">
             //     <HybridConnectionDescription...
             Fx.Assert(stream != null, "stream is required");
-            using (XmlReader xmlReader = XmlReader.Create(stream, new XmlReaderSettings { ValidationType = ValidationType.None }))
+            using (XmlReader xmlReader = XmlReader.Create(stream))
             {
                 // Move to the Atom <content> element then advance to the first non-whitespace element inside it
                 xmlReader.ReadToDescendant("content", "http://www.w3.org/2005/Atom");
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.Relay
                 // ServiceBus returns error details in the body like this:
                 // <Error><Code>XXX</Code><Detail>Message Here. TrackingId:...</Detail></Error>
                 using (var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (XmlReader xmlReader = XmlReader.Create(stream, new XmlReaderSettings { ValidationType = ValidationType.None }))
+                using (XmlReader xmlReader = XmlReader.Create(stream))
                 {
                     if (xmlReader.ReadToDescendant("Detail"))
                     {

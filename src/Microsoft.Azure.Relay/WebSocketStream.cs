@@ -139,6 +139,7 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+#if NET45
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return this.ReadAsync(buffer, offset, count, CancellationToken.None).ToAsyncResult(callback, state, true);
@@ -148,6 +149,7 @@ namespace Microsoft.Azure.Relay
         {
             return TaskEx.EndAsyncResult<int>(asyncResult);
         }
+#endif // NET45
 
         public override long Seek(long offset, SeekOrigin origin)
         {
@@ -199,6 +201,7 @@ namespace Microsoft.Azure.Relay
             }
         }
 
+#if NET45
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return this.WriteAsync(buffer, offset, count, CancellationToken.None).ToAsyncResult(callback, state, true);
@@ -208,5 +211,6 @@ namespace Microsoft.Azure.Relay
         {
             TaskEx.EndAsyncResult(asyncResult);
         }
+#endif // NET45
     }
 }

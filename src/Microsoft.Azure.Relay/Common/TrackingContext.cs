@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Relay
         /// <param name="subsystemId">subsystem-specific Uri like entity address to be used in the tracking context</param>
         internal static TrackingContext Create(Uri subsystemId)
         {
-            return Create(subsystemId.GetLeftPart(UriPartial.Path));
+            return Create(subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.Relay
 
         internal static TrackingContext Create(string trackingId, Uri subsystemId)
         {
-            return new TrackingContext(trackingId, subsystemId.GetLeftPart(UriPartial.Path));
+            return new TrackingContext(trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
         /// <summary>

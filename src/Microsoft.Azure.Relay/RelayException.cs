@@ -10,7 +10,9 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// Represents exceptions thrown for for relay errors.
     /// </summary>
+#if NET45
     [Serializable]
+#endif
     public class RelayException : Exception
     {
         /// <summary>
@@ -37,6 +39,7 @@ namespace Microsoft.Azure.Relay
             this.IsTransient = true;
         }
 
+#if NET45
         /// <summary>
         /// Creates a new instance of the <see cref="RelayException"/> class.
         /// </summary>
@@ -44,6 +47,7 @@ namespace Microsoft.Azure.Relay
         {
             this.IsTransient = true;
         }
+#endif
 
         /// <summary>Gets a value indicating whether the exception is transient. Check this property
         /// to determine if the operation should be retried.</summary> 

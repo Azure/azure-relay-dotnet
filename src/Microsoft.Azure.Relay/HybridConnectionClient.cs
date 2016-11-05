@@ -160,7 +160,8 @@ namespace Microsoft.Azure.Relay
                 {
                     RelayEventSource.Log.GetTokenStart(traceSource);
                     var token = await this.TokenProvider.GetTokenAsync(
-                        this.Address.GetLeftPart(UriPartial.Path), TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
+                        this.Address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped),
+                        TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
                     RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
 
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
@@ -180,6 +181,7 @@ namespace Microsoft.Azure.Relay
                     await webSocket.ConnectAsync(webSocketUri, cancelSource.Token).ConfigureAwait(false);
                 }
 
+#if TODO
                 var trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                 if (!string.IsNullOrEmpty(trackingId))
                 {
@@ -187,6 +189,7 @@ namespace Microsoft.Azure.Relay
                     trackingContext = TrackingContext.Create(trackingId, trackingContext.SubsystemId);
                     traceSource = this.GetType().Name + "(" + trackingContext + ")";
                 }
+#endif
 
                 return new WebSocketStream(webSocket, trackingContext);
             }

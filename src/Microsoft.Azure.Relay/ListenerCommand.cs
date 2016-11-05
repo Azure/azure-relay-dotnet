@@ -153,14 +153,20 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Does some custom serialization to avoid having "Key": and "Value": entries for every single Http Header in the resulting JSON
         /// </summary>
+#if NET45
         [Serializable]
-        class WebHeaderCollectionSerializer : ISerializable
+#endif
+        class WebHeaderCollectionSerializer
+#if NET45
+            : ISerializable
+#endif
         {
             public WebHeaderCollectionSerializer(WebHeaderCollection webHeaderCollection)
             {
                 this.WebHeaderCollection = webHeaderCollection;
             }
 
+#if NET45
             protected WebHeaderCollectionSerializer(SerializationInfo info, StreamingContext context)
             {
                 this.WebHeaderCollection = new WebHeaderCollection();
@@ -170,22 +176,25 @@ namespace Microsoft.Azure.Relay
                 {
                     var name = item.Name;
                     var value = item.Value != null ? item.Value.ToString() : string.Empty;
-                    this.WebHeaderCollection.Add(name, value);
+                    this.WebHeaderCollection[name] = value;
                 }
             }
+#endif
 
             internal WebHeaderCollection WebHeaderCollection
             {
                 get; private set;
             }
 
+#if NET45
             void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
             {
-                foreach (string key in this.WebHeaderCollection.Keys)
+                foreach (string key in this.WebHeaderCollection.AllKeys)
                 {
                     info.AddValue(key, this.WebHeaderCollection[key]);
                 }
             }
+#endif
         }
     }
 }

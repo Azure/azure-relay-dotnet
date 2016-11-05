@@ -80,7 +80,9 @@ namespace Microsoft.Azure.Relay
                 if (disposing)
                 {
                     this.asyncSemaphore.Dispose();
+#if NET45
                     this.lockRelease.Dispose();
+#endif
                 }
 
                 this.disposed = true;

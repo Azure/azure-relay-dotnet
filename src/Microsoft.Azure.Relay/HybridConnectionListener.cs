@@ -373,8 +373,8 @@ namespace Microsoft.Azure.Relay
 
         static string LookupFileVersion()
         {
-            var a = Assembly.GetExecutingAssembly();
-            var attribute = (AssemblyFileVersionAttribute)a.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true)[0];
+            var a = typeof(HybridConnectionListener).GetTypeInfo().Assembly;
+            var attribute = a.GetCustomAttribute<AssemblyFileVersionAttribute>();
             return attribute.Version;
         }
 
@@ -605,11 +605,16 @@ namespace Microsoft.Azure.Relay
                 using (var stream = new MemoryStream())
                 {
                     listenerCommand.WriteObject(stream);
-                    byte[] buffer = stream.GetBuffer();
+                    ArraySegment<byte> buffer;
+                    if (!stream.TryGetBuffer(out buffer))
+                    {
+                        buffer = new ArraySegment<byte>(stream.ToArray());
+                    }
+
                     using (await this.sendLock.LockAsync(cancellationToken).ConfigureAwait(false))
                     {
                         await webSocket.SendAsync(
-                            new ArraySegment<byte>(buffer, 0, (int)stream.Length), WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
+                            buffer, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -646,8 +651,9 @@ namespace Microsoft.Azure.Relay
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+#if TODO
                     webSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
-
+#endif
                     var token = await this.tokenRenewer.GetTokenAsync().ConfigureAwait(false);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
 
@@ -665,12 +671,14 @@ namespace Microsoft.Azure.Relay
 
                     await webSocket.ConnectAsync(webSocketUri, cancellationToken).ConfigureAwait(false);
 
+#if TODO_FLOW_WEBSOCKET_RESPONSE_HEADERS
                     trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                     if (!string.IsNullOrEmpty(trackingId))
                     {
                         // Update to the flown trackingId (which has _GX suffix)
                         this.listener.TrackingContext = TrackingContext.Create(trackingId, this.listener.TrackingContext.SubsystemId);
                     }
+#endif
 
                     this.OnOnline();
                     return webSocket;
@@ -965,7 +973,7 @@ namespace Microsoft.Azure.Relay
                 {
                     if (this.complete)
                     {
-                        connection.Close();
+                        connection.Dispose();
                         return;
                     }
 
@@ -990,7 +998,9 @@ namespace Microsoft.Azure.Relay
 
                     var clientWebSocket = new ClientWebSocket45();
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
+#if TODO
                     clientWebSocket.Options.Host = this.Address.Host;
+#endif
                     clientWebSocket.Options.Proxy = this.listener.Proxy;
                     clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
 
