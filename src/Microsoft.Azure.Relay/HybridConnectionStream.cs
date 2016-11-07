@@ -15,7 +15,6 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public abstract class HybridConnectionStream : Stream
     {
-
         /// <summary>
         /// Sets or gets the WriteMode for this stream. Default is WriteMode.Binary
         /// </summary>
