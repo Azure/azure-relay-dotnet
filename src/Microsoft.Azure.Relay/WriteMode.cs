@@ -6,12 +6,12 @@
     public enum WriteMode
     {
         /// <summary>
-        /// Write Binary frames on the WebSocket
-        /// </summary>
-        Binary,
-        /// <summary>
         /// Write Text Frames on the WebSocket
         /// </summary>
-        Text
+        Text = 0,
+        /// <summary>
+        /// Write Binary frames on the WebSocket
+        /// </summary>
+        Binary = 1
     }
 }

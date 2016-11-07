@@ -34,7 +34,6 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
         /// <see cref="HybridConnectionStream"/>. To disconnect cleanly and asynchronously, call ShutdownAsync,
