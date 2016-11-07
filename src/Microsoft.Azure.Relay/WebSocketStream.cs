@@ -199,7 +199,6 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return this.WriteAsync(buffer, offset, count, CancellationToken.None).ToAsyncResult(callback, state, true);
