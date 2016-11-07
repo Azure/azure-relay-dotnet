@@ -130,7 +130,7 @@ namespace Microsoft.Azure.Relay
                 {
                     WebSocketReceiveResult result = await this.webSocket.ReceiveAsync(
                         new ArraySegment<byte>(buffer, offset, count), linkedCancelSource.Token).ConfigureAwait(false);
-                    return result.Count;
+                    return result.Count; 
                 }
             }
             catch (WebSocketException webSocketException)
@@ -190,7 +190,7 @@ namespace Microsoft.Azure.Relay
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancelToken))
                 {
                     await this.webSocket.SendAsync(
-                        new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, true, linkedCancelSource.Token).ConfigureAwait(false);
+                        new ArraySegment<byte>(buffer, offset, count), this.WriteMode == WriteMode.Binary? WebSocketMessageType.Binary : WebSocketMessageType.Text, true, linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (WebSocketException webSocketException)
@@ -198,6 +198,7 @@ namespace Microsoft.Azure.Relay
                 throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
             }
         }
+
 
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {

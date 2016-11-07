@@ -15,6 +15,12 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public abstract class HybridConnectionStream : Stream
     {
+
+        /// <summary>
+        /// Sets or gets the WriteMode for this stream. Default is WriteMode.Binary
+        /// </summary>
+        public WriteMode WriteMode { get; set; } = WriteMode.Binary;
+
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
         /// <see cref="HybridConnectionStream"/>. To disconnect cleanly and asynchronously, call Shutdown,
@@ -27,6 +33,7 @@ namespace Microsoft.Azure.Relay
                 this.ShutdownAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
+
 
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
