@@ -21,8 +21,26 @@
     "requireLicenseAcceptance": true
   },
   "frameworks": {
+    "net45": {
+      "buildOptions": {
+        "compile": {
+          "exclude": [ "WebSockets/NetCore/*.cs" ],
+          "include": [ "WebSockets/Net45/*.cs" ]
+        },
+        "define": [ "NET45", "SERIALIZATION" ]
+      },
+      "frameworkAssemblies": {
+        "System.Net.Http": "4.0.0.0",
+        "System.Runtime.Serialization": "4.0.0",
+        "System.Xml": "4.0.0.0"
+      }
+    },
     "netstandard1.3": {
       "buildOptions": {
+        "compile": {
+          "exclude": [ "WebSockets/Net45/*.cs" ],
+          "include": [ "WebSockets/NetCore/*.cs" ]
+        },
         "define": [ "NETSTANDARD" ]
       },
       "dependencies": {

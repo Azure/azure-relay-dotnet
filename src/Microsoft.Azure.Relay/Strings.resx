@@ -153,9 +153,6 @@
   <data name="net_WebSockets_ArgumentOutOfRange_InternalBuffer" xml:space="preserve">
     <value>The byte array must have a length of at least '{0}' bytes.</value>
   </data>
-  <data name="net_WebSockets_ArgumentOutOfRange_TooBig" xml:space="preserve">
-    <value>The value of the '{0}' parameter ({1}) must be less than or equal to {2}.</value>
-  </data>
   <data name="net_WebSockets_ArgumentOutOfRange_TooSmall" xml:space="preserve">
     <value>The argument must be a value greater than {0}.</value>
   </data>
@@ -260,5 +257,38 @@
   </data>
   <data name="TokenProviderRequired" xml:space="preserve">
     <value>A TokenProvider is required to perform management operations.  If a connection string was provided it must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey.</value>
+  </data>
+  <data name="net_securityprotocolnotsupported" xml:space="preserve">
+    <value>The requested security protocol is not supported.</value>
+  </data>
+  <data name="net_Websockets_AlreadyOneOutstandingOperation" xml:space="preserve">
+    <value>There is already one outstanding '{0}' call for this WebSocket instance. ReceiveAsync and SendAsync can be called simultaneously, but at most one outstanding operation for each of them is allowed at the same time.</value>
+  </data>
+  <data name="net_WebSockets_Argument_InvalidMessageType" xml:space="preserve">
+    <value>The message type '{0}' is not allowed for the '{1}' operation. Valid message types are: '{2}, {3}'. To close the WebSocket, use the '{4}' operation instead.</value>
+  </data>
+  <data name="net_WebSockets_Generic" xml:space="preserve">
+    <value>An internal WebSocket error occurred. Please see the innerException, if present, for more details.</value>
+  </data>
+  <data name="net_WebSockets_InvalidCloseStatusCode" xml:space="preserve">
+    <value>The close status code '{0}' is reserved for system use only and cannot be specified when calling this method.</value>
+  </data>
+  <data name="net_WebSockets_InvalidCloseStatusDescription" xml:space="preserve">
+    <value>The close status description '{0}' is too long. The UTF8-representation of the status description must not be longer than {1} bytes.</value>
+  </data>
+  <data name="net_WebSockets_InvalidState" xml:space="preserve">
+    <value>The WebSocket is in an invalid state ('{0}') for this operation. Valid states are: '{1}'</value>
+  </data>
+  <data name="net_WebSockets_InvalidState_ClosedOrAborted" xml:space="preserve">
+    <value>The '{0}' instance cannot be used for communication because it has been transitioned into the '{1}' state.</value>
+  </data>
+  <data name="net_WebSockets_ReasonNotNull" xml:space="preserve">
+    <value>The close status description '{0}' is invalid. When using close status code '{1}' the description must be null.</value>
+  </data>
+  <data name="net_WebSockets_UnsupportedPlatform" xml:space="preserve">
+    <value>The WebSocket protocol is not supported on this platform.</value>
+  </data>
+  <data name="net_WebSockets_ArgumentOutOfRange_TooBig" xml:space="preserve">
+    <value>The value of the '{0}' parameter ({1}) must be less than or equal to {2}.</value>
   </data>
 </root>

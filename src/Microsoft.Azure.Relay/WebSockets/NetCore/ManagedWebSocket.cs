@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.WebSockets
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
     using System.Diagnostics;
@@ -1110,7 +1114,7 @@
                         // being closed and that was expected, exit gracefully.
                         if (_disposed)
                         {
-                            throw new ObjectDisposedException(nameof(ClientWebSocket45));
+                            throw new ObjectDisposedException(nameof(ClientWebSocket));
                         }
                         else if (throwOnPrematureClosure)
                         {

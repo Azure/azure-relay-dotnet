@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.WebSockets
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
     using System.Collections.Generic;
@@ -72,7 +76,7 @@
         public Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) =>
             _webSocket.CloseOutputAsync(closeStatus, statusDescription, cancellationToken);
 
-        public async Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken, ClientWebSocketOptions45 options)
+        public async Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken, ClientWebSocketOptions options)
         {
             // TODO: Not currently implemented, or explicitly ignored:
             // - ClientWebSocketOptions.UseDefaultCredentials
@@ -207,7 +211,7 @@
         /// <param name="options">The options used to configure the websocket.</param>
         /// <param name="secKey">The generated security key to send in the Sec-WebSocket-Key header.</param>
         /// <returns>The byte[] containing the encoded headers ready to send to the network.</returns>
-        private static byte[] BuildRequestHeader(string targetHost, Uri uri, ClientWebSocketOptions45 options, string secKey)
+        private static byte[] BuildRequestHeader(string targetHost, Uri uri, ClientWebSocketOptions options, string secKey)
         {
             StringBuilder builder = t_cachedStringBuilder ?? (t_cachedStringBuilder = new StringBuilder());
             Debug.Assert(builder.Length == 0, $"Expected builder to be empty, got one of length {builder.Length}");
@@ -293,7 +297,7 @@
         /// <param name="cancellationToken">The CancellationToken to use to cancel the websocket.</param>
         /// <returns>The agreed upon subprotocol with the server, or null if there was none.</returns>
         private async Task<string> ParseAndValidateConnectResponseAsync(
-            Stream stream, ClientWebSocketOptions45 options, string expectedSecWebSocketAccept, CancellationToken cancellationToken)
+            Stream stream, ClientWebSocketOptions options, string expectedSecWebSocketAccept, CancellationToken cancellationToken)
         {
             // Read the first line of the response
             string statusLine = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false);

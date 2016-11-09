@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// An exception that occurs when a Listener gets disconnected from the Azure cloud service.
     /// </summary>
-#if NET45
+#if SERIALIZATION
     [Serializable]
 #endif
     public class ConnectionLostException : RelayException
@@ -30,7 +30,7 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public ConnectionLostException(string message, Exception inner) : base(message, inner) { }
 
-#if NET45
+#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="ConnectionLostException"/> class.
         /// </summary>

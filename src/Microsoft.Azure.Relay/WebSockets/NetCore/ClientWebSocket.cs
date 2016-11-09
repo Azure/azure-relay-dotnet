@@ -17,7 +17,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading.Tasks;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocket.cs
-    sealed partial class ClientWebSocket45 : WebSocket
+    sealed partial class ClientWebSocket : WebSocket
     {
         private enum InternalState
         {
@@ -27,27 +27,27 @@ namespace Microsoft.Azure.Relay.WebSockets
             Disposed = 3
         }
 
-        private readonly ClientWebSocketOptions45 _options;
+        private readonly ClientWebSocketOptions _options;
         private WebSocketHandle _innerWebSocket; // may be mutable struct; do not make readonly
 
         // NOTE: this is really an InternalState value, but Interlocked doesn't support
         //       operations on values of enum types.
         private int _state;
 
-        public ClientWebSocket45()
+        public ClientWebSocket()
         {
             if (NetEventSource.IsEnabled) NetEventSource.Enter(this);
             WebSocketHandle.CheckPlatformSupport();
 
             _state = (int)InternalState.Created;
-            _options = new ClientWebSocketOptions45();
+            _options = new ClientWebSocketOptions();
 
             if (NetEventSource.IsEnabled) NetEventSource.Exit(this);
         }
 
         #region Properties
 
-        public ClientWebSocketOptions45 Options
+        public ClientWebSocketOptions Options
         {
             get
             {

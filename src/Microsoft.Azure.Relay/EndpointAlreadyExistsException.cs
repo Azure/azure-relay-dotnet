@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// An exception that indicates the Relay HybridConnection/Endpoint already exists.
     /// </summary>
-#if NET45
+#if SERIALIZATION
     [Serializable]
 #endif
     public class EndpointAlreadyExistsException : RelayException
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Relay
             this.IsTransient = false;
         }
 
-#if NET45
+#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="EndpointAlreadyExistsException"/> class.
         /// </summary>

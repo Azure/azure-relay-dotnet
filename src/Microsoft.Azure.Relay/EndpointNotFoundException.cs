@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// Represents an exception when the Relay HybridConnection/Endpoint should exist but was not present.
     /// </summary>
-#if NET45
+#if SERIALIZATION
     [Serializable]
 #endif
     public class EndpointNotFoundException : RelayException
@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Relay
             this.IsTransient = false;
         }
 
-#if NET45
+#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="EndpointNotFoundException"/> class.
         /// </summary>

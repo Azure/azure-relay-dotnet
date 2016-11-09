@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.WebSockets
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
     using System.Globalization;
@@ -113,7 +117,7 @@
                         // Ordering is important to maintain .NET 4.5 WebSocket implementation exception behavior.
                         if (isDisposed)
                         {
-                            throw new ObjectDisposedException(nameof(ClientWebSocket45));
+                            throw new ObjectDisposedException(nameof(ClientWebSocket));
                         }
 
                         return;

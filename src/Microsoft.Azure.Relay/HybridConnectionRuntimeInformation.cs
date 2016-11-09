@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>Provides runtime information about a HybridConnection.</summary>
     [DataContract(Name = "HybridConnectionDescription", Namespace = RelayConstants.ManagementNamespace)]
     public class HybridConnectionRuntimeInformation
-#if NET45
+#if SERIALIZATION
         : IExtensibleDataObject
 #endif
     {
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.Relay
             get { return this.userMetadata; }
         }
 
-#if NET45
+#if SERIALIZATION
         ExtensionDataObject IExtensibleDataObject.ExtensionData { get; set; }
 #endif
     }

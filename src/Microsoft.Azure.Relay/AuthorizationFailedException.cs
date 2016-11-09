@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// The exception that occurs when an authorization attempt fails.
     /// </summary>
-#if NET45
+#if SERIALIZATION
     [Serializable]
 #endif
     public class AuthorizationFailedException : RelayException
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Relay
             this.IsTransient = false;
         }
 
-#if NET45
+#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="AuthorizationFailedException"/> class.
         /// </summary>

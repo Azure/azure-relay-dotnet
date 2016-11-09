@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// An exception indicating a Relay quota has been exceeded.
     /// </summary>
-#if NET45
+#if SERIALIZATION
     [Serializable]
 #endif
     public class QuotaExceededException : RelayException
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Relay
             this.IsTransient = false;
         }
 
-#if NET45
+#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="QuotaExceededException"/> class.
         /// </summary>

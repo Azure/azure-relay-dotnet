@@ -2,6 +2,10 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------
 
+//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
 namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
@@ -13,7 +17,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocketOptions.cs
-    sealed class ClientWebSocketOptions45
+    sealed class ClientWebSocketOptions
     {
         private bool _isReadOnly; // After ConnectAsync is called the options cannot be modified.
         private readonly List<string> _requestedSubProtocols;
@@ -28,7 +32,7 @@ namespace Microsoft.Azure.Relay.WebSockets
         private int _sendBufferSize = 0x1000;
         private ArraySegment<byte>? _buffer;
 
-        internal ClientWebSocketOptions45()
+        internal ClientWebSocketOptions()
         {
             _requestedSubProtocols = new List<string>();
             _requestHeaders = new WebHeaderCollection();

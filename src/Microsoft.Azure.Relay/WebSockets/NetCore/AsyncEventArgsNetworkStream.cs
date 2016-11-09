@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.WebSockets
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
     using System.IO;

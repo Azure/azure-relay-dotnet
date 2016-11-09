@@ -14,7 +14,7 @@ namespace Microsoft.Azure.Relay
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Relay.WebSockets;
+    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
 
     /// <summary>
     /// Provides a listener for accepting HybridConnections from remote clients.
@@ -605,11 +605,7 @@ namespace Microsoft.Azure.Relay
                 using (var stream = new MemoryStream())
                 {
                     listenerCommand.WriteObject(stream);
-                    ArraySegment<byte> buffer;
-                    if (!stream.TryGetBuffer(out buffer))
-                    {
-                        buffer = new ArraySegment<byte>(stream.ToArray());
-                    }
+                    ArraySegment<byte> buffer = stream.GetArraySegment();
 
                     using (await this.sendLock.LockAsync(cancellationToken).ConfigureAwait(false))
                     {
@@ -647,7 +643,7 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.RelayClientConnectStart(this.listener);
-                    var webSocket = new ClientWebSocket45();
+                    var webSocket = new ClientWebSocket();
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
@@ -670,7 +666,7 @@ namespace Microsoft.Azure.Relay
 
                     await webSocket.ConnectAsync(webSocketUri, cancellationToken).ConfigureAwait(false);
 
-#if TODO_FLOW_WEBSOCKET_RESPONSE_HEADERS
+#if NET45 // TODO: Flow Response Headers in NETSTANDARD ClientWebSocket
                     trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                     if (!string.IsNullOrEmpty(trackingId))
                     {
@@ -995,7 +991,7 @@ namespace Microsoft.Azure.Relay
 
                     var timeoutHelper = new TimeoutHelper(AcceptTimeout);
 
-                    var clientWebSocket = new ClientWebSocket45();
+                    var clientWebSocket = new ClientWebSocket();
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     clientWebSocket.Options.SetRequestHeader("Host", this.Address.Host);
                     clientWebSocket.Options.Proxy = this.listener.Proxy;

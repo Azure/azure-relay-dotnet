@@ -9,7 +9,7 @@ namespace Microsoft.Azure.Relay
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Relay.WebSockets;
+    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
 
     /// <summary>
     /// Provides a client for initiating new send-side HybridConnections.
@@ -151,7 +151,7 @@ namespace Microsoft.Azure.Relay
             RelayEventSource.Log.RelayClientConnectStart(traceSource);
             try
             {
-                var webSocket = new ClientWebSocket45();
+                var webSocket = new ClientWebSocket();
                 webSocket.Options.Proxy = this.Proxy;
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
@@ -181,7 +181,7 @@ namespace Microsoft.Azure.Relay
                     await webSocket.ConnectAsync(webSocketUri, cancelSource.Token).ConfigureAwait(false);
                 }
 
-#if TODO
+#if NET45 // TODO: Flow Response Headers in NETSTANDARD ClientWebSocket
                 var trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                 if (!string.IsNullOrEmpty(trackingId))
                 {
