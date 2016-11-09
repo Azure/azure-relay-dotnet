@@ -17,7 +17,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading.Tasks;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocket.cs
-    public sealed partial class ClientWebSocket : WebSocket
+    sealed partial class ClientWebSocket : WebSocket
     {
         private enum InternalState
         {
