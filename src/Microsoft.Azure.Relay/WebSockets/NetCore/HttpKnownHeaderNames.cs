@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
 
+    // From: https://github.com/dotnet/corefx/blob/master/src/Common/src/System/Net/HttpKnownHeaderNames.cs
     internal static partial class HttpKnownHeaderNames
     {
         // When adding a new constant, add it to HttpKnownHeaderNames.TryGetHeaderName.cs as well.

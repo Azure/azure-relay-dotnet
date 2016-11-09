@@ -11,6 +11,8 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading;
     using System.Threading.Tasks;
 
+    // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/Sockets/AsyncEventArgsNetworkStream.cs
+
     /// <summary>
     /// A custom network stream that stores and reuses a single SocketAsyncEventArgs instance
     /// for reads and a single SocketAsyncEventArgs instance for writes.  This limits it to

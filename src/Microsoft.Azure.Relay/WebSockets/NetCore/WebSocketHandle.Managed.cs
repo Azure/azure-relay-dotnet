@@ -92,19 +92,12 @@ namespace Microsoft.Azure.Relay.WebSockets
                 Socket connectedSocket = await ConnectSocketAsync(uri.Host, uri.Port, cancellationToken).ConfigureAwait(false);
                 Stream stream = new AsyncEventArgsNetworkStream(connectedSocket);
 
-                // Host header may specify target name (useful if the Uri contains IP address but SSL is used).
-                string targetHost = options.RequestHeaders[HttpKnownHeaderNames.Host];
-                if (string.IsNullOrEmpty(targetHost))
-                {
-                    targetHost = uri.IdnHost;
-                }
-
                 // Upgrade to SSL if needed
                 if (uri.Scheme == UriScheme.Wss)
                 {
                     var sslStream = new SslStream(stream);
                     await sslStream.AuthenticateAsClientAsync(
-                        targetHost,
+                        uri.Host,
                         options.ClientCertificates,
                         SecurityProtocol.AllowedSecurityProtocols,
                         checkCertificateRevocation: false).ConfigureAwait(false);
@@ -113,7 +106,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 
                 // Create the security key and expected response, then build all of the request headers
                 KeyValuePair<string, string> secKeyAndSecWebSocketAccept = CreateSecKeyAndSecWebSocketAccept();
-                byte[] requestHeader = BuildRequestHeader(targetHost, uri, options, secKeyAndSecWebSocketAccept.Key);
+                byte[] requestHeader = BuildRequestHeader(uri, options, secKeyAndSecWebSocketAccept.Key);
 
                 // Write out the header to the connection
                 await stream.WriteAsync(requestHeader, 0, requestHeader.Length, cancellationToken).ConfigureAwait(false);
@@ -206,12 +199,11 @@ namespace Microsoft.Azure.Relay.WebSockets
         }
 
         /// <summary>Creates a byte[] containing the headers to send to the server.</summary>
-        /// <param name="targetHost">The target host name.</param>
         /// <param name="uri">The Uri of the server.</param>
         /// <param name="options">The options used to configure the websocket.</param>
         /// <param name="secKey">The generated security key to send in the Sec-WebSocket-Key header.</param>
         /// <returns>The byte[] containing the encoded headers ready to send to the network.</returns>
-        private static byte[] BuildRequestHeader(string targetHost, Uri uri, ClientWebSocketOptions options, string secKey)
+        private static byte[] BuildRequestHeader(Uri uri, ClientWebSocketOptions options, string secKey)
         {
             StringBuilder builder = t_cachedStringBuilder ?? (t_cachedStringBuilder = new StringBuilder());
             Debug.Assert(builder.Length == 0, $"Expected builder to be empty, got one of length {builder.Length}");
@@ -220,7 +212,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                 builder.Append("GET ").Append(uri.PathAndQuery).Append(" HTTP/1.1\r\n");
 
                 // Add all of the required headers
-                builder.Append(HttpKnownHeaderNames.Host).Append(": ").Append(targetHost).Append(":").Append(uri.Port).Append("\r\n");
+                builder.Append("Host: ").Append(uri.IdnHost).Append(":").Append(uri.Port).Append("\r\n");
                 builder.Append("Connection: Upgrade\r\n");
                 builder.Append("Upgrade: websocket\r\n");
                 builder.Append("Sec-WebSocket-Version: 13\r\n");
@@ -229,12 +221,6 @@ namespace Microsoft.Azure.Relay.WebSockets
                 // Add all of the additionally requested headers
                 foreach (string key in options.RequestHeaders.AllKeys)
                 {
-                    if (string.Equals(key, HttpKnownHeaderNames.Host, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Host header handled above
-                        continue;
-                    }
-
                     builder.Append(key).Append(": ").Append(options.RequestHeaders[key]).Append("\r\n");
                 }
 

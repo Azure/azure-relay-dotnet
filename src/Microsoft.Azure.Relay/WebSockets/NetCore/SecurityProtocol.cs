@@ -17,6 +17,8 @@ namespace Microsoft.Azure.Relay.WebSockets
         public const SslProtocols DefaultSecurityProtocols =
             SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
 
+        public const SslProtocols SystemDefaultSecurityProtocols = SslProtocols.None;
+
         public static void ThrowOnNotAllowed(SslProtocols protocols, bool allowNone = true)
         {
             if ((!allowNone && (protocols == SslProtocols.None)) || ((protocols & ~AllowedSecurityProtocols) != 0))
