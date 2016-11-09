@@ -5,6 +5,7 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Runtime.Serialization;
@@ -40,7 +41,7 @@ namespace Microsoft.Azure.Relay
     class ListenerCommand
     {
         [IgnoreDataMember]
-        static readonly DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(ListenerCommand));
+        static readonly DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(ListenerCommand), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
 
         [DataMember(Name = "accept", EmitDefaultValue = false)]
         public AcceptCommand Accept { get; set; }
@@ -91,29 +92,19 @@ namespace Microsoft.Azure.Relay
             public string Id { get; set; }
 
             [DataMember(Name = "connectHeaders", Order = 2)]
-            WebHeaderCollectionSerializer connectHeaders;
+            IDictionary<string, string> connectHeaders;
 
-            public WebHeaderCollection ConnectHeaders
+            [IgnoreDataMember]
+            public IDictionary<string, string> ConnectHeaders
             {
                 get
                 {
                     if (this.connectHeaders == null)
                     {
-                        this.connectHeaders = new WebHeaderCollectionSerializer(new WebHeaderCollection());
+                        this.connectHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     }
 
-                    return this.connectHeaders.WebHeaderCollection;
-                }
-                set
-                {
-                    if (value == null)
-                    {
-                        this.connectHeaders = null;
-                    }
-                    else
-                    {
-                        this.connectHeaders = new WebHeaderCollectionSerializer(value);
-                    }
+                    return this.connectHeaders;
                 }
             }
         }
@@ -149,52 +140,5 @@ namespace Microsoft.Azure.Relay
             public TimeSpan Delay { get; set; }
         }
 #endif // DEBUG
-
-        /// <summary>
-        /// Does some custom serialization to avoid having "Key": and "Value": entries for every single Http Header in the resulting JSON
-        /// </summary>
-#if NET45
-        [Serializable]
-#endif
-        class WebHeaderCollectionSerializer
-#if NET45
-            : ISerializable
-#endif
-        {
-            public WebHeaderCollectionSerializer(WebHeaderCollection webHeaderCollection)
-            {
-                this.WebHeaderCollection = webHeaderCollection;
-            }
-
-#if NET45
-            protected WebHeaderCollectionSerializer(SerializationInfo info, StreamingContext context)
-            {
-                this.WebHeaderCollection = new WebHeaderCollection();
-
-                // We don't know the names of all the HTTP headers so we simply enumerate whatever was serialized.
-                foreach (var item in info)
-                {
-                    var name = item.Name;
-                    var value = item.Value != null ? item.Value.ToString() : string.Empty;
-                    this.WebHeaderCollection[name] = value;
-                }
-            }
-#endif
-
-            internal WebHeaderCollection WebHeaderCollection
-            {
-                get; private set;
-            }
-
-#if NET45
-            void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
-            {
-                foreach (string key in this.WebHeaderCollection.AllKeys)
-                {
-                    info.AddValue(key, this.WebHeaderCollection[key]);
-                }
-            }
-#endif
-        }
     }
 }
