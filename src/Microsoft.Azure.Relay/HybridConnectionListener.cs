@@ -651,9 +651,8 @@ namespace Microsoft.Azure.Relay
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
-#if TODO
-                    webSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
-#endif
+                    webSocket.Options.SetRequestHeader("User-Agent", "ServiceBus/" + ClientAgentFileVersion);
+
                     var token = await this.tokenRenewer.GetTokenAsync().ConfigureAwait(false);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
 
@@ -998,9 +997,7 @@ namespace Microsoft.Azure.Relay
 
                     var clientWebSocket = new ClientWebSocket45();
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
-#if TODO
-                    clientWebSocket.Options.Host = this.Address.Host;
-#endif
+                    clientWebSocket.Options.SetRequestHeader("Host", this.Address.Host);
                     clientWebSocket.Options.Proxy = this.listener.Proxy;
                     clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
 
