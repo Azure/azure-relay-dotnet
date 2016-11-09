@@ -225,17 +225,19 @@ namespace Microsoft.Azure.Relay.WebSockets
             // Request Headers
             foreach (string key in options.RequestHeaders.Keys)
             {
+                // Special case Host and User-Agent headers
+                if (string.Equals(HttpKnownHeaderNames.Host, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    request.Host = options.RequestHeaders[key];
+                    continue;
+                }
+                else if (string.Equals(HttpKnownHeaderNames.UserAgent, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    request.UserAgent = options.RequestHeaders[key];
+                    continue;
+                }
+
                 request.Headers.Add(key, options.RequestHeaders[key]);
-            }
-
-            if (options.Host != null)
-            {
-                request.Host = options.Host;
-            }
-
-            if (options.UserAgent != null)
-            {
-                request.UserAgent = options.UserAgent;
             }
 
             // SubProtocols
@@ -419,8 +421,6 @@ namespace Microsoft.Azure.Relay.WebSockets
         private ArraySegment<byte>? buffer;
         private bool useDefaultCredentials;
         private ICredentials credentials;
-        private string host;
-        private string userAgent;
         private IWebProxy proxy;
         private X509CertificateCollection clientCertificates;
         private CookieContainer cookies;
@@ -470,32 +470,6 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 ThrowIfReadOnly();
                 credentials = value;
-            }
-        }
-
-        public string Host
-        {
-            get
-            {
-                return host;
-            }
-            set
-            {
-                ThrowIfReadOnly();
-                host = value;
-            }
-        }
-
-        public string UserAgent
-        {
-            get
-            {
-                return userAgent;
-            }
-            set
-            {
-                ThrowIfReadOnly();
-                userAgent = value;
             }
         }
 
