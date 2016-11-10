@@ -61,7 +61,7 @@ following two settings are specific to Hybrid Connections:
 | Property                    | Description                          |
 |-----------------------------|--------------------------------------|
 | RequiresClientAuthorization | If this is set to false (the default is true), sending clients can connect to a listener through the Relay without providing an authorization token. In this case, the Relay will not enforce any if its ownaccess rules, but the listener can still evaluate the Authorization HTTP header or use some other model for access control. |
-| ListenerCount               | This is an informational value that’s available via GetHybridConnectionDescription/Async and gives the number of connected listeners on this Hybrid Connection as the value is queried. |
+| ListenerCount               | This is an informational value that’s available via GetRuntimeInformationAsync and gives the number of connected listeners on this Hybrid Connection as the value is queried. |
 
 Up to 25 listeners can be concurrently connected and the Relay will distribute
 incoming connection requests across all connected listeners, equivalent to a
@@ -80,7 +80,7 @@ that is common across all Service Bus capabilities and entities.
 Access tokens are created from an Authorization rule and key using a token
 provider helper as described in the article linked above; the Hybrid Connections
 API has its own ```TokenProvider``` class, however. The ```TokenProvider``` can
-be initialized from a rule and key (and an optional expiry span) with
+be initialized from a rule and key with
 ```TokenProvider.CreateSharedAccessSignatureTokenProvider(ruleName, key)``` or
 it can be initialized from an existing token string that has been issued by some
 other application with ```TokenProvider.CreateSharedAccessSignatureTokenProvider(token)```.
@@ -97,8 +97,8 @@ web site can hold on to the required SAS rule and key, and use the ```TokenProvi
 to create a short-lived token string and pass that on to the client: 
 
 ``` C#
-var token = await TokenProvider.GetTokenAsync("wss://namespace.servicebus.windows.net/$hc/path", TimeSpan.FromSeconds(30)); 
-var tokenString = token.TokenValue.ToString(); 
+var token = await TokenProvider.GetTokenAsync("http://namespace.servicebus.windows.net/path", TimeSpan.FromSeconds(30));
+var tokenString = token.TokenString;
 ```
 
 The token created in the exemplary snippet above will only be valid to establish
@@ -112,7 +112,7 @@ and from which the application can then accept these incoming connections for
 handling. 
 
 ``` C#
-var listener = new HybridConnectionListener("wss://namespace.servicebus.windows.net/$hc/path", tokenProvider); 
+var listener = new HybridConnectionListener("sb://namespace.servicebus.windows.net/path", tokenProvider); 
 await listener.OpenAsync(TimeSpan.FromSeconds(60)); 
 do 
 { 
@@ -145,7 +145,7 @@ application can observe the connection state through the ```Connecting```,
 ```Online```, and ```Offline``` events that fire when the network status
 changes. The ```IsOnline``` property reflects the current connection status, and
 ```LastError``` provides insight into the reason why the last connection attempt
-failed, if the listener transitions its state from ```Connecting``` to ```Offline```.
+failed, if the listener transitions its state to ```Connecting``` or ```Offline```.
 
 ### Creating Clients 
 
