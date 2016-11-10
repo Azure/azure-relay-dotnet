@@ -6,3 +6,4 @@ build_script:
     dotnet build src/Microsoft.Azure.Relay/project.json
     
     dotnet build test/Microsoft.Azure.Relay.UnitTests/project.json
+test: off
