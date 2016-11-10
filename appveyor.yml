@@ -1,0 +1,8 @@
+version: 1.0.{build}
+build_script:
+- cmd: >-
+    dotnet restore
+    
+    dotnet build src/Microsoft.Azure.Relay/project.json
+    
+    dotnet build test/Microsoft.Azure.Relay.UnitTests/project.json
