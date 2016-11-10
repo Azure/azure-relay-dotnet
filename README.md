@@ -161,4 +161,18 @@ the connection has been established, the method returns a
 connection attempt fails, a ```RelayException``` will be raised that indicates the
 reason for why the connection could not be established.
 
+## Running the unit tests 
 
+In order to run the unit tests, you will need to do the following:
+
+1. Create an Event Hub
+
+2. Create a consumer group on that Event Hub called `cgroup1` in addition to the default consumer group.
+
+3. Create a storage account
+
+4. Add the following Environment Variables with the corresponding connection strings:
+
+  1. `EVENTHUBCONNECTIONSTRING` - *The EntityPath is required in this string.*
+
+  2. `EVENTPROCESSORSTORAGECONNECTIONSTRING`
