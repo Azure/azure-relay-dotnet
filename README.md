@@ -165,14 +165,10 @@ reason for why the connection could not be established.
 
 In order to run the unit tests, you will need to do the following:
 
-1. Create an Event Hub
+1. Create a Relay namespace.
 
-2. Create a consumer group on that Event Hub called `cgroup1` in addition to the default consumer group.
+2. Create a Hybrid Connection that requires client authentication called *authenticated*.
 
-3. Create a storage account
+3. Create an additional Hybrid Connection that does not require authentication called *unauthenticated*.
 
-4. Add the following Environment Variables with the corresponding connection strings:
-
-  1. `EVENTHUBCONNECTIONSTRING` - *The EntityPath is required in this string.*
-
-  2. `EVENTPROCESSORSTORAGECONNECTIONSTRING`
+4. Add an Environment Variable called `RELAYCONNECTIONSTRING` with the connection string from the portal.
