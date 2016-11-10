@@ -12,8 +12,9 @@ namespace Microsoft.Azure.Relay.UnitTests
     /// </summary>
     public abstract class HybridConnectionTestBase
     {
-        protected Logger logger;
-        protected RelayConnectionStringBuilder connectionStringBuilder;
+        private Logger logger;
+
+        private RelayConnectionStringBuilder connectionStringBuilder;
 
         public HybridConnectionTestBase(ITestOutputHelper output)
         {
@@ -31,6 +32,22 @@ namespace Microsoft.Azure.Relay.UnitTests
                 EntityPath = "authenticated",
                 OperationTimeout = TimeSpan.FromSeconds(15)
             };
+        }
+
+        protected Logger Logger
+        {
+            get
+            {
+                return this.logger;
+            }
+        }
+
+        protected RelayConnectionStringBuilder ConnectionStringBuilder
+        {
+            get
+            {
+                return this.connectionStringBuilder;
+            }
         }
     }
 }

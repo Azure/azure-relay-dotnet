@@ -18,7 +18,7 @@ namespace Microsoft.Azure.Relay.UnitTests
         [Fact]
         public async Task TokenProviderValidation()
         {
-            this.logger.Log("Testing TokenProvider parameter validation");
+            this.Logger.Log("Testing TokenProvider parameter validation");
 
             var keyValue = SasKeyGenerator.GenerateRandomKey();
 
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder(" "));
             Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("; "));
 
-            this.logger.Log("Try some other weird combinations which shouldn't fail.");
+            this.Logger.Log("Try some other weird combinations which shouldn't fail.");
 
             new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net").ToString();
             new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net/").ToString();
@@ -76,33 +76,33 @@ namespace Microsoft.Azure.Relay.UnitTests
         public void ClientValidation()
         {
             string connectionString = "Endpoint=sb://whatever.servicebus.windows.net/";
-            string connectionStringWithEntityPath = "Endpoint=sb://whatever.servicebus.windows.net/;EntityPath=" + this.connectionStringBuilder.EntityPath;
-            string connectionStringWithSASKeyValueOnly = "Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey=" + this.connectionStringBuilder.SharedAccessKey;
+            string connectionStringWithEntityPath = "Endpoint=sb://whatever.servicebus.windows.net/;EntityPath=" + this.ConnectionStringBuilder.EntityPath;
+            string connectionStringWithSASKeyValueOnly = "Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey=" + this.ConnectionStringBuilder.SharedAccessKey;
 
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient((string)null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient(string.Empty));
             Assert.Throws<ArgumentException>(() => new HybridConnectionClient(connectionString));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient(connectionString, null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient(connectionString, string.Empty));
-            Assert.Throws<ArgumentException>(() => new HybridConnectionClient(connectionStringWithEntityPath, this.connectionStringBuilder.EntityPath));
-            Assert.Throws<ArgumentException>(() => new HybridConnectionClient(connectionStringWithSASKeyValueOnly, this.connectionStringBuilder.EntityPath));
+            Assert.Throws<ArgumentException>(() => new HybridConnectionClient(connectionStringWithEntityPath, this.ConnectionStringBuilder.EntityPath));
+            Assert.Throws<ArgumentException>(() => new HybridConnectionClient(connectionStringWithSASKeyValueOnly, this.ConnectionStringBuilder.EntityPath));
         }
 
         [Fact]
         public void ListenerValidation()
         {
             string connectionString = "Endpoint=sb://whatever.servicebus.windows.net/";
-            string connectionStringWithEntityPath = "Endpoint=sb://whatever.servicebus.windows.net/;EntityPath=" + this.connectionStringBuilder.EntityPath;
-            string connectionStringWithSASKeyValueOnly = "Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey=" + this.connectionStringBuilder.SharedAccessKey;
+            string connectionStringWithEntityPath = "Endpoint=sb://whatever.servicebus.windows.net/;EntityPath=" + this.ConnectionStringBuilder.EntityPath;
+            string connectionStringWithSASKeyValueOnly = "Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey=" + this.ConnectionStringBuilder.SharedAccessKey;
 
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener((string)null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener(string.Empty));
             Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionString));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener(connectionString, null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener(connectionString, string.Empty));
-            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionString, this.connectionStringBuilder.EntityPath));
-            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionStringWithEntityPath, this.connectionStringBuilder.EntityPath));
-            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionStringWithSASKeyValueOnly, this.connectionStringBuilder.EntityPath));
+            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionString, this.ConnectionStringBuilder.EntityPath));
+            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionStringWithEntityPath, this.ConnectionStringBuilder.EntityPath));
+            Assert.Throws<ArgumentException>(() => new HybridConnectionListener(connectionStringWithSASKeyValueOnly, this.ConnectionStringBuilder.EntityPath));
         }
     }
 }
