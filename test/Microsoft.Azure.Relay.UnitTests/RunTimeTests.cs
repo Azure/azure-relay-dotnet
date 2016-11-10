@@ -165,7 +165,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             var listener = new HybridConnectionListener(connectionString);
             var client = new HybridConnectionClient(connectionString);
 
-            this.logger.Log($"Opening {listener}");
+            this.logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(60));
 
             this.logger.Log($"Opening {ClientCount} connections quickly");
@@ -185,7 +185,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             await Task.WhenAll(senderTasks);
 
-            this.logger.Log($"Closing {listener}");
+            this.logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
         }
 
