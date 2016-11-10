@@ -163,18 +163,12 @@ reason for why the connection could not be established.
 
 ## Running the unit tests 
 
-In order to run the unit tests, click here to deploy the ARM template that is a part of this repo.
+In order to run the unit tests complete the following:
+
+1. Click below to deploy the ARM template that is a part of this repository.
+
+2. Add an Environment Variable called `RELAYCONNECTIONSTRING` with the resulting namespace connection string.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-relay-dotnet%2Fmaster%2Ftemplates%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
-
-If you prefer to manually setup your environment, you can do the following:
-
-1. Create a Relay namespace.
-
-2. Create a Hybrid Connection that requires client authentication called *authenticated*.
-
-3. Create an additional Hybrid Connection that does not require authentication called *unauthenticated*.
-
-4. Add an Environment Variable called `RELAYCONNECTIONSTRING` with the connection string from the portal.
