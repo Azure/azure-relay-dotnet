@@ -7,7 +7,7 @@ namespace Microsoft.Azure.Relay.UnitTests
     using System;
     using System.Security.Cryptography;
 
-    internal static class SasKeyGenerator
+    static class SasKeyGenerator
     {
         internal static string GenerateRandomKey()
         {

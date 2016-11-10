@@ -13,11 +13,11 @@ namespace Microsoft.Azure.Relay.UnitTests
 
     public class ConnectionStringBuilderTests
     {
-        private readonly Uri endpoint;
-        private readonly string sasKeyName;
-        private readonly string entityPath;
-        private readonly string sasKeyValue;
-        private Logger logger;
+        readonly Uri endpoint;
+        readonly string sasKeyName;
+        readonly string entityPath;
+        readonly string sasKeyValue;
+        Logger logger;
 
         public ConnectionStringBuilderTests(ITestOutputHelper output)
         {

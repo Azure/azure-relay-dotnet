@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
     public class Logger
     {
-        private ITestOutputHelper output;
+        readonly ITestOutputHelper output;
 
         public Logger(ITestOutputHelper output)
         {
