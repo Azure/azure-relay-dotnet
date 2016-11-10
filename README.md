@@ -163,7 +163,13 @@ reason for why the connection could not be established.
 
 ## Running the unit tests 
 
-In order to run the unit tests, you will need to do the following:
+In order to run the unit tests, click here to deploy the ARM template that is a part of this repo.
+
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-relay-dotnet%2Fmaster%2Ftemplates%2Fazuredeploy.json" target="_blank">
+    <img src="http://azuredeploy.net/deploybutton.png"/>
+</a>
+
+If you prefer to manually setup your environment, you can do the following:
 
 1. Create a Relay namespace.
 
