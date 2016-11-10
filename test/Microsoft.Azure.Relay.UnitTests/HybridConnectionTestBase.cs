@@ -12,42 +12,32 @@ namespace Microsoft.Azure.Relay.UnitTests
     /// </summary>
     public abstract class HybridConnectionTestBase
     {
-        private Logger logger;
-
-        private RelayConnectionStringBuilder connectionStringBuilder;
+        protected readonly string AuthenticatedEntityPath = "authenticated";
+        protected readonly string UnauthenticatedEntityPath = "unauthenticated";
 
         public HybridConnectionTestBase(ITestOutputHelper output)
         {
-            this.logger = new Logger(output);
+            this.Logger = new Logger(output);
 
-            var connectionString = Environment.GetEnvironmentVariable("RELAYCONNECTIONSTRING");
-            if (string.IsNullOrWhiteSpace(connectionString))
+            var envConnectionString = Environment.GetEnvironmentVariable("RELAYCONNECTIONSTRING");
+            if (string.IsNullOrWhiteSpace(envConnectionString))
             {
                 throw new InvalidOperationException("RELAYCONNECTIONSTRING environment variable was not found!");
             }
 
-            this.connectionStringBuilder = new RelayConnectionStringBuilder(connectionString)
+            // Validate the connection string
+            // Running most tests on the authenticated Hybrid Connection, unless already specified in the connection string
+
+            var connectionStringBuilder = new RelayConnectionStringBuilder(envConnectionString);
+            if (string.IsNullOrEmpty(connectionStringBuilder.EntityPath))
             {
-                // Unless explicitly stated, run all tests against the authenticated Hybrid Connection
-                EntityPath = "authenticated",
-                OperationTimeout = TimeSpan.FromSeconds(15)
-            };
+                connectionStringBuilder.EntityPath = "authenticated";
+            }
+            this.ConnectionString = connectionStringBuilder.ToString();
         }
 
-        protected Logger Logger
-        {
-            get
-            {
-                return this.logger;
-            }
-        }
+        protected Logger Logger { get; }
 
-        protected RelayConnectionStringBuilder ConnectionStringBuilder
-        {
-            get
-            {
-                return this.connectionStringBuilder;
-            }
-        }
+        protected string ConnectionString { get; }
     }
 }

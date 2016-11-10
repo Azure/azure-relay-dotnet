@@ -23,21 +23,30 @@ namespace Microsoft.Azure.Relay.UnitTests
         [Fact]
         public async Task UnauthenticatedHybridConnection()
         {
+            this.Logger.Log("UnauthenticatedHybridConnection test start");
+
             this.Logger.Log("Creating a listener connection string for the unauthenticated Hybrid Connection");
-            var listenerConnectionStringBuilder = this.ConnectionStringBuilder;
-            listenerConnectionStringBuilder.EntityPath = "unauthenticated";
-            var listenerConnectionString = listenerConnectionStringBuilder.ToString();
+            var listenerConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                EntityPath = UnauthenticatedEntityPath
+            };
 
             this.Logger.Log("Creating a client connection string for the unauthenticated Hybrid Connection. Setting the keys to string.Empty");
-            var clientConnectionStringBuilder = this.ConnectionStringBuilder;
-            clientConnectionStringBuilder.EntityPath = "unauthenticated";
-            clientConnectionStringBuilder.SharedAccessKey = string.Empty;
-            clientConnectionStringBuilder.SharedAccessKeyName = string.Empty;
-            clientConnectionStringBuilder.SharedAccessSignature = string.Empty;
-            var clientConnectionString = clientConnectionStringBuilder.ToString();
 
-            var listener = new HybridConnectionListener(listenerConnectionString);
-            var client = new HybridConnectionClient(clientConnectionString);
+            var clientConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                EntityPath = UnauthenticatedEntityPath,
+                SharedAccessKey = string.Empty,
+                SharedAccessKeyName = string.Empty,
+                SharedAccessSignature = string.Empty,
+            };
+
+            Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessKey);
+            Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessKeyName);
+            Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessSignature);
+
+            var listener = new HybridConnectionListener(listenerConnectionStringBuilder.ToString());
+            var client = new HybridConnectionClient(clientConnectionStringBuilder.ToString());
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -70,15 +79,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
+
+            this.Logger.Log("UnauthenticatedHybridConnection test end");
         }
 
         [Fact]
         public async Task AuthenticatedHybridConnection()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
+            this.Logger.Log("AuthenticatedHybridConnection test start");
 
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -111,14 +122,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
+
+            this.Logger.Log("AuthenticatedHybridConnection test end");
         }
 
         [Fact]
         public async Task ClientShutdown()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("ClientShutdown test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -154,6 +168,8 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
+
+            this.Logger.Log("ClientShutdown test end");
         }
 
         [Fact]
@@ -161,12 +177,13 @@ namespace Microsoft.Azure.Relay.UnitTests
         {
             const int ClientCount = 100;
 
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("ConcurrentClients test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
-            await listener.OpenAsync(TimeSpan.FromSeconds(60));
+            await listener.OpenAsync(TimeSpan.FromSeconds(120));
 
             this.Logger.Log($"Opening {ClientCount} connections quickly");
 
@@ -187,14 +204,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
+
+            this.Logger.Log("ConcurrentClients test end");
         }
 
         [Fact]
         public async Task Write1Mb()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("Write1Mb test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -229,14 +249,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Calling clientStream.Close");
             clientStream.Close();
+
+            this.Logger.Log("Write1Mb test end");
         }
 
         [Fact]
         public async Task ListenerShutdown()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("ListenerShutdown test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -269,14 +292,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Calling listenerStream.Close");
             listenerStream.Close();
+
+            this.Logger.Log("ListenerShutdown test end");
         }
 
         [Fact]
         public async Task ListenerAbortWhileClientReading()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("ListenerAbortWhileClientReading test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             this.Logger.Log("Calling HybridConnectionListener.Open");
             await listener.OpenAsync(TimeSpan.FromSeconds(30));
@@ -298,14 +324,21 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             this.Logger.Log("Calling clientStream.Close");
             var clientCloseTask = clientStream.CloseAsync(CancellationToken.None);
+
+            this.Logger.Log("ListenerAbortWhileClientReading test end");
         }
 
         [Fact]
         public async Task NonExistantNamespace()
         {
+            this.Logger.Log("NonExistantNamespace test start");
+
             this.Logger.Log("Setting ConnectionStringBuilder.Endpoint to 'sb://fakeendpoint.com'");
-            var fakeEndpointConnectionStringBuilder = this.ConnectionStringBuilder;
-            fakeEndpointConnectionStringBuilder.Endpoint = new Uri("sb://fakeendpoint.com");
+
+            var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                Endpoint = new Uri("sb://fakeendpoint.com")
+            };
             var fakeEndpointConnectionString = fakeEndpointConnectionStringBuilder.ToString();
 
             var listener = new HybridConnectionListener(fakeEndpointConnectionString);
@@ -313,14 +346,20 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync(TimeSpan.FromSeconds(30)));
             await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
+
+            this.Logger.Log("NonExistantNamespace test end");
         }
 
         [Fact]
         public async Task NonExistantHybridConnection()
         {
+            this.Logger.Log("NonExistantHybridConnection test start");
+
             this.Logger.Log("Setting ConnectionStringBuilder.EntityPath to a new GUID");
-            var fakeEndpointConnectionStringBuilder = this.ConnectionStringBuilder;
-            fakeEndpointConnectionStringBuilder.EntityPath = Guid.NewGuid().ToString();
+            var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                EntityPath = Guid.NewGuid().ToString()
+            };
             var fakeEndpointConnectionString = fakeEndpointConnectionStringBuilder.ToString();
 
             var listener = new HybridConnectionListener(fakeEndpointConnectionString);
@@ -328,14 +367,17 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
             await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+
+            this.Logger.Log("NonExistantHybridConnection test end");
         }
 
         [Fact]
         public async Task ListenerShutdownWithPendingAccepts()
         {
-            var connectionString = this.ConnectionStringBuilder.ToString();
-            var listener = new HybridConnectionListener(connectionString);
-            var client = new HybridConnectionClient(connectionString);
+            this.Logger.Log("ListenerShutdownWithPendingAccepts test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+            var client = new HybridConnectionClient(this.ConnectionString);
 
             await listener.OpenAsync(TimeSpan.FromSeconds(20));
             this.Logger.Log("Calling HybridConnectionListener.Open");
@@ -355,12 +397,18 @@ namespace Microsoft.Azure.Relay.UnitTests
                 Assert.True(acceptTasks[i].Wait(TimeSpan.FromSeconds(5)));
                 Assert.Null(acceptTasks[i].Result);
             }
+
+            this.Logger.Log("ListenerShutdownWithPendingAccepts test end");
         }
 
         [Fact]
         public async Task SubProtocol()
         {
-            var listener = new HybridConnectionListener(this.ConnectionStringBuilder.ToString());
+            this.Logger.Log("SubProtocol test start");
+
+            var listener = new HybridConnectionListener(this.ConnectionString);
+
+            var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
 
             var clientWebSocket = new ClientWebSocket();
             string subProtocol1 = "wshybridconnection";
@@ -369,15 +417,15 @@ namespace Microsoft.Azure.Relay.UnitTests
             clientWebSocket.Options.AddSubProtocol(subProtocol2);
 
             var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(
-                this.ConnectionStringBuilder.SharedAccessKeyName,
-                this.ConnectionStringBuilder.SharedAccessKey);
+                connectionStringBuilder.SharedAccessKeyName,
+                connectionStringBuilder.SharedAccessKey);
 
-            var token = await tokenProvider.GetTokenAsync(this.ConnectionStringBuilder.Endpoint.ToString(), TimeSpan.FromMinutes(10));
+            var token = await tokenProvider.GetTokenAsync(connectionStringBuilder.Endpoint.ToString(), TimeSpan.FromMinutes(10));
 
             var wssUri = new Uri(string.Format(
                 "wss://{0}/$hc/{1}?sb-hc-action={2}&sb-hc-token={3}",
-                this.ConnectionStringBuilder.Endpoint.Host,
-                this.ConnectionStringBuilder.EntityPath,
+                connectionStringBuilder.Endpoint.Host,
+                connectionStringBuilder.EntityPath,
                 "connect",
                 WebUtility.UrlEncode(token.TokenString)));
 
@@ -418,6 +466,8 @@ namespace Microsoft.Azure.Relay.UnitTests
                 this.Logger.Log("Closing " + listener.GetType().Name);
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
             }
+
+            this.Logger.Log("SubProtocol test end");
         }
 
         /// <summary>
