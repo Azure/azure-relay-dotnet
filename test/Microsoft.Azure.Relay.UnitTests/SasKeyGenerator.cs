@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.UnitTests
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.UnitTests
 {
     using System;
     using System.Security.Cryptography;
@@ -7,7 +11,7 @@
     {
         internal static string GenerateRandomKey()
         {
-            byte[] key256 = new byte[32];
+            var key256 = new byte[32];
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
                 rngCryptoServiceProvider.GetBytes(key256);

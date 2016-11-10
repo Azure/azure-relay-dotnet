@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Azure.Relay.UnitTests
+﻿//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
+
+namespace Microsoft.Azure.Relay.UnitTests
 {
     using System;
     using System.Diagnostics;

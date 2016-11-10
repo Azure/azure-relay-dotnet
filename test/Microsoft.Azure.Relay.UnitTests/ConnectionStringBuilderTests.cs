@@ -138,39 +138,5 @@ namespace Microsoft.Azure.Relay.UnitTests
             Assert.Equal(TimeSpan.FromMinutes(1), connectionStringBuilder.OperationTimeout);
             Assert.Null(connectionStringBuilder.SharedAccessSignature);
         }
-
-        [Fact]
-        public void ConnectionStringBuilderParameterValidation()
-        {
-            Assert.Throws<ArgumentNullException>(() => new RelayConnectionStringBuilder(null));
-            Assert.Throws<ArgumentNullException>(() => new RelayConnectionStringBuilder(string.Empty));
-
-            Assert.Throws<ArgumentNullException>(() => new RelayConnectionStringBuilder { Endpoint = null });
-            Assert.Throws<ArgumentNullException>(() => new RelayConnectionStringBuilder().ToString());
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder { Endpoint = new Uri("/NotAbsoluteUri", UriKind.Relative) });
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder($"Endpoint={this.endpoint};OperationTimeout=NotATimeSpan"));
-
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("Endpoint=NOT_A_URI"));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("Endpoint="));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("OperationTimeout="));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("NOT_A_KEY=value"));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("=NO_KEY"));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("NOT_A_KEY_VALUE_PAIR"));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder(" "));
-            Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("; "));
-
-            this.logger.Log("Try some other weird combinations which shouldn't fail.");
-
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net/").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net".ToLowerInvariant()).ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net:443").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net:443;").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net:443;;").ToString();
-            new RelayConnectionStringBuilder(";Endpoint=sb://whatever.servicebus.windows.net:443").ToString();
-            new RelayConnectionStringBuilder(";;Endpoint=sb://whatever.servicebus.windows.net:443").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net:443;;EntityPath=foo").ToString();
-            new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net:443/;;EntityPath=foo;").ToString();
-        }
     }
 }
