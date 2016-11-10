@@ -12,6 +12,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Microsoft.Azure.Relay", "src\Microsoft.Azure.Relay\Microsoft.Azure.Relay.xproj", "{6747D8BD-AC7B-4100-ACE5-E45F14931153}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2C7349A8-BE85-4D88-8788-973914215467}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Microsoft.Azure.Relay.UnitTests", "test\Microsoft.Azure.Relay.UnitTests\Microsoft.Azure.Relay.UnitTests.xproj", "{A2690D09-95E9-4018-A340-6FAF47C4E64A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,11 +26,16 @@ Global
 		{6747D8BD-AC7B-4100-ACE5-E45F14931153}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6747D8BD-AC7B-4100-ACE5-E45F14931153}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6747D8BD-AC7B-4100-ACE5-E45F14931153}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2690D09-95E9-4018-A340-6FAF47C4E64A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2690D09-95E9-4018-A340-6FAF47C4E64A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2690D09-95E9-4018-A340-6FAF47C4E64A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2690D09-95E9-4018-A340-6FAF47C4E64A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6747D8BD-AC7B-4100-ACE5-E45F14931153} = {93B7A5D6-F65E-4C90-9BB7-094C66302766}
+		{A2690D09-95E9-4018-A340-6FAF47C4E64A} = {2C7349A8-BE85-4D88-8788-973914215467}
 	EndGlobalSection
 EndGlobal
