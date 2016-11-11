@@ -2,7 +2,12 @@
   <img src="relay.png" alt="Microsoft Azure Relay" width="100"/>
 </p>
 
-# Azure Relay Hybrid Connections 
+# Microsoft Azure Relay Hybrid Connections Client for .NET
+
+|Build/Package|Status|
+|------|-------------|
+|master|[![Build status](https://ci.appveyor.com/api/projects/status/qhefoxrdg068xjhj/branch/master?svg=true)](https://ci.appveyor.com/project/jtaubensee/azure-relay-dotnet/branch/master)|
+|Microsoft.Azure.Relay|[![NuGet Version and Downloads count](https://buildstats.info/nuget/Microsoft.Azure.Relay)](https://www.nuget.org/packages/Microsoft.Azure.Relay/)|
 
 Azure Relay is one of the key capability pillars of the Azure Service Bus
 platform. The Relay’s new "Hybrid Connections" capability is a secure,
