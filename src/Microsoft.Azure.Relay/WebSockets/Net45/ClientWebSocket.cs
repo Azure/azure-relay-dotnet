@@ -1,6 +1,5 @@
-﻿//------------------------------------------------------------
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.Azure.Relay.WebSockets
 {
@@ -8,14 +7,13 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics.Contracts;
-    using System.Linq;
     using System.Net;
     using System.Net.WebSockets;
     using System.Security.Cryptography.X509Certificates;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
 
+    // From: https://referencesource.microsoft.com/#System/net/System/Net/WebSockets/ClientWebSocket.cs
     sealed class ClientWebSocket : WebSocket
     {
         private readonly ClientWebSocketOptions options;
