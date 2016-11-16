@@ -18,8 +18,6 @@ namespace Microsoft.Azure.Relay.WebSockets
 
     sealed class ClientWebSocket : WebSocket
     {
-        const string UriSchemeWs = "ws";
-        const string UriSchemeWss = "wss";
         private readonly ClientWebSocketOptions options;
         private WebSocket innerWebSocket;
         private readonly CancellationTokenSource cts;
@@ -130,7 +128,7 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 throw new ArgumentException(SR.GetString(SR.net_uri_NotAbsolute), "uri");
             }
-            if (uri.Scheme != UriSchemeWs && uri.Scheme != UriSchemeWss)
+            if (uri.Scheme != UriScheme.Ws && uri.Scheme != UriScheme.Wss)
             {
                 throw new ArgumentException(SR.GetString(SR.net_WebSockets_Scheme), "uri");
             }

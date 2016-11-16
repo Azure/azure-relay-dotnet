@@ -66,7 +66,7 @@ namespace Microsoft.Azure.Relay
         static Uri CreateManagementUri(Uri uri)
         {
             // Create an HTTPS Uri for the REST operation
-            var builder = new UriBuilder(uri) { Scheme = "https" };
+            var builder = new UriBuilder(uri) { Scheme = UriScheme.Https };
             builder.Query = AddQueryParameter(builder.Query, "api-version", RelayConstants.ManagementApiVersion);
             return builder.Uri;
         }
@@ -95,7 +95,7 @@ namespace Microsoft.Azure.Relay
                 xmlReader.ReadToDescendant("content", "http://www.w3.org/2005/Atom");
                 xmlReader.Read();
                 xmlReader.MoveToContent();
-                
+
                 var serializer = new DataContractSerializer(typeof(TEntityDescription));
                 return (TEntityDescription)serializer.ReadObject(xmlReader);
             }

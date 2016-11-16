@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay
 {
     // From: https://github.com/dotnet/corefx/blob/master/src/Common/src/System/Net/UriScheme.cs
     internal class UriScheme

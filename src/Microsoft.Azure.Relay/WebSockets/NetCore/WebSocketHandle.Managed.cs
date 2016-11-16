@@ -220,7 +220,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                 builder.Append("GET ").Append(uri.PathAndQuery).Append(" HTTP/1.1\r\n");
 
                 // Add all of the required headers
-                builder.Append(HttpKnownHeaderNames.Host).Append(": ").Append(targetHost).Append(":").Append(uri.Port).Append("\r\n");
+                builder.Append("Host: ").Append(targetHost).Append(":").Append(uri.Port).Append("\r\n");
                 builder.Append("Connection: Upgrade\r\n");
                 builder.Append("Upgrade: websocket\r\n");
                 builder.Append("Sec-WebSocket-Version: 13\r\n");
