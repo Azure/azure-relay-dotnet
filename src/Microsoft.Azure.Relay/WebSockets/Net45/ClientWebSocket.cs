@@ -16,11 +16,9 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading;
     using System.Threading.Tasks;
 
-    sealed class ClientWebSocket45 : WebSocket
+    sealed class ClientWebSocket : WebSocket
     {
-        const string UriSchemeWs = "ws";
-        const string UriSchemeWss = "wss";
-        private readonly ClientWebSocketOptions45 options;
+        private readonly ClientWebSocketOptions options;
         private WebSocket innerWebSocket;
         private readonly CancellationTokenSource cts;
 
@@ -31,19 +29,19 @@ namespace Microsoft.Azure.Relay.WebSockets
         private const int connected = 2;
         private const int disposed = 3;
 
-        static ClientWebSocket45()
+        static ClientWebSocket()
         {
             // Register ws: and wss: with WebRequest.Register so that WebRequest.Create returns a 
             // WebSocket capable HttpWebRequest instance.
             WebSocket.RegisterPrefixes();
         }
 
-        public ClientWebSocket45()
+        public ClientWebSocket()
         {
             if (Logging.On) Logging.Enter(Logging.WebSockets, this, ".ctor", null);
 
             state = created;
-            options = new ClientWebSocketOptions45();
+            options = new ClientWebSocketOptions();
             cts = new CancellationTokenSource();
 
             if (Logging.On) Logging.Exit(Logging.WebSockets, this, ".ctor", null);
@@ -51,7 +49,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         #region Properties
 
-        public ClientWebSocketOptions45 Options { get { return options; } }
+        public ClientWebSocketOptions Options { get { return options; } }
 
         public override WebSocketCloseStatus? CloseStatus
         {
@@ -130,7 +128,7 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 throw new ArgumentException(SR.GetString(SR.net_uri_NotAbsolute), "uri");
             }
-            if (uri.Scheme != UriSchemeWs && uri.Scheme != UriSchemeWss)
+            if (uri.Scheme != UriScheme.Ws && uri.Scheme != UriScheme.Wss)
             {
                 throw new ArgumentException(SR.GetString(SR.net_WebSockets_Scheme), "uri");
             }
@@ -225,17 +223,19 @@ namespace Microsoft.Azure.Relay.WebSockets
             // Request Headers
             foreach (string key in options.RequestHeaders.Keys)
             {
+                // Special case Host and User-Agent headers
+                if (string.Equals(HttpKnownHeaderNames.Host, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    request.Host = options.RequestHeaders[key];
+                    continue;
+                }
+                else if (string.Equals(HttpKnownHeaderNames.UserAgent, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    request.UserAgent = options.RequestHeaders[key];
+                    continue;
+                }
+
                 request.Headers.Add(key, options.RequestHeaders[key]);
-            }
-
-            if (options.Host != null)
-            {
-                request.Host = options.Host;
-            }
-
-            if (options.UserAgent != null)
-            {
-                request.UserAgent = options.UserAgent;
             }
 
             // SubProtocols
@@ -408,7 +408,7 @@ namespace Microsoft.Azure.Relay.WebSockets
         }
     }
 
-    sealed class ClientWebSocketOptions45
+    sealed class ClientWebSocketOptions
     {
         private bool isReadOnly; // After ConnectAsync is called the options cannot be modified.
         private readonly IList<string> requestedSubProtocols;
@@ -419,13 +419,11 @@ namespace Microsoft.Azure.Relay.WebSockets
         private ArraySegment<byte>? buffer;
         private bool useDefaultCredentials;
         private ICredentials credentials;
-        private string host;
-        private string userAgent;
         private IWebProxy proxy;
         private X509CertificateCollection clientCertificates;
         private CookieContainer cookies;
 
-        internal ClientWebSocketOptions45()
+        internal ClientWebSocketOptions()
         {
             requestedSubProtocols = new List<string>();
             requestHeaders = new WebHeaderCollection();
@@ -470,32 +468,6 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 ThrowIfReadOnly();
                 credentials = value;
-            }
-        }
-
-        public string Host
-        {
-            get
-            {
-                return host;
-            }
-            set
-            {
-                ThrowIfReadOnly();
-                host = value;
-            }
-        }
-
-        public string UserAgent
-        {
-            get
-            {
-                return userAgent;
-            }
-            set
-            {
-                ThrowIfReadOnly();
-                userAgent = value;
             }
         }
 

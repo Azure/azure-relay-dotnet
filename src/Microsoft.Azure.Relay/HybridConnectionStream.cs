@@ -54,14 +54,17 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Closes this <see cref="HybridConnectionStream"/> instance.
         /// </summary>
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.ReadTimeout)))
+            if (disposing)
             {
-                this.CloseAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.ReadTimeout)))
+                {
+                    this.CloseAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
             }
 
-            base.Close();
+            base.Dispose(disposing);
         }
 
         /// <summary>

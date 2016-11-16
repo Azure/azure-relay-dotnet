@@ -14,7 +14,7 @@ namespace Microsoft.Azure.Relay
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Relay.WebSockets;
+    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
 
     /// <summary>
     /// Provides a listener for accepting HybridConnections from remote clients.
@@ -373,8 +373,8 @@ namespace Microsoft.Azure.Relay
 
         static string LookupFileVersion()
         {
-            var a = Assembly.GetExecutingAssembly();
-            var attribute = (AssemblyFileVersionAttribute)a.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true)[0];
+            var a = typeof(HybridConnectionListener).GetTypeInfo().Assembly;
+            var attribute = a.GetCustomAttribute<AssemblyFileVersionAttribute>();
             return attribute.Version;
         }
 
@@ -605,11 +605,12 @@ namespace Microsoft.Azure.Relay
                 using (var stream = new MemoryStream())
                 {
                     listenerCommand.WriteObject(stream);
-                    byte[] buffer = stream.GetBuffer();
+                    ArraySegment<byte> buffer = stream.GetArraySegment();
+
                     using (await this.sendLock.LockAsync(cancellationToken).ConfigureAwait(false))
                     {
                         await webSocket.SendAsync(
-                            new ArraySegment<byte>(buffer, 0, (int)stream.Length), WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
+                            buffer, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -642,11 +643,11 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.RelayClientConnectStart(this.listener);
-                    var webSocket = new ClientWebSocket45();
+                    var webSocket = new ClientWebSocket();
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
-                    webSocket.Options.UserAgent = "ServiceBus/" + ClientAgentFileVersion;
+                    webSocket.Options.SetRequestHeader("User-Agent", "ServiceBus/" + ClientAgentFileVersion);
 
                     var token = await this.tokenRenewer.GetTokenAsync().ConfigureAwait(false);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
@@ -665,12 +666,14 @@ namespace Microsoft.Azure.Relay
 
                     await webSocket.ConnectAsync(webSocketUri, cancellationToken).ConfigureAwait(false);
 
+#if NET45 // TODO: Flow Response Headers in NETSTANDARD ClientWebSocket
                     trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
                     if (!string.IsNullOrEmpty(trackingId))
                     {
                         // Update to the flown trackingId (which has _GX suffix)
                         this.listener.TrackingContext = TrackingContext.Create(trackingId, this.listener.TrackingContext.SubsystemId);
                     }
+#endif
 
                     this.OnOnline();
                     return webSocket;
@@ -965,7 +968,7 @@ namespace Microsoft.Azure.Relay
                 {
                     if (this.complete)
                     {
-                        connection.Close();
+                        connection.Dispose();
                         return;
                     }
 
@@ -988,9 +991,9 @@ namespace Microsoft.Azure.Relay
 
                     var timeoutHelper = new TimeoutHelper(AcceptTimeout);
 
-                    var clientWebSocket = new ClientWebSocket45();
+                    var clientWebSocket = new ClientWebSocket();
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
-                    clientWebSocket.Options.Host = this.Address.Host;
+                    clientWebSocket.Options.SetRequestHeader("Host", this.Address.Host);
                     clientWebSocket.Options.Proxy = this.listener.Proxy;
                     clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
 

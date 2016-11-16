@@ -73,7 +73,7 @@ namespace Microsoft.Azure.Relay
 
         static string NormalizeAudience(string audience)
         {
-            return UriHelper.NormalizeUri(audience, Uri.UriSchemeHttp, true, stripPath: false, ensureTrailingSlash: true).AbsoluteUri;
+            return UriHelper.NormalizeUri(audience, UriScheme.Http, true, stripPath: false, ensureTrailingSlash: true).AbsoluteUri;
         }
     }
 }
