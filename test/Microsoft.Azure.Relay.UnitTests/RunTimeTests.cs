@@ -611,7 +611,8 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                         if (bytesRead == 0)
                         {
-                            await listener.CloseAsync(new TimeSpan(0, 0, 10));
+                            var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                            await listenerStream.CloseAsync(cancellationTokenSource.Token);
                             return;
                         }
                         else
