@@ -1,4 +1,7 @@
 version: 1.0.{build}
+environment:
+  RELAYCONNECTIONSTRING:
+    secure: 4yWgjKkxdBsqrE2LHex9vF5c4SW0W+ELgzuCpGzhFywKziZ/4VpzNu2kAWTPGKWMZxmfZqfipCIrXa+2PecqHQF79ihsdyu7etVDUhk4n72F8QhLBQ8k7/Ln7+rfMK8viNE6WHxubjFGTGxCLGY/67EFpM6N8qoqpSzDr5aV5zE0LaK14ACWdaOTMBKb61qkAIzX8RQiz+eRBpSi7VtBT1XIUOgfzS7Hr+mXrMtOaNs=
 build_script:
 - cmd: >-
     dotnet restore
@@ -6,4 +9,28 @@ build_script:
     dotnet build src/Microsoft.Azure.Relay/project.json
     
     dotnet build test/Microsoft.Azure.Relay.UnitTests/project.json
-test: off
+before_test:
+- cmd: >-
+    "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\x64\sn.exe" -Vr *,31bf3856ad364e35
+- ps: >-
+    $xUnitConfig = "
+    {
+        `"parallelizeAssembly`": false,
+        `"parallelizeTestCollections`": false
+    }"
+
+    New-Item test/Microsoft.Azure.Relay.UnitTests/bin/debug/netcoreapp1.0/xunit.runner.json -type file -force -value $xUnitConfig
+    
+    New-Item test/Microsoft.Azure.Relay.UnitTests/bin/Debug/net46/win7-x64/xunit.runner.json -type file -force -value $xUnitConfig
+test_script:
+- ps: >-
+    if ([bool]$env:RELAYCONNECTIONSTRING)
+    {
+        Write-Host "Running unit tests."
+
+        dotnet test test/Microsoft.Azure.Relay.UnitTests/project.json
+    }
+    else
+    {
+        Write-Host "No environment variables present. Skipping unit tests."
+    }
