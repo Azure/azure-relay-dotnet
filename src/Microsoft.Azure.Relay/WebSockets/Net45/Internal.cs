@@ -1,11 +1,9 @@
-﻿//------------------------------------------------------------
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.Azure.Relay.WebSockets
 {
-    using System;
-
+    // From: https://referencesource.microsoft.com/#System/net/System/Net/Internal.cs
     //
     // this class contains known header names
     //

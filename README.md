@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="relay.png" alt="Microsoft Azure Relay" width="100"/>
 </p>
 
@@ -8,6 +8,8 @@
 |------|-------------|
 |master|[![Build status](https://ci.appveyor.com/api/projects/status/qhefoxrdg068xjhj/branch/master?svg=true)](https://ci.appveyor.com/project/jtaubensee/azure-relay-dotnet/branch/master)|
 |Microsoft.Azure.Relay|[![NuGet Version and Downloads count](https://buildstats.info/nuget/Microsoft.Azure.Relay)](https://www.nuget.org/packages/Microsoft.Azure.Relay/)|
+
+This library is built using .NET Standard 1.3. For more information on what platforms are supported see [.NET Platforms Support](https://docs.microsoft.com/en-us/dotnet/articles/standard/library#net-platforms-support).
 
 Azure Relay is one of the key capability pillars of the Azure Service Bus
 platform. The Relay’s new "Hybrid Connections" capability is a secure,

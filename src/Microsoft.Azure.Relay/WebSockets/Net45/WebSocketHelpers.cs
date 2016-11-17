@@ -1,24 +1,18 @@
-﻿//------------------------------------------------------------
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics.Contracts;
     using System.Globalization;
-    using System.IO;
     using System.Runtime.CompilerServices;
     using System.Security.Cryptography;
     using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Win32;
-    using System.Net.WebSockets;
-    using System.Net;
 
+    // From: https://referencesource.microsoft.com/#System/net/System/Net/WebSockets/WebSocketHelpers.cs
     internal static class WebSocketHelpers
     {
         internal const string SecWebSocketKeyGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

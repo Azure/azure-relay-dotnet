@@ -1,6 +1,5 @@
-﻿//------------------------------------------------------------
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.Azure.Relay.WebSockets
 {
@@ -9,6 +8,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Globalization;
     using System.Runtime.InteropServices;
 
+    // From: https://referencesource.microsoft.com/#System/net/System/Net/WebSockets/WebSocketBuffer.cs
     // This class helps to abstract the internal WebSocket buffer, which is used to interact with the native WebSocket
     // protocol component (WSPC). It helps to shield the details of the layout and the involved pointer arithmetic.
     // The internal WebSocket buffer also contains a segment, which is used by the WebSocketBase class to buffer 
