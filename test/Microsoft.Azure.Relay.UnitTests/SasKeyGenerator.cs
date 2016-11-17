@@ -12,9 +12,9 @@ namespace Microsoft.Azure.Relay.UnitTests
         internal static string GenerateRandomKey()
         {
             var key256 = new byte[32];
-            using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
+            using (var rng = RandomNumberGenerator.Create())
             {
-                rngCryptoServiceProvider.GetBytes(key256);
+                rng.GetBytes(key256);
             }
 
             return Convert.ToBase64String(key256);

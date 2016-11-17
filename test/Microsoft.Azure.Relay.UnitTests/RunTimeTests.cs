@@ -156,15 +156,15 @@ namespace Microsoft.Azure.Relay.UnitTests
             this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
             Assert.Equal(0, bytesRead);
 
-            this.Logger.Log("Calling listenerStream.Shutdown and Close");
+            this.Logger.Log("Calling listenerStream.Shutdown and Dispose");
             listenerStream.Shutdown();
-            listenerStream.Close();
+            listenerStream.Dispose();
             bytesRead = await this.SafeReadAsync(clientStream, readBuffer, 0, readBuffer.Length);
             this.Logger.Log($"clientStream.Read returned {bytesRead} bytes");
             Assert.Equal(0, bytesRead);
 
-            this.Logger.Log("Calling clientStream.Close");
-            clientStream.Close();
+            this.Logger.Log("Calling clientStream.Dispose");
+            clientStream.Dispose();
 
             this.Logger.Log("Closing " + listener.GetType().Name);
             await listener.CloseAsync(TimeSpan.FromSeconds(10));
@@ -244,11 +244,11 @@ namespace Microsoft.Azure.Relay.UnitTests
             this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
             Assert.Equal(0, bytesRead);
 
-            this.Logger.Log("Calling listenerStream.Close");
-            listenerStream.Close();
+            this.Logger.Log("Calling listenerStream.Dispose");
+            listenerStream.Dispose();
 
-            this.Logger.Log("Calling clientStream.Close");
-            clientStream.Close();
+            this.Logger.Log("Calling clientStream.Dispose");
+            clientStream.Dispose();
 
             this.Logger.Log("Write1Mb test end");
         }
@@ -283,15 +283,15 @@ namespace Microsoft.Azure.Relay.UnitTests
             this.Logger.Log($"clientStream.Read returned {bytesRead} bytes");
             Assert.Equal(0, bytesRead);
 
-            this.Logger.Log("Calling clientStream.Shutdown and Close");
+            this.Logger.Log("Calling clientStream.Shutdown and Dispose");
             clientStream.Shutdown();
-            clientStream.Close();
+            clientStream.Dispose();
             bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
             this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
             Assert.Equal(0, bytesRead);
 
-            this.Logger.Log("Calling listenerStream.Close");
-            listenerStream.Close();
+            this.Logger.Log("Calling listenerStream.Dispose");
+            listenerStream.Dispose();
 
             this.Logger.Log("ListenerShutdown test end");
         }
@@ -365,8 +365,8 @@ namespace Microsoft.Azure.Relay.UnitTests
             var listener = new HybridConnectionListener(fakeEndpointConnectionString);
             var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
-            await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-            await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+            await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
+            await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
 
             this.Logger.Log("NonExistantHybridConnection test end");
         }
@@ -402,7 +402,7 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact]
-        public async Task SubProtocol()
+        public async Task RawWebSocketSender()
         {
             this.Logger.Log("SubProtocol test start");
 
@@ -411,10 +411,6 @@ namespace Microsoft.Azure.Relay.UnitTests
             var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
 
             var clientWebSocket = new ClientWebSocket();
-            string subProtocol1 = "wshybridconnection";
-            string subProtocol2 = "somethingelsehere";
-            clientWebSocket.Options.AddSubProtocol(subProtocol1);
-            clientWebSocket.Options.AddSubProtocol(subProtocol2);
 
             var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(
                 connectionStringBuilder.SharedAccessKeyName,
@@ -433,7 +429,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             {
                 this.Logger.Log("Calling HybridConnectionListener.Open");
                 await listener.OpenAsync(cancelSource.Token);
-                
+
                 await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
 
                 var listenerStream = await listener.AcceptConnectionAsync();
