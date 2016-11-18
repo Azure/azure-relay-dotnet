@@ -50,7 +50,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(listenerConnectionStringBuilder.ToString());
                 var client = new HybridConnectionClient(clientConnectionStringBuilder.ToString());
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
@@ -79,8 +79,9 @@ namespace Microsoft.Azure.Relay.UnitTests
                 await clientStreamCloseTask;
                 this.Logger.Log("Calling clientStream.CloseAsync completed");
 
-                this.Logger.Log("Closing " + listener.GetType().Name);
+                this.Logger.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
 
                 this.Logger.Log("UnauthenticatedHybridConnection test end");
             }
@@ -101,7 +102,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
@@ -130,8 +131,9 @@ namespace Microsoft.Azure.Relay.UnitTests
                 await clientStreamCloseTask;
                 this.Logger.Log("Calling clientStream.CloseAsync completed");
 
-                this.Logger.Log("Closing " + listener.GetType().Name);
+                this.Logger.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
 
                 this.Logger.Log("AuthenticatedHybridConnection test end");
             }
@@ -152,7 +154,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
@@ -184,8 +186,9 @@ namespace Microsoft.Azure.Relay.UnitTests
                 this.Logger.Log("Calling clientStream.Dispose");
                 clientStream.Dispose();
 
-                this.Logger.Log("Closing " + listener.GetType().Name);
+                this.Logger.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
 
                 this.Logger.Log("ClientShutdown test end");
             }
@@ -208,7 +211,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(10));
 
                 this.Logger.Log($"Opening {ClientCount} connections quickly");
@@ -228,8 +231,9 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 await Task.WhenAll(senderTasks);
 
-                this.Logger.Log("Closing " + listener.GetType().Name);
+                this.Logger.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
 
                 this.Logger.Log("ConcurrentClients test end");
             }
@@ -250,10 +254,11 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
+                this.Logger.Log($"clientStream connected! {clientStream}");
                 var listenerStream = await listener.AcceptConnectionAsync();
 
                 this.Logger.Log("Sending 1MB from client->listener");
@@ -267,7 +272,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 this.Logger.Log("Sending 1MB from listener->client");
                 await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log("listenerStream wrote {sendBuffer.Length} bytes");
+                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                 await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
@@ -303,7 +308,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
@@ -354,7 +359,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
-                this.Logger.Log("Calling HybridConnectionListener.Open");
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
@@ -453,8 +458,8 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(this.ConnectionString);
                 var client = new HybridConnectionClient(this.ConnectionString);
 
+                this.Logger.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(20));
-                this.Logger.Log("Calling HybridConnectionListener.Open");
 
                 var acceptTasks = new List<Task<HybridConnectionStream>>(600);
                 this.Logger.Log($"Calling listener.AcceptConnectionAsync() {acceptTasks.Capacity} times");
@@ -464,8 +469,9 @@ namespace Microsoft.Azure.Relay.UnitTests
                     Assert.False(acceptTasks[i].IsCompleted);
                 }
 
-                this.Logger.Log("Calling HybridConnectionListener.Close");
+                this.Logger.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
                 for (int i = 0; i < acceptTasks.Count; i++)
                 {
                     Assert.True(acceptTasks[i].Wait(TimeSpan.FromSeconds(5)));
@@ -509,7 +515,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                 {
-                    this.Logger.Log("Calling HybridConnectionListener.Open");
+                    this.Logger.Log($"Opening {listener}");
                     await listener.OpenAsync(cancelSource.Token);
 
                     await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
@@ -541,8 +547,9 @@ namespace Microsoft.Azure.Relay.UnitTests
                     await clientStreamCloseTask;
                     this.Logger.Log("Calling clientStream.CloseAsync completed");
 
-                    this.Logger.Log("Closing " + listener.GetType().Name);
+                    this.Logger.Log($"Closing {listener}");
                     await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                    listener = null;
                 }
 
                 this.Logger.Log("SubProtocol test end");
@@ -605,19 +612,22 @@ namespace Microsoft.Azure.Relay.UnitTests
                         catch (Exception readException)
                         {
                             this.Logger.Log($"AcceptEchoListener {readException.GetType().Name}: {readException.Message}");
-                            await listener.CloseAsync(new TimeSpan(0, 0, 10));
+                            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                            {
+                                await listenerStream.CloseAsync(cts.Token);
+                            }
+
                             return;
                         }
 
-                        if (bytesRead == 0)
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                         {
-                            var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                            await listenerStream.CloseAsync(cancellationTokenSource.Token);
-                            return;
-                        }
-                        else
-                        {
-                            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                            if (bytesRead == 0)
+                            {
+                                await listenerStream.CloseAsync(cts.Token);
+                                return;
+                            }
+                            else
                             {
                                 await listenerStream.WriteAsync(buffer, 0, bytesRead, cts.Token);
                             }
@@ -714,7 +724,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             {
                 try
                 {
-                    Logger.Log("Closing HybridConnectionListener");
+                    this.Logger.Log($"Closing {listener}");
                     await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 }
                 catch (Exception e)
