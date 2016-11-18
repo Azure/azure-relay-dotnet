@@ -272,7 +272,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 this.Logger.Log("Sending 1MB from listener->client");
                     await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log("listenerStream wrote {sendBuffer.Length} bytes");
+                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                     await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                     Assert.Equal(sendBuffer, readBuffer);
