@@ -7,7 +7,7 @@
 |Build/Package|Status|
 |------|-------------|
 |master|[![Build status](https://ci.appveyor.com/api/projects/status/qhefoxrdg068xjhj/branch/master?svg=true)](https://ci.appveyor.com/project/jtaubensee/azure-relay-dotnet/branch/master)|
-|Microsoft.Azure.Relay|[![NuGet Version and Downloads count](https://buildstats.info/nuget/Microsoft.Azure.Relay)](https://www.nuget.org/packages/Microsoft.Azure.Relay/)|
+|Microsoft.Azure.Relay|[![NuGet Version and Downloads count](https://buildstats.info/nuget/Microsoft.Azure.Relay?includePreReleases=true)](https://www.nuget.org/packages/Microsoft.Azure.Relay/)|
 
 This library is built using .NET Standard 1.3. For more information on what platforms are supported see [.NET Platforms Support](https://docs.microsoft.com/en-us/dotnet/articles/standard/library#net-platforms-support).
 
