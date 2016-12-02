@@ -902,7 +902,7 @@ namespace Microsoft.Azure.Relay
             readonly HybridConnectionListener listener;
             readonly TokenProvider tokenProvider;
             readonly Uri rendezvousAddress;
-            readonly string subProtocol = "";
+            readonly string subProtocol;
             bool complete;
             bool disposed;
 
@@ -996,7 +996,10 @@ namespace Microsoft.Azure.Relay
                     clientWebSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     clientWebSocket.Options.SetRequestHeader("Host", this.Address.Host);
                     clientWebSocket.Options.Proxy = this.listener.Proxy;
-                    clientWebSocket.Options.AddSubProtocol(this.subProtocol);
+                    if (!string.IsNullOrEmpty(this.subProtocol)) 
+                    {
+                        clientWebSocket.Options.AddSubProtocol(this.subProtocol);
+                    }
                     clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
 
                     using (var cancelSource = new CancellationTokenSource(timeoutHelper.RemainingTime()))
