@@ -42,7 +42,11 @@ namespace Microsoft.Azure.Relay
 
     static class HybridConnectionUtility
     {
+        // These readonly arrays are so we don't allocate arrays every time we call string.Split(params char[]...)
+        static readonly char[] Ampersand = new char[] { '&' };
         static readonly char[] Slash = new char[] { '/' };
+        static readonly char[] EqualSign = new char[] { '=' };
+        static readonly char[] QuestionMark = new char[] { '?' };
 
         /// <summary>
         /// Build the websocket uri for use with HybridConnection WebSockets.
@@ -71,6 +75,38 @@ namespace Microsoft.Azure.Relay
                 Path = HybridConnectionConstants.HybridConnectionRequestUri + path,
                 Query = query
             }.Uri;
+        }
+
+        /// <summary>
+        /// Filters out any query string values which start with the 'sb-hc-' prefix.  The returned string never
+        /// has a '?' character at the start.
+        /// </summary>
+        public static string FilterQueryString(string queryString)
+        {
+            if (string.IsNullOrEmpty(queryString))
+            {
+                return string.Empty;
+            }
+
+            queryString = queryString.TrimStart(QuestionMark);
+            var queryStringCollection = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
+            foreach (var nameValueString in queryString.Split(Ampersand))
+            {
+                if (!string.IsNullOrEmpty(nameValueString))
+                {
+                    string[] nameAndValue = nameValueString.Split(EqualSign, 2);
+                    if (nameAndValue.Length == 2)
+                    {
+                        queryStringCollection[nameAndValue[0]] = nameAndValue[1];
+                    }
+                    else
+                    {
+                        queryStringCollection[nameAndValue[0]] = string.Empty;
+                    }
+                }
+            }
+
+            return FilterQueryString(queryStringCollection);
         }
 
         /// <summary>

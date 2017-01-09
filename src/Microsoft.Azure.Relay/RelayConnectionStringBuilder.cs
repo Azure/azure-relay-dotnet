@@ -13,6 +13,7 @@ namespace Microsoft.Azure.Relay
     /// </summary> 
     public class RelayConnectionStringBuilder
     {
+        const string TraceSource = nameof(RelayConnectionStringBuilder);
         const string EndpointConfigName = "Endpoint";
         const string EntityPathConfigName = "EntityPath";
         const string OperationTimeoutConfigName = "OperationTimeout";
@@ -49,7 +50,7 @@ namespace Microsoft.Azure.Relay
         {
             if (string.IsNullOrEmpty(connectionString))
             {
-                throw RelayEventSource.Log.ArgumentNull(nameof(connectionString), this);
+                throw RelayEventSource.Log.ArgumentNull(nameof(connectionString), TraceSource);
             }
 
             this.ParseConnectionString(connectionString);
@@ -68,11 +69,11 @@ namespace Microsoft.Azure.Relay
             {
                 if (value == null)
                 {
-                    throw RelayEventSource.Log.ArgumentNull(nameof(Endpoint), this);
+                    throw RelayEventSource.Log.ArgumentNull(nameof(Endpoint), TraceSource);
                 }
                 else if (!value.IsAbsoluteUri)
                 {
-                    throw RelayEventSource.Log.Argument(nameof(Endpoint), SR.GetString(SR.NotValidAbsoluteUri, nameof(Endpoint)));
+                    throw RelayEventSource.Log.Argument(nameof(Endpoint), SR.GetString(SR.NotValidAbsoluteUri, nameof(Endpoint)), TraceSource);
                 }
 
                 this.endpoint = value;
@@ -117,7 +118,7 @@ namespace Microsoft.Azure.Relay
         public override string ToString()
         {
             this.Validate();
-            var connectionStringBuilder = new StringBuilder();
+            var connectionStringBuilder = new StringBuilder(200);
 
             // Endpoint is Required (Validate throws if not present)
             connectionStringBuilder.Append($"{EndpointConfigName}{KeyValueSeparator}{this.Endpoint.AbsoluteUri}{KeyValuePairDelimiter}");
@@ -163,7 +164,7 @@ namespace Microsoft.Azure.Relay
             }
             else
             {
-                throw RelayEventSource.Log.Argument("connectionString", SR.ConnectionStringMustIncludeTokenProviderSettings);
+                throw RelayEventSource.Log.Argument("connectionString", SR.ConnectionStringMustIncludeTokenProviderSettings, TraceSource);
             }
 
             return tokenProvider;
@@ -173,7 +174,7 @@ namespace Microsoft.Azure.Relay
         {
             if (this.Endpoint == null)
             {
-                throw RelayEventSource.Log.ArgumentNull(nameof(Endpoint));
+                throw RelayEventSource.Log.ArgumentNull(nameof(Endpoint), TraceSource);
             }
 
             // if one supplied SharedAccessKeyName, they need to supply SharedAccessKey, and vise versa
@@ -188,21 +189,24 @@ namespace Microsoft.Azure.Relay
                 {
                     throw RelayEventSource.Log.Argument(
                         SharedAccessSignatureConfigName + "," + SharedAccessKeyNameConfigName,
-                        SR.GetString(SR.SasTokenShouldBeAlone, SharedAccessSignatureConfigName, SharedAccessKeyNameConfigName));
+                        SR.GetString(SR.SasTokenShouldBeAlone, SharedAccessSignatureConfigName, SharedAccessKeyNameConfigName),
+                        TraceSource);
                 }
 
                 if (hasSharedAccessKey)
                 {
                     throw RelayEventSource.Log.Argument(
                         SharedAccessSignatureConfigName + "," + SharedAccessKeyConfigName,
-                        SR.GetString(SR.SasTokenShouldBeAlone, SharedAccessSignatureConfigName, SharedAccessKeyConfigName));
+                        SR.GetString(SR.SasTokenShouldBeAlone, SharedAccessSignatureConfigName, SharedAccessKeyConfigName),
+                        TraceSource);
                 }
             }
             else if ((hasSharedAccessKeyName && !hasSharedAccessKey) || (!hasSharedAccessKeyName && hasSharedAccessKey))
             {
                 // SharedAccessKeyName + SharedAccessKey go together, cannot specify one without the other.
                 throw RelayEventSource.Log.Argument(SharedAccessKeyNameConfigName + "," + SharedAccessKeyConfigName,
-                    SR.GetString(SR.ArgumentInvalidCombination, SharedAccessKeyNameConfigName + "," + SharedAccessKeyConfigName));
+                    SR.GetString(SR.ArgumentInvalidCombination, SharedAccessKeyNameConfigName + "," + SharedAccessKeyConfigName),
+                    TraceSource);
             }
         }
 
@@ -217,7 +221,8 @@ namespace Microsoft.Azure.Relay
                 string key = keyAndValue[0];
                 if (keyAndValue.Length != 2)
                 {
-                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringParameterValueMissing, key));
+                    throw RelayEventSource.Log.Argument(
+                        nameof(connectionString), SR.GetString(SR.ConnectionStringParameterValueMissing, key), TraceSource);
                 }
 
                 string value = keyAndValue[1];
@@ -226,7 +231,8 @@ namespace Microsoft.Azure.Relay
                     Uri endpoint;
                     if (!Uri.TryCreate(value, UriKind.Absolute, out endpoint))
                     {
-                        throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.NotValidAbsoluteUri, EndpointConfigName));
+                        throw RelayEventSource.Log.Argument(
+                            nameof(connectionString), SR.GetString(SR.NotValidAbsoluteUri, EndpointConfigName), TraceSource);
                     }
 
                     this.Endpoint = endpoint;
@@ -252,14 +258,16 @@ namespace Microsoft.Azure.Relay
                     TimeSpan timeValue;
                     if (!TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out timeValue))
                     {
-                        throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.NotValidTimeSpan, OperationTimeoutConfigName));
+                        throw RelayEventSource.Log.Argument(
+                            nameof(connectionString), SR.GetString(SR.NotValidTimeSpan, OperationTimeoutConfigName), TraceSource);
                     }
 
                     this.OperationTimeout = timeValue;
                 }
                 else
                 {
-                    throw RelayEventSource.Log.Argument(nameof(connectionString), SR.GetString(SR.ConnectionStringUnknownParameter, key));
+                    throw RelayEventSource.Log.Argument(
+                        nameof(connectionString), SR.GetString(SR.ConnectionStringUnknownParameter, key), TraceSource);
                 }
             }
         }

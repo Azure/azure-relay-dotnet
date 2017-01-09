@@ -63,6 +63,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to The Listener&apos;s custom AcceptHandler threw an exception. See Listener logs for details. TrackingId: {0}..
+        /// </summary>
+        public static string AcceptHandlerException {
+            get {
+                return ResourceManager.GetString("AcceptHandlerException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to Ensure either all or none of the following arguments are defined: &apos;{0}&apos;..
         /// </summary>
         public static string ArgumentInvalidCombination {

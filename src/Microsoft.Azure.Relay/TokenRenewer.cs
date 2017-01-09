@@ -18,19 +18,17 @@ namespace Microsoft.Azure.Relay
     class TokenRenewer
     {
         readonly Timer renewTimer;
-        readonly TokenProvider tokenProvider;
+        readonly HybridConnectionListener listener;
         readonly string appliesTo;
         readonly TimeSpan tokenValidFor;
-        readonly object traceSource;
 
-        public TokenRenewer(TokenProvider tokenProvider, string appliesTo, TimeSpan tokenValidFor, object traceSource)
+        public TokenRenewer(HybridConnectionListener listener, string appliesTo, TimeSpan tokenValidFor)
         {
-            Fx.Assert(tokenProvider != null, "tokenProvider is required");
+            Fx.Assert(listener != null, "listener is required");
             Fx.Assert(!string.IsNullOrEmpty(appliesTo), "appliesTo is required");
-            this.tokenProvider = tokenProvider;
+            this.listener = listener;
             this.appliesTo = appliesTo;
             this.tokenValidFor = tokenValidFor;
-            this.traceSource = traceSource;
             this.renewTimer = new Timer(s => OnRenewTimer(s), this, Timeout.Infinite, Timeout.Infinite);
         }
 
@@ -52,8 +50,8 @@ namespace Microsoft.Azure.Relay
         {
             try
             {
-                RelayEventSource.Log.GetTokenStart(this.traceSource);
-                var token = await this.tokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor).ConfigureAwait(false);
+                RelayEventSource.Log.GetTokenStart(this.listener);
+                var token = await this.listener.TokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor).ConfigureAwait(false);
                 RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
 
                 if (raiseTokenRenewedEvent)
@@ -64,13 +62,9 @@ namespace Microsoft.Azure.Relay
                 this.ScheduleRenewTimer(token);
                 return token;
             }
-            catch (Exception e)
+            catch (Exception e) when (!Fx.IsFatal(e))
             {
-                if (!Fx.IsFatal(e))
-                {
-                    this.OnTokenRenewException(e);
-                }
-
+                this.OnTokenRenewException(e);
                 throw;
             }
         }
@@ -87,14 +81,9 @@ namespace Microsoft.Azure.Relay
             {
                 await thisPtr.GetTokenAsync(true).ConfigureAwait(false);
             }
-            catch (Exception exception)
+            catch (Exception exception) when (!Fx.IsFatal(exception))
             {
-                if (Fx.IsFatal(exception))
-                {
-                    throw;
-                }
-
-                RelayEventSource.Log.HandledExceptionAsWarning(thisPtr.traceSource, exception);
+                RelayEventSource.Log.HandledExceptionAsWarning(thisPtr.listener, exception);
             }
         }
 
@@ -110,7 +99,7 @@ namespace Microsoft.Azure.Relay
             // TokenProvider won't return a token which is within 5min of expiring so we don't have to pad here.
             interval = interval < RelayConstants.ClientMinimumTokenRefreshInterval ? RelayConstants.ClientMinimumTokenRefreshInterval : interval;
 
-            RelayEventSource.Log.TokenRenewScheduled(interval, this.traceSource);
+            RelayEventSource.Log.TokenRenewScheduled(interval, this.listener);
             this.renewTimer.Change(interval, Timeout.InfiniteTimeSpan);
         }
 

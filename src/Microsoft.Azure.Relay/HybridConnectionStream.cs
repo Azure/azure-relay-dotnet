@@ -14,10 +14,18 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public abstract class HybridConnectionStream : Stream
     {
+        string cachedToString;
+
+        internal HybridConnectionStream(TrackingContext trackingContext)
+        {
+            this.TrackingContext = trackingContext;
+        }
         /// <summary>
         /// Sets or gets the WriteMode for this stream. Default is WriteMode.Binary
         /// </summary>
         public WriteMode WriteMode { get; set; } = WriteMode.Binary;
+
+        internal TrackingContext TrackingContext { get; }
 
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
@@ -48,6 +56,14 @@ namespace Microsoft.Azure.Relay
             {
                 RelayEventSource.Log.RelayClientShutdownStop();
             }
+        }
+
+        /// <summary>
+        /// Returns a string that represents the current object.  Includes a TrackingId for end to end correlation.
+        /// </summary>
+        public override string ToString()
+        {
+            return this.cachedToString ?? (this.cachedToString = nameof(HybridConnectionStream) + "(" + this.TrackingContext + ")");
         }
 
         /// <summary>
