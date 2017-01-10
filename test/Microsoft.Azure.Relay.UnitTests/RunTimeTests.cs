@@ -324,7 +324,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 byte[] sendBuffer = this.CreateBuffer(2 * 1024, new byte[] { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
                 await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log("listenerStream wrote {sendBuffer.Length} bytes");
+                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
