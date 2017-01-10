@@ -15,6 +15,12 @@ namespace Microsoft.Azure.Relay.UnitTests
 
     public class RunTimeTests : HybridConnectionTestBase
     {
+        const string TestAcceptHandlerResultHeader = "X-TestAcceptHandlerResult";
+        const string TestAcceptHandlerStatusCodeHeader = "X-TestAcceptHandlerStatusCode";
+        const string TestAcceptHandlerStatusDescriptionHeader = "X-TestAcceptHandlerStatusDescription";
+        const string TestAcceptHandlerSetResponseHeader = "X-TestAcceptHandlerSetResponseHeader";
+        const string TestAcceptHandlerDelayHeader = "X-TestAcceptHandlerDelay";
+
         public RunTimeTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -87,7 +93,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -139,7 +145,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -194,7 +200,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -239,7 +245,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -293,7 +299,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -318,7 +324,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 byte[] sendBuffer = this.CreateBuffer(2 * 1024, new byte[] { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
                 await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log("listenerStream wrote {sendBuffer.Length} bytes");
+                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
@@ -344,7 +350,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -384,7 +390,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -414,7 +420,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -443,7 +449,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -482,7 +488,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
             }
         }
 
@@ -556,7 +562,93 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             finally
             {
-                await this.SafeCloseHybridConnectionListenerAsync(listener);
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Fact]
+        public async Task AcceptHandler()
+        {
+            var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
+            HybridConnectionListener listener = null;
+            try
+            {
+                this.Logger.Log("Creating a listener connection string for the unauthenticated HybridConnection");
+                var connectionInfo = new RelayConnectionStringBuilder(this.ConnectionString)
+                {
+                    EntityPath = UnauthenticatedEntityPath
+                };
+
+                listener = new HybridConnectionListener(connectionInfo.ToString());
+                this.Logger.Log($"Opening {listener}");
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                // Install a Custom AcceptHandler which allows using Headers to control the StatusCode, StatusDescription,
+                // and whether to accept or reject the client.
+                listener.AcceptHandler = TestAcceptHandler;
+
+                Uri wssUri = new Uri("wss://" + connectionStringBuilder.Endpoint.Host + "/$hc/" + connectionInfo.EntityPath);
+                this.Logger.Log($"Using WebSocket address {wssUri}");
+                using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                {
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler accepting with only returning true");
+                    AcceptEchoListener(listener);
+                    var clientWebSocket = new ClientWebSocket();
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, true.ToString());
+                    await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
+                    await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Test closing web socket", cancelSource.Token);
+
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler accepting and setting response header");
+                    AcceptEchoListener(listener);
+                    clientWebSocket = new ClientWebSocket();
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, true.ToString());
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerSetResponseHeader, "X-CustomHeader: Test value");
+                    await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
+                    await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Test closing web socket", cancelSource.Token);
+
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with only returning false");
+                    AcceptEchoListener(listener);
+                    HttpStatusCode expectedStatusCode = HttpStatusCode.BadRequest;
+                    string expectedStatusDescription = "Rejected by user code";
+                    clientWebSocket = new ClientWebSocket();
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, false.ToString());
+                    var webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
+                    VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
+
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code and returning false");
+                    AcceptEchoListener(listener);
+                    expectedStatusCode = HttpStatusCode.Unauthorized;
+                    expectedStatusDescription = "Unauthorized";
+                    clientWebSocket = new ClientWebSocket();
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, false.ToString());
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerStatusCodeHeader, ((int)expectedStatusCode).ToString());
+                    webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
+                    VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
+
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code+description and returning false");
+                    AcceptEchoListener(listener);
+                    expectedStatusCode = HttpStatusCode.Unauthorized;
+                    expectedStatusDescription = "Status Description from test";
+                    clientWebSocket = new ClientWebSocket();
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, false.ToString());
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerStatusCodeHeader, ((int)expectedStatusCode).ToString());
+                    clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerStatusDescriptionHeader, expectedStatusDescription);
+                    webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
+                    VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
+
+                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler with a custom handler that returns null instead of a valid Task<bool>");
+                    listener.AcceptHandler = context => null;
+                    AcceptEchoListener(listener);
+                    expectedStatusCode = HttpStatusCode.BadGateway;
+                    expectedStatusDescription = "The Listener's custom AcceptHandler threw an exception. See Listener logs for details.";
+                    clientWebSocket = new ClientWebSocket();
+                    webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
+                    VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription, false);
+                }
+            }
+            finally
+            {
+                await SafeCloseAsync(listener);
             }
         }
 
@@ -718,7 +810,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             return buffer;
         }
 
-        async Task SafeCloseHybridConnectionListenerAsync(HybridConnectionListener listener)
+        async Task SafeCloseAsync(HybridConnectionListener listener)
         {
             if (listener != null)
             {
@@ -732,6 +824,75 @@ namespace Microsoft.Azure.Relay.UnitTests
                     Logger.Log($"Error closing HybridConnectionListener {e.GetType()}: {e.Message}");
                 }
             }
+        }
+
+        async Task<bool> TestAcceptHandler(RelayedHttpListenerContext listenerContext)
+        {
+            string delayString = listenerContext.Request.Headers[TestAcceptHandlerDelayHeader];
+            TimeSpan delay;
+            if (!string.IsNullOrEmpty(delayString) && TimeSpan.TryParse(delayString, out delay))
+            {
+                await Task.Delay(delay);
+            }
+
+            string statusCodeString = listenerContext.Request.Headers[TestAcceptHandlerStatusCodeHeader];
+            int statusCode;
+            if (!string.IsNullOrEmpty(statusCodeString) && int.TryParse(statusCodeString, out statusCode))
+            {
+                listenerContext.Response.StatusCode = (HttpStatusCode)statusCode;
+            }
+
+            string statusDescription = listenerContext.Request.Headers[TestAcceptHandlerStatusDescriptionHeader];
+            if (!string.IsNullOrEmpty(statusDescription))
+            {
+                listenerContext.Response.StatusDescription = statusDescription;
+            }
+
+            string responseHeaders = listenerContext.Request.Headers[TestAcceptHandlerSetResponseHeader];
+            if (!string.IsNullOrEmpty(responseHeaders))
+            {
+                foreach (var headerAndValue in responseHeaders.Split(','))
+                {
+                    string[] headerNameAndValue = headerAndValue.Split(':');
+                    listenerContext.Response.Headers[headerNameAndValue[0]] = headerNameAndValue[1].Trim();
+                }
+            }
+
+            bool result;
+            if (!bool.TryParse(listenerContext.Request.Headers[TestAcceptHandlerResultHeader], out result))
+            {
+                result = true;
+            }
+
+            this.Logger.Log($"Test AcceptHandler: {listenerContext.Request.Url} {(int)listenerContext.Response.StatusCode}: {listenerContext.Response.StatusDescription} returning {result}");
+            return result;
+        }
+
+        void VerifyHttpStatusCodeAndDescription(
+            WebSocketException webSocketException,
+            HttpStatusCode expectedStatusCode,
+            string expectedStatusDescription,
+            bool exactMatchDescription = true)
+        {
+            Assert.NotNull(webSocketException.InnerException);
+
+            // TODO: Error details aren't available in .NET Core due to issue:
+            // https://github.com/dotnet/corefx/issues/13773
+            ////Assert.IsAssignableFrom<WebException>(webSocketException.InnerException);
+            ////var webException = (WebException)webSocketException.InnerException;
+            ////Assert.NotNull(webException.Response);
+            ////Assert.IsAssignableFrom<HttpWebResponse>(webException.Response);
+            ////var httpWebResponse = (HttpWebResponse)webException.Response;
+            ////this.Logger.Log($"Actual HTTP Status: {(int)httpWebResponse.StatusCode}: {httpWebResponse.StatusDescription}");
+            ////Assert.Equal(expectedStatusCode, httpWebResponse.StatusCode);
+            ////if (exactMatchDescription)
+            ////{
+            ////    Assert.Equal(expectedStatusDescription, httpWebResponse.StatusDescription);
+            ////}
+            ////else
+            ////{
+            ////    Assert.Contains(expectedStatusDescription, httpWebResponse.StatusDescription);
+            ////}
         }
     }
 }

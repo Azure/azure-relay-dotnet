@@ -18,9 +18,9 @@ namespace Microsoft.Azure.Relay
             this.SubsystemId = subsystemId;
         }
 
-        public string TrackingId { get; private set; }
+        public string TrackingId { get; }
 
-        public string SubsystemId { get; private set; }
+        public string SubsystemId { get; }
 
         /// <summary>
         /// Create a TrackingContext with a new Guid/TrackingId and no subsystemId.

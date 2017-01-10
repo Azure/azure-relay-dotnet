@@ -14,7 +14,7 @@ namespace Microsoft.Azure.Relay
         public static void Fork(this Task thisTask, object source)
         {
             Fx.Assert(thisTask != null, "task is required!");
-            thisTask.ContinueWith(t => RelayEventSource.Log.HandledExceptionAsError(source, t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+            thisTask.ContinueWith((t, s) => RelayEventSource.Log.HandledExceptionAsError(s, t.Exception), source, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         /// <summary>

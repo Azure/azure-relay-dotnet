@@ -12,12 +12,11 @@ namespace Microsoft.Azure.Relay
     class WebSocketStream : HybridConnectionStream
     {
         readonly WebSocket webSocket;
-        string toString;
 
         public WebSocketStream(WebSocket webSocket, TrackingContext trackingContext)
+            : base(trackingContext)
         {
             this.webSocket = webSocket;
-            this.TrackingContext = trackingContext;
             this.ReadTimeout = Timeout.Infinite;
             this.WriteTimeout = Timeout.Infinite;
         }
@@ -70,18 +69,6 @@ namespace Microsoft.Azure.Relay
             get; set;
         }
 
-        TrackingContext TrackingContext { get; set; }
-
-        public override string ToString()
-        {
-            if (this.toString == null)
-            {
-                this.toString = typeof(HybridConnectionStream).Name + "(" + this.TrackingContext + ")";
-            }
-
-            return this.toString;
-        }
-
         protected override async Task OnCloseAsync(CancellationToken cancellationToken)
         {
             try
@@ -93,13 +80,8 @@ namespace Microsoft.Azure.Relay
                     await this.webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "CloseAsync", linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
-            catch (Exception exception)
+            catch (Exception exception) when (!Fx.IsFatal(exception))
             {
-                if (Fx.IsFatal(exception))
-                {
-                    throw;
-                }
-
                 RelayEventSource.Log.HandledExceptionAsWarning(this, exception);
                 this.webSocket.Abort();
             }
@@ -211,5 +193,10 @@ namespace Microsoft.Azure.Relay
             TaskEx.EndAsyncResult(asyncResult);
         }
 #endif // NET45
+
+        internal void Abort()
+        {
+            this.webSocket.Abort();
+        }
     }
 }

@@ -85,7 +85,7 @@ namespace Microsoft.Azure.Relay
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     // path is required outside of connectionString
-                    throw RelayEventSource.Log.ArgumentNull(nameof(path));
+                    throw RelayEventSource.Log.ArgumentNull(nameof(path), this);
                 }
                 else if (!string.IsNullOrWhiteSpace(builder.EntityPath))
                 {
@@ -144,7 +144,7 @@ namespace Microsoft.Azure.Relay
         public async Task<HybridConnectionStream> CreateConnectionAsync()
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
-            string traceSource = this.GetType().Name + "(" + trackingContext + ")";
+            string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext.ToString() + ")";
             var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
 
             RelayEventSource.Log.RelayClientConnectStart(traceSource);
@@ -158,11 +158,9 @@ namespace Microsoft.Azure.Relay
                 if (this.TokenProvider != null)
                 {
                     RelayEventSource.Log.GetTokenStart(traceSource);
-                    var token = await this.TokenProvider.GetTokenAsync(
-                        this.Address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped),
-                        TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
+                    string audience = this.Address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
+                    var token = await this.TokenProvider.GetTokenAsync(audience, TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
                     RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
-
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
                 }
 
@@ -186,7 +184,7 @@ namespace Microsoft.Azure.Relay
                 {
                     // Update to the flown trackingId (which has _GX suffix)
                     trackingContext = TrackingContext.Create(trackingId, trackingContext.SubsystemId);
-                    traceSource = this.GetType().Name + "(" + trackingContext + ")";
+                    traceSource = nameof(HybridConnectionClient) + "(" + trackingContext.ToString() + ")";
                 }
 #endif
 
@@ -198,7 +196,7 @@ namespace Microsoft.Azure.Relay
             }
             finally
             {
-                RelayEventSource.Log.RelayClientConnectStop(traceSource);
+                RelayEventSource.Log.RelayClientConnectStop();
             }
         }
 

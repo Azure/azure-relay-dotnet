@@ -11,10 +11,10 @@ namespace Microsoft.Azure.Relay
 
     sealed class InputQueue<T> : IDisposable where T : class
     {
+        readonly ItemQueue itemQueue;
+        readonly Queue<IQueueReader> readerQueue;
+        readonly List<IQueueWaiter> waiterList;
         QueueState queueState;
-        ItemQueue itemQueue;
-        Queue<IQueueReader> readerQueue;
-        List<IQueueWaiter> waiterList;
 
         public InputQueue()
         {

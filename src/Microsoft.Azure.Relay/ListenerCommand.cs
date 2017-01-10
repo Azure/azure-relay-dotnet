@@ -16,7 +16,7 @@ namespace Microsoft.Azure.Relay
     /// Accept:
     /// {
     ///   "accept" : {
-    ///     "address" : "wss:\/\/168.61.148.205:443\/$servicebus\/hybridconnection?action=accept&amp;path=somehybridconnection&amp;id=GUID_G0_G1",
+    ///     "address" : "wss://g63-prod-xxx-001-sb.servicebus.windows.net:443/$hc/YourHybridConnection?sb-hc-action=accept&amp;sb-hc-id=GUID_G0_G1",
     ///     "id" : "GUID_G0_G1",
     ///     "connectHeaders" : {
     ///       "Sec-WebSocket-Key": "l8fWd829IrZbEqUcLejv+Q==",
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.Relay
         /// <para/>
         /// {
         ///   "accept" : {
-        ///     "address" : "wss:\/\/168.61.148.205:443\/$servicebus\/hybridconnection?action=accept&amp;path=somehybridconnection&amp;id=GUID_G0_G1",
+        ///     "address" : "wss://g63-prod-xxx-001-sb.servicebus.windows.net:443/$hc/YourHybridConnection?sb-hc-action=accept&amp;sb-hc-id=GUID_G0_G1",
         ///     "id" : "GUID_G0_G1",
         ///     "connectHeaders" : {
         ///       "Sec-WebSocket-Key": "l8fWd829IrZbEqUcLejv+Q==",
