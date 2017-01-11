@@ -220,7 +220,8 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         internal static uint GetThreadId()
         {
-            uint threadId = (uint)Thread.CurrentThread.GetHashCode();
+            // Note: Changed from equivalent Thread.CurrentThread.GetHashCode() to support UWP
+            uint threadId = (uint)Environment.CurrentManagedThreadId;
             return threadId;
         }
 

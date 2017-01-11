@@ -173,7 +173,7 @@ namespace Microsoft.Azure.Relay
 
             if (outstandingReaders != null)
             {
-                ThreadPool.QueueUserWorkItem(s => CompleteOutstandingReadersCallback(s), outstandingReaders);
+                ActionItem.Schedule(s => CompleteOutstandingReadersCallback(s), outstandingReaders);
             }
 
             if (waiters != null)
@@ -343,11 +343,11 @@ namespace Microsoft.Azure.Relay
         {
             if (itemAvailable)
             {
-                ThreadPool.QueueUserWorkItem(s => CompleteWaitersTrueCallback(s), waiters);
+                ActionItem.Schedule(s => CompleteWaitersTrueCallback(s), waiters);
             }
             else
             {
-                ThreadPool.QueueUserWorkItem(s => CompleteWaitersFalseCallback(s), waiters);
+                ActionItem.Schedule(s => CompleteWaitersFalseCallback(s), waiters);
             }
         }
 
@@ -365,7 +365,7 @@ namespace Microsoft.Azure.Relay
         {
             if (dequeuedCallback != null)
             {
-                ThreadPool.QueueUserWorkItem(s => OnInvokeDequeuedCallback(s), dequeuedCallback);
+                ActionItem.Schedule(s => OnInvokeDequeuedCallback(s), dequeuedCallback);
             }
         }
 
@@ -447,7 +447,7 @@ namespace Microsoft.Azure.Relay
 
             if (dispatchLater)
             {
-                ThreadPool.QueueUserWorkItem(s => OnDispatchCallback(s), this);
+                ActionItem.Schedule(s => OnDispatchCallback(s), this);
             }
             else if (disposeItem)
             {
