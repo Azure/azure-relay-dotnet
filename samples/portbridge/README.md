@@ -148,7 +148,7 @@ local firewall. This is an additional layer of protection.
       </port>
     </portMappings>
   </portBridgeAgent>
-``` XML
+```
 
 Again, the serviceBusNamespace attribute takes your Service Bus namespace name,
 and serviceBusAccessRuleName plus serviceBusAccessRuleKey the SAS rule information.
