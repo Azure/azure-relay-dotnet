@@ -7,9 +7,7 @@
     "xmlDoc": true,
     "allowUnsafe": true,
     "warningsAsErrors": true,
-    "delaySign": true,
-    "publicSign": false,
-    "keyFile": "../../build/MSSharedLibSN1024.snk",
+    "keyFile": "../../build/keyfile.snk",
     "define": [ "TRACE" ]
   },
   "packOptions": {
