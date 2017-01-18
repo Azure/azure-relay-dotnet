@@ -4,11 +4,19 @@
 namespace Microsoft.Azure.Relay.UnitTests
 {
     using System;
+    using System.Diagnostics;
     using System.Security.Cryptography;
 
-    static class SasKeyGenerator
+    static class TestUtility
     {
-        internal static string GenerateRandomKey()
+        internal static void Log(string message)
+        {
+            var formattedMessage = $"{DateTime.Now.TimeOfDay}: {message}";
+            Debug.WriteLine(formattedMessage);
+            Console.WriteLine(formattedMessage);
+        }
+
+        internal static string GenerateRandomSasKey()
         {
             var key256 = new byte[32];
             using (var rng = RandomNumberGenerator.Create())

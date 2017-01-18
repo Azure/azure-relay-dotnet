@@ -6,20 +6,14 @@ namespace Microsoft.Azure.Relay.UnitTests
     using System;
     using System.Threading.Tasks;
     using Xunit;
-    using Xunit.Abstractions;
 
-    public class ParameterValidationTests : HybridConnectionTestBase
+    public class ParameterValidationTests
     {
-        public ParameterValidationTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact]
+        [DisplayTestMethodName]
         public async Task TokenProviderValidation()
         {
-            this.Logger.Log("Testing TokenProvider parameter validation");
-
-            var keyValue = SasKeyGenerator.GenerateRandomKey();
+            var keyValue = TestUtility.GenerateRandomSasKey();
 
             Assert.Throws<ArgumentNullException>(() => TokenProvider.CreateSharedAccessSignatureTokenProvider(null));
             Assert.Throws<ArgumentNullException>(() => TokenProvider.CreateSharedAccessSignatureTokenProvider(string.Empty));
@@ -38,6 +32,7 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact]
+        [DisplayTestMethodName]
         public void RelayConnectionStringBuilderValidation()
         {
             Assert.Throws<ArgumentNullException>(() => new RelayConnectionStringBuilder(null));
@@ -57,7 +52,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder(" "));
             Assert.Throws<ArgumentException>(() => new RelayConnectionStringBuilder("; "));
 
-            this.Logger.Log("Try some other weird combinations which shouldn't fail.");
+            TestUtility.Log("Try some other weird combinations which shouldn't fail.");
 
             new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net").ToString();
             new RelayConnectionStringBuilder("Endpoint=sb://whatever.servicebus.windows.net/").ToString();
@@ -72,12 +67,13 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact]
+        [DisplayTestMethodName]
         public void ClientValidation()
         {
             var entityPath = "myentity";
             var connectionString = "Endpoint=sb://whatever.servicebus.windows.net/";
             var connectionStringWithEntityPath = $"Endpoint=sb://whatever.servicebus.windows.net/;EntityPath={entityPath}";
-            var connectionStringWithSASKeyValueOnly = $"Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey={SasKeyGenerator.GenerateRandomKey()}";
+            var connectionStringWithSASKeyValueOnly = $"Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey={TestUtility.GenerateRandomSasKey()}";
 
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient((string)null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionClient(string.Empty));
@@ -89,12 +85,13 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact]
+        [DisplayTestMethodName]
         public void ListenerValidation()
         {
             var entityPath = "myentity";
             var connectionString = "Endpoint=sb://whatever.servicebus.windows.net/";
             var connectionStringWithEntityPath = $"Endpoint=sb://whatever.servicebus.windows.net/;EntityPath={entityPath}";
-            var connectionStringWithSASKeyValueOnly = $"Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey={SasKeyGenerator.GenerateRandomKey()}";
+            var connectionStringWithSASKeyValueOnly = $"Endpoint=sb://whatever.servicebus.windows.net/;SharedAccessKey={TestUtility.GenerateRandomSasKey()}";
 
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener((string)null));
             Assert.Throws<ArgumentNullException>(() => new HybridConnectionListener(string.Empty));

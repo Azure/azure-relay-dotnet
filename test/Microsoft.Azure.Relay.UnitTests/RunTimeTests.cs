@@ -11,85 +11,87 @@ namespace Microsoft.Azure.Relay.UnitTests
     using System.Threading;
     using System.Threading.Tasks;
     using Xunit;
-    using Xunit.Abstractions;
 
-    public class RunTimeTests : HybridConnectionTestBase
+    public class RunTimeTests
     {
+        const string ConnectionStringEnvironmentVariable = "azure-relay-dotnet/connectionstring";
+        const string AuthenticatedEntityPath = "authenticated";
+        const string UnauthenticatedEntityPath = "unauthenticated";
+
         const string TestAcceptHandlerResultHeader = "X-TestAcceptHandlerResult";
         const string TestAcceptHandlerStatusCodeHeader = "X-TestAcceptHandlerStatusCode";
         const string TestAcceptHandlerStatusDescriptionHeader = "X-TestAcceptHandlerStatusDescription";
         const string TestAcceptHandlerSetResponseHeader = "X-TestAcceptHandlerSetResponseHeader";
         const string TestAcceptHandlerDelayHeader = "X-TestAcceptHandlerDelay";
 
-        public RunTimeTests(ITestOutputHelper output) : base(output)
+        readonly string ConnectionString;
+
+        enum EndpointTestType
         {
+            Authenticated,
+            Unauthenticated
         }
 
-        [Fact]
-        public async Task UnauthenticatedHybridConnection()
+        public static IEnumerable<object> AuthenticationTestPermutations => new object[]
+        {
+            new object[] { EndpointTestType.Authenticated },
+            new object[] { EndpointTestType.Unauthenticated }
+        };
+
+        public RunTimeTests()
+        {
+            var envConnectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
+            if (string.IsNullOrWhiteSpace(envConnectionString))
+            {
+                throw new InvalidOperationException($"'{ConnectionStringEnvironmentVariable}' environment variable was not found!");
+            }
+
+            // Validate the connection string
+            ConnectionString = new RelayConnectionStringBuilder(envConnectionString).ToString();
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task HybridConnectionTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("UnauthenticatedHybridConnection test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                this.Logger.Log("Creating a listener connection string for the unauthenticated Hybrid Connection");
-                var listenerConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
-                {
-                    EntityPath = UnauthenticatedEntityPath
-                };
-
-                this.Logger.Log("Creating a client connection string for the unauthenticated Hybrid Connection. Setting the keys to string.Empty");
-
-                var clientConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
-                {
-                    EntityPath = UnauthenticatedEntityPath,
-                    SharedAccessKey = string.Empty,
-                    SharedAccessKeyName = string.Empty,
-                    SharedAccessSignature = string.Empty,
-                };
-
-                Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessKey);
-                Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessKeyName);
-                Assert.Equal(string.Empty, clientConnectionStringBuilder.SharedAccessSignature);
-
-                listener = new HybridConnectionListener(listenerConnectionStringBuilder.ToString());
-                var client = new HybridConnectionClient(clientConnectionStringBuilder.ToString());
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
                 var listenerStream = await listener.AcceptConnectionAsync();
-                this.Logger.Log("Client and Listener HybridStreams are connected!");
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
 
                 byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
                 await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"clientStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
 
-                this.Logger.Log("Calling clientStream.CloseAsync");
+                TestUtility.Log("Calling clientStream.CloseAsync");
                 var clientStreamCloseTask = clientStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
-                this.Logger.Log("Reading from listenerStream");
+                TestUtility.Log("Reading from listenerStream");
                 int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling listenerStream.CloseAsync");
+                TestUtility.Log("Calling listenerStream.CloseAsync");
                 var listenerStreamCloseTask = listenerStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
                 await listenerStreamCloseTask;
-                this.Logger.Log("Calling listenerStream.CloseAsync completed");
+                TestUtility.Log("Calling listenerStream.CloseAsync completed");
                 await clientStreamCloseTask;
-                this.Logger.Log("Calling clientStream.CloseAsync completed");
+                TestUtility.Log("Calling clientStream.CloseAsync completed");
 
-                this.Logger.Log($"Closing {listener}");
+                TestUtility.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 listener = null;
-
-                this.Logger.Log("UnauthenticatedHybridConnection test end");
             }
             finally
             {
@@ -97,106 +99,51 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task AuthenticatedHybridConnection()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ClientShutdownTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("AuthenticatedHybridConnection test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
-                await listener.OpenAsync(TimeSpan.FromSeconds(30));
-
-                var clientStream = await client.CreateConnectionAsync();
-                var listenerStream = await listener.AcceptConnectionAsync();
-                this.Logger.Log("Client and Listener HybridStreams are connected!");
-
-                byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-                await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"clientStream wrote {sendBuffer.Length} bytes");
-
-                byte[] readBuffer = new byte[sendBuffer.Length];
-                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
-                Assert.Equal(sendBuffer, readBuffer);
-
-                this.Logger.Log("Calling clientStream.CloseAsync");
-                var clientStreamCloseTask = clientStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
-                this.Logger.Log("Reading from listenerStream");
-                int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
-                Assert.Equal(0, bytesRead);
-
-                this.Logger.Log("Calling listenerStream.CloseAsync");
-                var listenerStreamCloseTask = listenerStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
-                await listenerStreamCloseTask;
-                this.Logger.Log("Calling listenerStream.CloseAsync completed");
-                await clientStreamCloseTask;
-                this.Logger.Log("Calling clientStream.CloseAsync completed");
-
-                this.Logger.Log($"Closing {listener}");
-                await listener.CloseAsync(TimeSpan.FromSeconds(10));
-                listener = null;
-
-                this.Logger.Log("AuthenticatedHybridConnection test end");
-            }
-            finally
-            {
-                await this.SafeCloseAsync(listener);
-            }
-        }
-
-        [Fact]
-        public async Task ClientShutdown()
-        {
-            HybridConnectionListener listener = null;
-            try
-            {
-                this.Logger.Log("ClientShutdown test start");
-
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
                 var listenerStream = await listener.AcceptConnectionAsync();
 
-                this.Logger.Log("Client and Listener HybridStreams are connected!");
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
 
                 byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
                 await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"clientStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
 
-                this.Logger.Log("Calling clientStream.Shutdown");
+                TestUtility.Log("Calling clientStream.Shutdown");
                 clientStream.Shutdown();
                 int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling listenerStream.Shutdown and Dispose");
+                TestUtility.Log("Calling listenerStream.Shutdown and Dispose");
                 listenerStream.Shutdown();
                 listenerStream.Dispose();
                 bytesRead = await this.SafeReadAsync(clientStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"clientStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"clientStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling clientStream.Dispose");
+                TestUtility.Log("Calling clientStream.Dispose");
                 clientStream.Dispose();
 
-                this.Logger.Log($"Closing {listener}");
+                TestUtility.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 listener = null;
-
-                this.Logger.Log("ClientShutdown test end");
             }
             finally
             {
@@ -204,23 +151,21 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task ConcurrentClients()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ConcurrentClientsTest(EndpointTestType endpointTestType)
         {
+            const int ClientCount = 100;
             HybridConnectionListener listener = null;
             try
             {
-                const int ClientCount = 100;
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                this.Logger.Log("ConcurrentClients test start");
-
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(10));
 
-                this.Logger.Log($"Opening {ClientCount} connections quickly");
+                TestUtility.Log($"Opening {ClientCount} connections quickly");
 
                 var createConnectionTasks = new List<Task<HybridConnectionStream>>();
                 for (var i = 0; i < ClientCount; i++)
@@ -237,11 +182,9 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 await Task.WhenAll(senderTasks);
 
-                this.Logger.Log($"Closing {listener}");
+                TestUtility.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 listener = null;
-
-                this.Logger.Log("ConcurrentClients test end");
             }
             finally
             {
@@ -249,53 +192,50 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task Write1Mb()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task WriteLargeDataSetTest(EndpointTestType endpointTestType, int kilobytesToSend = 1024)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("Write1Mb test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
-                this.Logger.Log($"clientStream connected! {clientStream}");
+                TestUtility.Log($"clientStream connected! {clientStream}");
                 var listenerStream = await listener.AcceptConnectionAsync();
 
-                this.Logger.Log("Sending 1MB from client->listener");
-                byte[] sendBuffer = this.CreateBuffer(1024 * 1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+                TestUtility.Log("Sending 1MB from client->listener");
+                byte[] sendBuffer = this.CreateBuffer(kilobytesToSend * 1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
                 await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"clientStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
 
-                this.Logger.Log("Sending 1MB from listener->client");
+                TestUtility.Log("Sending 1MB from listener->client");
                 await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                 await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
 
-                this.Logger.Log("Calling clientStream.Shutdown");
+                TestUtility.Log("Calling clientStream.Shutdown");
                 clientStream.Shutdown();
                 int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling listenerStream.Dispose");
+                TestUtility.Log("Calling listenerStream.Dispose");
                 listenerStream.Dispose();
 
-                this.Logger.Log("Calling clientStream.Dispose");
+                TestUtility.Log("Calling clientStream.Dispose");
                 clientStream.Dispose();
-
-                this.Logger.Log("Write1Mb test end");
             }
             finally
             {
@@ -303,50 +243,47 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task ListenerShutdown()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ListenerShutdownTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("ListenerShutdown test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
                 var listenerStream = await listener.AcceptConnectionAsync();
 
-                this.Logger.Log("Client and Listener HybridStreams are connected!");
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
 
                 byte[] sendBuffer = this.CreateBuffer(2 * 1024, new byte[] { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
                 await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                this.Logger.Log($"listenerStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"listenerStream wrote {sendBuffer.Length} bytes");
 
                 byte[] readBuffer = new byte[sendBuffer.Length];
                 await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                 Assert.Equal(sendBuffer, readBuffer);
 
-                this.Logger.Log("Calling listenerStream.Shutdown");
+                TestUtility.Log("Calling listenerStream.Shutdown");
                 listenerStream.Shutdown();
                 int bytesRead = await this.SafeReadAsync(clientStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"clientStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"clientStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling clientStream.Shutdown and Dispose");
+                TestUtility.Log("Calling clientStream.Shutdown and Dispose");
                 clientStream.Shutdown();
                 clientStream.Dispose();
                 bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
                 Assert.Equal(0, bytesRead);
 
-                this.Logger.Log("Calling listenerStream.Dispose");
+                TestUtility.Log("Calling listenerStream.Dispose");
                 listenerStream.Dispose();
-
-                this.Logger.Log("ListenerShutdown test end");
             }
             finally
             {
@@ -354,28 +291,27 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task ListenerAbortWhileClientReading()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ListenerAbortWhileClientReadingTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("ListenerAbortWhileClientReading test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
                 var listenerStream = await listener.AcceptConnectionAsync();
 
-                this.Logger.Log("Client and Listener HybridStreams are connected!");
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
 
                 using (var cancelSource = new CancellationTokenSource())
                 {
-                    this.Logger.Log("Aborting listener WebSocket");
+                    TestUtility.Log("Aborting listener WebSocket");
                     cancelSource.Cancel();
                     await listenerStream.CloseAsync(cancelSource.Token);
                 }
@@ -383,10 +319,8 @@ namespace Microsoft.Azure.Relay.UnitTests
                 byte[] readBuffer = new byte[1024];
                 await Assert.ThrowsAsync<RelayException>(() => clientStream.ReadAsync(readBuffer, 0, readBuffer.Length));
 
-                this.Logger.Log("Calling clientStream.Close");
+                TestUtility.Log("Calling clientStream.Close");
                 var clientCloseTask = clientStream.CloseAsync(CancellationToken.None);
-
-                this.Logger.Log("ListenerAbortWhileClientReading test end");
             }
             finally
             {
@@ -394,29 +328,41 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task NonExistantNamespace()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task NonExistantNamespaceTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("NonExistantNamespace test start");
-
-                this.Logger.Log("Setting ConnectionStringBuilder.Endpoint to 'sb://fakeendpoint.com'");
+                TestUtility.Log("Setting ConnectionStringBuilder.Endpoint to 'sb://fakeendpoint.com'");
 
                 var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
                 {
                     Endpoint = new Uri("sb://fakeendpoint.com")
                 };
+
+                if (endpointTestType == EndpointTestType.Authenticated)
+                {
+                    fakeEndpointConnectionStringBuilder.EntityPath = AuthenticatedEntityPath;
+                }
+                else
+                {
+                    fakeEndpointConnectionStringBuilder.EntityPath = UnauthenticatedEntityPath;
+                }
+
                 var fakeEndpointConnectionString = fakeEndpointConnectionStringBuilder.ToString();
 
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
-                await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync(TimeSpan.FromSeconds(30)));
+#if NET451
+                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
+                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+#else
+                await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
-
-                this.Logger.Log("NonExistantNamespace test end");
+#endif
             }
             finally
             {
@@ -424,15 +370,13 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task NonExistantHCEntity()
+        [Fact, DisplayTestMethodName]
+        async Task NonExistantHCEntityTest()
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("NonExistantHybridConnection test start");
-
-                this.Logger.Log("Setting ConnectionStringBuilder.EntityPath to a new GUID");
+                TestUtility.Log("Setting ConnectionStringBuilder.EntityPath to a new GUID");
                 var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
                 {
                     EntityPath = Guid.NewGuid().ToString()
@@ -441,11 +385,15 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
-
+#if NET451
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+#else
+                await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
+                await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
+#endif
 
-                this.Logger.Log("NonExistantHybridConnection test end");
+
             }
             finally
             {
@@ -453,29 +401,28 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task ListenerShutdownWithPendingAccepts()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ListenerShutdownWithPendingAcceptsTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("ListenerShutdownWithPendingAccepts test start");
+                listener = GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
 
-                listener = new HybridConnectionListener(this.ConnectionString);
-                var client = new HybridConnectionClient(this.ConnectionString);
-
-                this.Logger.Log($"Opening {listener}");
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(20));
 
                 var acceptTasks = new List<Task<HybridConnectionStream>>(600);
-                this.Logger.Log($"Calling listener.AcceptConnectionAsync() {acceptTasks.Capacity} times");
+                TestUtility.Log($"Calling listener.AcceptConnectionAsync() {acceptTasks.Capacity} times");
                 for (int i = 0; i < acceptTasks.Capacity; i++)
                 {
                     acceptTasks.Add(listener.AcceptConnectionAsync());
                     Assert.False(acceptTasks[i].IsCompleted);
                 }
 
-                this.Logger.Log($"Closing {listener}");
+                TestUtility.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 listener = null;
                 for (int i = 0; i < acceptTasks.Count; i++)
@@ -483,8 +430,6 @@ namespace Microsoft.Azure.Relay.UnitTests
                     Assert.True(acceptTasks[i].Wait(TimeSpan.FromSeconds(5)));
                     Assert.Null(acceptTasks[i].Result);
                 }
-
-                this.Logger.Log("ListenerShutdownWithPendingAccepts test end");
             }
             finally
             {
@@ -492,73 +437,56 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task RawWebSocketSender()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task RawWebSocketSenderTest(EndpointTestType endpointTestType)
         {
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("SubProtocol test start");
-
-                listener = new HybridConnectionListener(this.ConnectionString);
-
-                var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
+                listener = GetHybridConnectionListener(endpointTestType);
 
                 var clientWebSocket = new ClientWebSocket();
-
-                var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(
-                    connectionStringBuilder.SharedAccessKeyName,
-                    connectionStringBuilder.SharedAccessKey);
-
-                var token = await tokenProvider.GetTokenAsync(connectionStringBuilder.Endpoint.ToString(), TimeSpan.FromMinutes(10));
-
-                var wssUri = new Uri(string.Format(
-                    "wss://{0}/$hc/{1}?sb-hc-action={2}&sb-hc-token={3}",
-                    connectionStringBuilder.Endpoint.Host,
-                    connectionStringBuilder.EntityPath,
-                    "connect",
-                    WebUtility.UrlEncode(token.TokenString)));
+                var wssUri = await GetWebSocketConnectionUri(endpointTestType);
 
                 using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                 {
-                    this.Logger.Log($"Opening {listener}");
+                    TestUtility.Log($"Opening {listener}");
                     await listener.OpenAsync(cancelSource.Token);
 
                     await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
 
                     var listenerStream = await listener.AcceptConnectionAsync();
 
-                    this.Logger.Log("Client and Listener are connected!");
+                    TestUtility.Log("Client and Listener are connected!");
                     Assert.Null(clientWebSocket.SubProtocol);
 
                     byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
                     await clientWebSocket.SendAsync(new ArraySegment<byte>(sendBuffer), WebSocketMessageType.Binary, true, cancelSource.Token);
-                    this.Logger.Log($"clientWebSocket wrote {sendBuffer.Length} bytes");
+                    TestUtility.Log($"clientWebSocket wrote {sendBuffer.Length} bytes");
 
                     byte[] readBuffer = new byte[sendBuffer.Length];
                     await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
                     Assert.Equal(sendBuffer, readBuffer);
 
-                    this.Logger.Log("Calling clientStream.CloseAsync");
+                    TestUtility.Log("Calling clientStream.CloseAsync");
                     var clientStreamCloseTask = clientWebSocket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "From Test Code", cancelSource.Token);
-                    this.Logger.Log("Reading from listenerStream");
+                    TestUtility.Log("Reading from listenerStream");
                     int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                    this.Logger.Log($"listenerStream.Read returned {bytesRead} bytes");
+                    TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
                     Assert.Equal(0, bytesRead);
 
-                    this.Logger.Log("Calling listenerStream.CloseAsync");
+                    TestUtility.Log("Calling listenerStream.CloseAsync");
                     var listenerStreamCloseTask = listenerStream.CloseAsync(cancelSource.Token);
                     await listenerStreamCloseTask;
-                    this.Logger.Log("Calling listenerStream.CloseAsync completed");
+                    TestUtility.Log("Calling listenerStream.CloseAsync completed");
                     await clientStreamCloseTask;
-                    this.Logger.Log("Calling clientStream.CloseAsync completed");
+                    TestUtility.Log("Calling clientStream.CloseAsync completed");
 
-                    this.Logger.Log($"Closing {listener}");
+                    TestUtility.Log($"Closing {listener}");
                     await listener.CloseAsync(TimeSpan.FromSeconds(10));
                     listener = null;
                 }
-
-                this.Logger.Log("SubProtocol test end");
             }
             finally
             {
@@ -566,39 +494,37 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        public async Task AcceptHandler()
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task AcceptHandlerTest(EndpointTestType endpointTestType)
         {
-            var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
             HybridConnectionListener listener = null;
             try
             {
-                this.Logger.Log("Creating a listener connection string for the unauthenticated HybridConnection");
-                var connectionInfo = new RelayConnectionStringBuilder(this.ConnectionString)
-                {
-                    EntityPath = UnauthenticatedEntityPath
-                };
-
-                listener = new HybridConnectionListener(connectionInfo.ToString());
-                this.Logger.Log($"Opening {listener}");
+                listener = GetHybridConnectionListener(endpointTestType);
+                TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 // Install a Custom AcceptHandler which allows using Headers to control the StatusCode, StatusDescription,
                 // and whether to accept or reject the client.
                 listener.AcceptHandler = TestAcceptHandler;
 
-                Uri wssUri = new Uri("wss://" + connectionStringBuilder.Endpoint.Host + "/$hc/" + connectionInfo.EntityPath);
-                this.Logger.Log($"Using WebSocket address {wssUri}");
+                var clientConnectionString = GetConnectionString(endpointTestType);
+
+                var connectionStringBuilder = new RelayConnectionStringBuilder(clientConnectionString);
+
+                var wssUri = await GetWebSocketConnectionUri(endpointTestType);
+                TestUtility.Log($"Using WebSocket address {wssUri}");
                 using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
                 {
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler accepting with only returning true");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler accepting with only returning true");
                     AcceptEchoListener(listener);
                     var clientWebSocket = new ClientWebSocket();
                     clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, true.ToString());
                     await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
                     await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Test closing web socket", cancelSource.Token);
 
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler accepting and setting response header");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler accepting and setting response header");
                     AcceptEchoListener(listener);
                     clientWebSocket = new ClientWebSocket();
                     clientWebSocket.Options.SetRequestHeader(TestAcceptHandlerResultHeader, true.ToString());
@@ -606,7 +532,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
                     await clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Test closing web socket", cancelSource.Token);
 
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with only returning false");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler rejecting with only returning false");
                     AcceptEchoListener(listener);
                     HttpStatusCode expectedStatusCode = HttpStatusCode.BadRequest;
                     string expectedStatusDescription = "Rejected by user code";
@@ -615,7 +541,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     var webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
                     VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
 
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code and returning false");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code and returning false");
                     AcceptEchoListener(listener);
                     expectedStatusCode = HttpStatusCode.Unauthorized;
                     expectedStatusDescription = "Unauthorized";
@@ -625,7 +551,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
                     VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
 
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code+description and returning false");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler rejecting with setting status code+description and returning false");
                     AcceptEchoListener(listener);
                     expectedStatusCode = HttpStatusCode.Unauthorized;
                     expectedStatusDescription = "Status Description from test";
@@ -636,7 +562,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     webSocketException = await Assert.ThrowsAsync<WebSocketException>(() => clientWebSocket.ConnectAsync(wssUri, cancelSource.Token));
                     VerifyHttpStatusCodeAndDescription(webSocketException, expectedStatusCode, expectedStatusDescription);
 
-                    this.Logger.Log("Testing HybridConnectionListener.AcceptHandler with a custom handler that returns null instead of a valid Task<bool>");
+                    TestUtility.Log("Testing HybridConnectionListener.AcceptHandler with a custom handler that returns null instead of a valid Task<bool>");
                     listener.AcceptHandler = context => null;
                     AcceptEchoListener(listener);
                     expectedStatusCode = HttpStatusCode.BadGateway;
@@ -653,10 +579,83 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         /// <summary>
+        /// Since these tests all share a common connection string, this method will modify the 
+        /// endpoint / shared access keys as needed based on the EndpointTestType.
+        /// </summary>
+        string GetConnectionString(EndpointTestType endpointTestType)
+        {
+            var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
+            if (endpointTestType == EndpointTestType.Unauthenticated)
+            {
+                connectionStringBuilder.EntityPath = UnauthenticatedEntityPath;
+                connectionStringBuilder.SharedAccessKey = string.Empty;
+                connectionStringBuilder.SharedAccessKeyName = string.Empty;
+                connectionStringBuilder.SharedAccessSignature = string.Empty;
+            }
+            else
+            {
+                connectionStringBuilder.EntityPath = AuthenticatedEntityPath;
+            }
+
+            return connectionStringBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Returns a HybridConnectionClient based on the EndpointTestType (authenticated/unauthenticated).
+        /// </summary>
+        HybridConnectionClient GetHybridConnectionClient(EndpointTestType endpointTestType)
+        {
+            var connectionString = GetConnectionString(endpointTestType);
+            return new HybridConnectionClient(connectionString);
+        }
+
+        /// <summary>
+        /// Returns a HybridConnectionListener based on the EndpointTestType (authenticated/unauthenticated).
+        /// </summary>
+        HybridConnectionListener GetHybridConnectionListener(EndpointTestType endpointTestType)
+        {
+            // Even if the endpoint is unauthenticated, the *listener* still needs to be authenticated
+            if (endpointTestType == EndpointTestType.Unauthenticated)
+            {
+                var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+                {
+                    EntityPath = UnauthenticatedEntityPath
+                };
+                return new HybridConnectionListener(connectionStringBuilder.ToString());
+            }
+
+            return new HybridConnectionListener(GetConnectionString(endpointTestType));
+        }
+
+        /// <summary>
+        /// Since these tests all share a common connection string, this method will modify the 
+        /// endpoint / shared access keys as needed based on the EndpointTestType, and return a WebSocket URI.
+        /// </summary>
+        async Task<Uri> GetWebSocketConnectionUri(EndpointTestType endpointTestType)
+        {
+            var clientConnectionString = GetConnectionString(endpointTestType);
+            var connectionStringBuilder = new RelayConnectionStringBuilder(clientConnectionString);
+            var connectionUriString = $"wss://{connectionStringBuilder.Endpoint.Host}/$hc/{connectionStringBuilder.EntityPath}";
+
+            if (endpointTestType == EndpointTestType.Authenticated)
+            {
+                var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(
+                    connectionStringBuilder.SharedAccessKeyName,
+                    connectionStringBuilder.SharedAccessKey);
+
+                var token = await tokenProvider.GetTokenAsync(connectionStringBuilder.Endpoint.ToString(), TimeSpan.FromMinutes(10));
+
+                connectionUriString += $"?sb-hc-token={WebUtility.UrlEncode(token.TokenString)}";
+            }
+
+            return new Uri(connectionUriString);
+        }
+
+        /// <summary>
         /// Create an send-side HybridConnectionStream, send N bytes to it, receive N bytes response from it,
         /// then close the HybridConnectionStream.
         /// </summary>
-        private async Task RunEchoClientAsync(HybridConnectionStream clientStream, int byteCount)
+        async Task RunEchoClientAsync(HybridConnectionStream clientStream, int byteCount)
         {
             var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             try
@@ -672,7 +671,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             catch (Exception e)
             {
-                this.Logger.Log($"[byteCount={byteCount}] {e.GetType().Name}: {e.Message}");
+                TestUtility.Log($"[byteCount={byteCount}] {e.GetType().Name}: {e.Message}");
                 await clientStream.CloseAsync(cancelSource.Token);
                 throw;
             }
@@ -686,7 +685,7 @@ namespace Microsoft.Azure.Relay.UnitTests
         /// Call HybridConnectionListener.AcceptConnectionAsync, once/if a listener is accepted
         /// read from its stream and echo the bytes until a 0-byte read occurs, then close.
         /// </summary>
-        private async void AcceptEchoListener(HybridConnectionListener listener)
+        async void AcceptEchoListener(HybridConnectionListener listener)
         {
             try
             {
@@ -703,7 +702,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                         }
                         catch (Exception readException)
                         {
-                            this.Logger.Log($"AcceptEchoListener {readException.GetType().Name}: {readException.Message}");
+                            TestUtility.Log($"AcceptEchoListener {readException.GetType().Name}: {readException.Message}");
                             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                             {
                                 await listenerStream.CloseAsync(cts.Token);
@@ -730,11 +729,11 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
             catch (Exception e)
             {
-                this.Logger.Log($"AcceptEchoListener {e.GetType().Name}: {e.Message}");
+                TestUtility.Log($"AcceptEchoListener {e.GetType().Name}: {e.Message}");
             }
         }
 
-        private async Task ReadCountBytesAsync(Stream stream, byte[] buffer, int offset, int bytesToRead, TimeSpan timeout)
+        async Task ReadCountBytesAsync(Stream stream, byte[] buffer, int offset, int bytesToRead, TimeSpan timeout)
         {
             DateTime timeoutInstant = DateTime.Now.Add(timeout);
             int? originalReadTimeout = stream.CanTimeout ? stream.ReadTimeout : (int?)null;
@@ -751,7 +750,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                     stream.ReadTimeout = (int)remainingTimeout.TotalMilliseconds;
                     int bytesRead = await stream.ReadAsync(buffer, offset + totalBytesRead, bytesToRead - totalBytesRead);
-                    this.Logger.Log($"Stream read {bytesRead} bytes");
+                    TestUtility.Log($"Stream read {bytesRead} bytes");
                     if (bytesRead == 0)
                     {
                         break;
@@ -778,23 +777,23 @@ namespace Microsoft.Azure.Relay.UnitTests
         /// <summary>
         /// Calls Stream.ReadAsync with Exception handling. If an IOException occurs a zero byte read is returned.
         /// </summary>
-        private async Task<int> SafeReadAsync(Stream stream, byte[] buffer, int offset, int bytesToRead)
+        async Task<int> SafeReadAsync(Stream stream, byte[] buffer, int offset, int bytesToRead)
         {
             int bytesRead = 0;
             try
             {
                 bytesRead = await stream.ReadAsync(buffer, offset, bytesToRead);
-                this.Logger.Log($"Stream read {bytesRead} bytes");
+                TestUtility.Log($"Stream read {bytesRead} bytes");
             }
             catch (IOException ex)
             {
-                this.Logger.Log($"Stream.ReadAsync error {ex}");
+                TestUtility.Log($"Stream.ReadAsync error {ex}");
             }
 
             return bytesRead;
         }
 
-        private byte[] CreateBuffer(int length, byte[] fillPattern)
+        byte[] CreateBuffer(int length, byte[] fillPattern)
         {
             byte[] buffer = new byte[length];
 
@@ -816,12 +815,12 @@ namespace Microsoft.Azure.Relay.UnitTests
             {
                 try
                 {
-                    this.Logger.Log($"Closing {listener}");
+                    TestUtility.Log($"Closing {listener}");
                     await listener.CloseAsync(TimeSpan.FromSeconds(10));
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"Error closing HybridConnectionListener {e.GetType()}: {e.Message}");
+                    TestUtility.Log($"Error closing HybridConnectionListener {e.GetType()}: {e.Message}");
                 }
             }
         }
@@ -864,7 +863,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 result = true;
             }
 
-            this.Logger.Log($"Test AcceptHandler: {listenerContext.Request.Url} {(int)listenerContext.Response.StatusCode}: {listenerContext.Response.StatusDescription} returning {result}");
+            TestUtility.Log($"Test AcceptHandler: {listenerContext.Request.Url} {(int)listenerContext.Response.StatusCode}: {listenerContext.Response.StatusDescription} returning {result}");
             return result;
         }
 
@@ -883,7 +882,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             ////Assert.NotNull(webException.Response);
             ////Assert.IsAssignableFrom<HttpWebResponse>(webException.Response);
             ////var httpWebResponse = (HttpWebResponse)webException.Response;
-            ////this.Logger.Log($"Actual HTTP Status: {(int)httpWebResponse.StatusCode}: {httpWebResponse.StatusDescription}");
+            ////TestUtility.Log($"Actual HTTP Status: {(int)httpWebResponse.StatusCode}: {httpWebResponse.StatusDescription}");
             ////Assert.Equal(expectedStatusCode, httpWebResponse.StatusCode);
             ////if (exactMatchDescription)
             ////{
