@@ -27,6 +27,10 @@ listener and sender roles and how listeners accept new connections.
 This repository contains samples showing how to use the Hybrid Connections
 capability from C# and it also holds the protocol documentation.
 
+## How to provide feedback
+
+See our [Contribution Guidelines](./.github/CONTRIBUTING.md).
+
 ## Samples
 
 - [**Simple**](./samples/simple/README.md) - The "Simple" sample illustrates the basic functions of the API
