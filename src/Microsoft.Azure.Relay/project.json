@@ -54,6 +54,11 @@
         "System.Runtime.Serialization.Xml": "4.1.1"
       },
       "imports": "dnxcore50"
+    },
+    "uap10.0": {
+      "dependencies": {
+        "Microsoft.NETCore.UniversalWindowsPlatform": "5.2.2"
+      }
     }
   }
 }
