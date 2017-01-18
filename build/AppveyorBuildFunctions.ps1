@@ -74,7 +74,7 @@ function Deploy-AzureResources
         Write-Host "Relay namespace: $NamespaceName"
         
         $ConnectionString = $settings.Outputs.Get_Item("namespaceConnectionString").Value
-        [Environment]::SetEnvironmentVariable('azure-relay-dotnet/connectionstring', $ConnectionString)
+        [Environment]::SetEnvironmentVariable('RELAYCONNECTIONSTRING', $ConnectionString)
 
         Write-Host "Completed creating Azure resources"
     }
@@ -89,7 +89,7 @@ function Deploy-AzureResources
 
 function Run-UnitTests
 {
-    if ([bool][Environment]::GetEnvironmentVariable('azure-relay-dotnet/connectionstring'))
+    if ([bool][Environment]::GetEnvironmentVariable('RELAYCONNECTIONSTRING'))
     {
         Write-Host "Running unit tests."
 
