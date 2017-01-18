@@ -1,6 +1,10 @@
 {
   "version": "1.0.0",
   "testRunner": "xunit",
+  "buildOptions": {
+    "warningsAsErrors": true,
+    "keyFile": "../../build/keyfile.snk"
+  },
   "dependencies": {
     "Microsoft.Azure.Relay": {
       "target": "project"
