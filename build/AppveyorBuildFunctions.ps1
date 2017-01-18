@@ -15,14 +15,14 @@ function Build-Solution
 
     if (-not $?)
     {
-        throw "Build failed."
+        throw "Microsoft.Azure.Relay build failed."
     }
 
     dotnet build test/Microsoft.Azure.Relay.UnitTests/project.json
 
     if (-not $?)
     {
-        throw "Build failed."
+        throw "Microsoft.Azure.Relay.UnitTests build failed."
     }
     else
     {
