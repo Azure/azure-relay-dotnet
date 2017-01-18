@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using Xunit.Runners.UI;
 
-namespace Microsoft.Azure.Relay.UnitTests.UWP
+namespace Microsoft.Azure.Relay.UnitTests
 {
     sealed partial class App : RunnerApplication
     {

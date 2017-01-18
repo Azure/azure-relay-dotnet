@@ -57,7 +57,19 @@
     },
     "uap10.0": {
       "dependencies": {
-        "Microsoft.NETCore.UniversalWindowsPlatform": "5.2.2"
+        "Microsoft.NETCore.UniversalWindowsPlatform": "5.2.2",
+        "System.Collections.NonGeneric": "4.0.1",
+        "System.Collections.Specialized": "4.0.1",
+        "System.Threading.Overlapped": "4.0.1",
+        "System.Xml.XmlDocument": "4.0.1",
+        "System.Net.Security": "4.3.0"
+      },
+      "buildOptions": {
+        "compile": {
+          "exclude": [ "WebSockets/Net45/*.cs" ],
+          "include": [ "WebSockets/NetCore/*.cs" ]
+        },
+        "define": [ "NETSTANDARD" ]
       }
     }
   }
