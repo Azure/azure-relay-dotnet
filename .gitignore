@@ -180,6 +180,8 @@ $RECYCLE.BIN/
 *.lib
 *.dll
 *.lock.json
+*.nuget.props
+*.nuget.targets
 
 #Windows CE build artifacts
 Build.err
