@@ -21,7 +21,6 @@ namespace Microsoft.Azure.Relay.UnitTests
             var log = string.Format("{0} {1}", DateTime.Now.TimeOfDay, message);
             this.output.WriteLine(log);
             Debug.WriteLine(message);
-            Console.WriteLine(message);
         }
     }
 }
