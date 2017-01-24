@@ -67,6 +67,9 @@
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
     <None Include="..\..\Build\keyfile.snk" />
     <None Include="project.json" />
+    <Reference Include="Microsoft.Azure.Relay">
+      <HintPath>..\..\src\Microsoft.Azure.Relay\bin\$(Configuration)\uap10.0\Microsoft.Azure.Relay.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs">
@@ -100,11 +103,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.Azure.Relay">
-      <HintPath>..\..\src\Microsoft.Azure.Relay\bin\$(Configuration)\uap10.0\Microsoft.Azure.Relay.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup />
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
