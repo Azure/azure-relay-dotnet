@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4-preview",
+  "version": "0.1.5-preview",
   "title": "Microsoft.Azure.Relay",
   "description": "Microsoft.Azure.Relay Class Library",
   "authors": [ "Microsoft" ],
