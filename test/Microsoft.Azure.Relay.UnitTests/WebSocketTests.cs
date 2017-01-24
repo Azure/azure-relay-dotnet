@@ -18,10 +18,6 @@ namespace Microsoft.Azure.Relay.UnitTests
         const string TestAcceptHandlerSetResponseHeader = "X-TestAcceptHandlerSetResponseHeader";
         const string TestAcceptHandlerDelayHeader = "X-TestAcceptHandlerDelay";
 
-        public  WebSocketTests() : base()
-        {
-        }
-
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
         async Task RawWebSocketSenderTest(EndpointTestType endpointTestType)

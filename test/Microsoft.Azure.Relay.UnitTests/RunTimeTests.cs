@@ -11,10 +11,6 @@ namespace Microsoft.Azure.Relay.UnitTests
 
     public class RunTimeTests : HybridConnectionTestBase
     {
-        public RunTimeTests() : base()
-        {
-        }
-
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
         async Task HybridConnectionTest(EndpointTestType endpointTestType)
@@ -321,6 +317,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
+// TODO: Remove this once .NET Core supports inspecting the StatusCode/Description. https://github.com/dotnet/corefx/issues/13773
 #if NET451
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
