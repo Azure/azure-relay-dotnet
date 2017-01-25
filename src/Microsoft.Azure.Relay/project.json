@@ -22,8 +22,7 @@
     "net45": {
       "buildOptions": {
         "compile": {
-          "exclude": [ "WebSockets/NetCore/*.cs" ],
-          "include": [ "WebSockets/Net45/*.cs" ]
+          "exclude": [ "WebSockets/NetCore/*.cs" ]
         },
         "define": [ "NET45", "SERIALIZATION" ]
       },
@@ -36,10 +35,9 @@
     "netstandard1.3": {
       "buildOptions": {
         "compile": {
-          "exclude": [ "WebSockets/Net45/*.cs" ],
           "include": [ "WebSockets/NetCore/*.cs" ]
         },
-        "define": [ "NETSTANDARD" ]
+        "define": [ "NETSTANDARD", "CUSTOM_CLIENTWEBSOCKET" ]
       },
       "dependencies": {
         "NETStandard.Library": "1.6.1",

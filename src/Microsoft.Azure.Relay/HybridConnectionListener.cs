@@ -9,19 +9,18 @@ namespace Microsoft.Azure.Relay
     using System.IO;
     using System.Net;
     using System.Net.WebSockets;
-    using System.Reflection;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+#if CUSTOM_CLIENTWEBSOCKET
     using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
+#endif
 
     /// <summary>
     /// Provides a listener for accepting HybridConnections from remote clients.
     /// </summary>
     public class HybridConnectionListener : IConnectionStatus
     {
-        static readonly string ClientAgentFileVersion = LookupFileVersion();
-
         const int DefaultConnectionBufferSize = 64 * 1024;
         readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
@@ -378,13 +377,6 @@ namespace Microsoft.Azure.Relay
             this.controlConnection.SendCommandAsync(listenerCommand, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        static string LookupFileVersion()
-        {
-            var a = typeof(HybridConnectionListener).GetTypeInfo().Assembly;
-            var attribute = a.GetCustomAttribute<AssemblyFileVersionAttribute>();
-            return attribute.Version;
-        }
-
         void ThrowIfReadOnly()
         {
             lock (this.ThisLock)
@@ -641,7 +633,7 @@ namespace Microsoft.Azure.Relay
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
-                    webSocket.Options.SetRequestHeader("User-Agent", "ServiceBus/" + ClientAgentFileVersion);
+                    webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
 
                     var token = await this.tokenRenewer.GetTokenAsync().ConfigureAwait(false);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
@@ -659,15 +651,6 @@ namespace Microsoft.Azure.Relay
                         trackingId);
 
                     await webSocket.ConnectAsync(webSocketUri, cancellationToken).ConfigureAwait(false);
-
-#if NET45 // TODO: Flow Response Headers in NETSTANDARD ClientWebSocket
-                    trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
-                    if (!string.IsNullOrEmpty(trackingId))
-                    {
-                        // Update to the flown trackingId (which has _GX suffix)
-                        this.listener.TrackingContext = TrackingContext.Create(trackingId, this.listener.TrackingContext.SubsystemId);
-                    }
-#endif
 
                     this.OnOnline();
                     return webSocket;

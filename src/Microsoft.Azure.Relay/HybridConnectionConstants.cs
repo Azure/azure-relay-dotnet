@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.Collections.Specialized;
     using System.Net;
+    using System.Reflection;
     using System.Text;
 
     static class HybridConnectionConstants
@@ -16,13 +17,20 @@ namespace Microsoft.Azure.Relay
         // Names of query string options
         public const string QueryStringKeyPrefix = "sb-hc-";
         public const string Action = QueryStringKeyPrefix + "action"; // sb-hc-action
-        public const string Host = QueryStringKeyPrefix + "host"; // sb-hc-host
         public const string Id = QueryStringKeyPrefix + "id"; // sb-hc-id
         public const string StatusCode = QueryStringKeyPrefix + "statusCode"; // sb-hc-statusCode
         public const string StatusDescription = QueryStringKeyPrefix + "statusDescription"; // sb-hc-statusDescription
         public const string Token = QueryStringKeyPrefix + "token"; // sb-hc-token
 
         public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromMinutes(3.5);
+        public static readonly string ClientAgent = "azure-relay-dotnet/" + LookupFileVersion();
+
+        static string LookupFileVersion()
+        {
+            var a = typeof(HybridConnectionConstants).GetTypeInfo().Assembly;
+            var attribute = a.GetCustomAttribute<AssemblyFileVersionAttribute>();
+            return attribute.Version;
+        }
 
         public static class Actions
         {
@@ -33,6 +41,7 @@ namespace Microsoft.Azure.Relay
 
         public static class Headers
         {
+            public const string RelayUserAgent = "Relay-User-Agent";
             public const string SecWebSocketExtensions = "Sec-WebSocket-Extensions";
             public const string SecWebSocketKey = "Sec-WebSocket-Key";
             public const string SecWebSocketProtocol = "Sec-WebSocket-Protocol";

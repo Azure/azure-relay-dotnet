@@ -9,7 +9,9 @@ namespace Microsoft.Azure.Relay
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+#if CUSTOM_CLIENTWEBSOCKET
     using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
+#endif
 
     /// <summary>
     /// Provides access to the request and response objects representing a client request to a <see cref="HybridConnectionListener"/>.
@@ -131,7 +133,6 @@ namespace Microsoft.Azure.Relay
         {
             var clientWebSocket = new ClientWebSocket();
             clientWebSocket.Options.SetBuffer(this.Listener.ConnectionBufferSize, this.Listener.ConnectionBufferSize);
-            clientWebSocket.Options.SetRequestHeader("Host", this.Listener.Address.Host);
             clientWebSocket.Options.Proxy = this.Listener.Proxy;
             clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
             return clientWebSocket;
