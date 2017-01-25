@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     // From: https://github.com/dotnet/corefx/blob/master/src/Common/src/System/SR.cs
     internal partial class SR : Strings
     {
-        // This method is used to decide if we need to append the exception message parameters to the message when calling SR.Format. 
+        // This method is used to decide if we need to append the exception message parameters to the message when calling SR.Format.
         // by default it returns false.
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static bool UsingResourceKeys()
