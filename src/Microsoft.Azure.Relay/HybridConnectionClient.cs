@@ -8,7 +8,9 @@ namespace Microsoft.Azure.Relay
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
+#if CUSTOM_CLIENTWEBSOCKET
     using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
+#endif
 
     /// <summary>
     /// Provides a client for initiating new send-side HybridConnections.
@@ -154,6 +156,7 @@ namespace Microsoft.Azure.Relay
                 webSocket.Options.Proxy = this.Proxy;
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
+                webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
 
                 if (this.TokenProvider != null)
                 {
@@ -177,16 +180,6 @@ namespace Microsoft.Azure.Relay
                 {
                     await webSocket.ConnectAsync(webSocketUri, cancelSource.Token).ConfigureAwait(false);
                 }
-
-#if NET45 // TODO: Flow Response Headers in NETSTANDARD ClientWebSocket
-                var trackingId = webSocket.ResponseHeaders[TrackingContext.TrackingIdName];
-                if (!string.IsNullOrEmpty(trackingId))
-                {
-                    // Update to the flown trackingId (which has _GX suffix)
-                    trackingContext = TrackingContext.Create(trackingId, trackingContext.SubsystemId);
-                    traceSource = nameof(HybridConnectionClient) + "(" + trackingContext.ToString() + ")";
-                }
-#endif
 
                 return new WebSocketStream(webSocket, trackingContext);
             }
