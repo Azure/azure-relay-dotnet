@@ -135,6 +135,10 @@ namespace Microsoft.Azure.Relay
             clientWebSocket.Options.SetBuffer(this.Listener.ConnectionBufferSize, this.Listener.ConnectionBufferSize);
             clientWebSocket.Options.Proxy = this.Listener.Proxy;
             clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+#if CUSTOM_CLIENTWEBSOCKET
+            // The .NET Framework ClientWebSocket throws when setting the Host header, but it works in .NET Core
+            clientWebSocket.Options.SetRequestHeader("Host", this.Listener.Address.Host);
+#endif
             return clientWebSocket;
         }
 
