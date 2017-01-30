@@ -167,23 +167,26 @@ namespace Microsoft.Azure.Relay.UnitTests
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var clientStream = await client.CreateConnectionAsync();
-                TestUtility.Log($"clientStream connected! {clientStream}");
                 var listenerStream = await listener.AcceptConnectionAsync();
+                TestUtility.Log($"clientStream and listenerStream connected! {listenerStream}");
 
-                TestUtility.Log("Sending 1MB from client->listener");
                 byte[] sendBuffer = this.CreateBuffer(kilobytesToSend * 1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-                await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
-
                 byte[] readBuffer = new byte[sendBuffer.Length];
-                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
+
+                TestUtility.Log($"Sending {sendBuffer.Length} bytes from client->listener");
+                var sendTask = clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+                var readTask = this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
+
+                await Task.WhenAll(sendTask, readTask);
+                TestUtility.Log($"Sending and Reading complete");
                 Assert.Equal(sendBuffer, readBuffer);
 
-                TestUtility.Log("Sending 1MB from listener->client");
-                await listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-                TestUtility.Log($"listenerStream wrote {sendBuffer.Length} bytes");
+                TestUtility.Log($"Sending {sendBuffer.Length} bytes from listener->client");
+                sendTask = listenerStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+                readTask = this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
 
-                await this.ReadCountBytesAsync(clientStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
+                await Task.WhenAll(sendTask, readTask);
+                TestUtility.Log($"Sending and Reading complete");
                 Assert.Equal(sendBuffer, readBuffer);
 
                 TestUtility.Log("Calling clientStream.Shutdown");
