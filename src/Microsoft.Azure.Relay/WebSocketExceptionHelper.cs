@@ -13,15 +13,12 @@ namespace Microsoft.Azure.Relay
         public static Exception ConvertToRelayContract(Exception exception)
         {
             string message = exception.Message;
-            Exception innerException = exception;
-
             if (exception is WebSocketException)
             {
                 WebException innerWebException;
                 IOException innerIOException;
                 if ((innerWebException = exception.InnerException as WebException) != null)
                 {
-                    innerException = innerWebException;
                     HttpWebResponse httpWebResponse;
                     if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
                     {
@@ -29,15 +26,15 @@ namespace Microsoft.Azure.Relay
                         switch (httpWebResponse.StatusCode)
                         {
                             case HttpStatusCode.BadRequest:
-                                return new RelayException(httpWebResponse.StatusCode + ": " + httpWebResponse.StatusDescription, innerWebException);
+                                return new RelayException(httpWebResponse.StatusCode + ": " + httpWebResponse.StatusDescription, exception);
                             case HttpStatusCode.Unauthorized:
-                                return new AuthorizationFailedException(httpWebResponse.StatusDescription, innerWebException);
+                                return new AuthorizationFailedException(httpWebResponse.StatusDescription, exception);
                             case HttpStatusCode.NotFound:
-                                return new EndpointNotFoundException(httpWebResponse.StatusDescription, innerWebException);
+                                return new EndpointNotFoundException(httpWebResponse.StatusDescription, exception);
                             case HttpStatusCode.GatewayTimeout:
                             case HttpStatusCode.RequestTimeout:
                                 // TODO: Add a way to tell if the listener failed to rendezvous or if the timeout was the application.
-                                return new TimeoutException(httpWebResponse.StatusDescription, innerWebException);
+                                return new TimeoutException(httpWebResponse.StatusDescription, exception);
                             // Other values we might care about
                             case HttpStatusCode.InternalServerError:
                             case HttpStatusCode.NotImplemented:
@@ -48,16 +45,18 @@ namespace Microsoft.Azure.Relay
                                 break;
                         }
                     }
+                    else if (innerWebException.Status == WebExceptionStatus.NameResolutionFailure)
+                    {
+                        return new EndpointNotFoundException(innerWebException.Message, exception);
+                    }
                 }
                 else if ((innerIOException = exception.InnerException as IOException) != null)
                 {
-                    innerException = innerIOException;
                     message = innerIOException.Message;
                 }
-
             }
 
-            return new RelayException(message, innerException);
+            return new RelayException(message, exception);
         }
     }
 }
