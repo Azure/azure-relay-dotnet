@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.IO;
     using System.Net;
+    using System.Net.Sockets;
     using System.Net.WebSockets;
 
     static class WebSocketExceptionHelper
@@ -17,6 +18,7 @@ namespace Microsoft.Azure.Relay
             {
                 WebException innerWebException;
                 IOException innerIOException;
+                SocketException socketException;
                 if ((innerWebException = exception.InnerException as WebException) != null)
                 {
                     HttpWebResponse httpWebResponse;
@@ -53,6 +55,13 @@ namespace Microsoft.Azure.Relay
                 else if ((innerIOException = exception.InnerException as IOException) != null)
                 {
                     message = innerIOException.Message;
+                }
+                else if ((socketException = exception.InnerException as SocketException) != null)
+                {
+                    if (socketException.SocketErrorCode == SocketError.HostNotFound)
+                    {
+                        return new EndpointNotFoundException(socketException.Message, exception);
+                    }
                 }
             }
 
