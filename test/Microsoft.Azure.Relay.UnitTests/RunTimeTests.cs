@@ -320,14 +320,8 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
-// TODO: Remove this once .NET Core supports inspecting the StatusCode/Description. https://github.com/dotnet/corefx/issues/13773
-#if NET451
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
-#else
                 await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
-#endif
             }
             finally
             {
