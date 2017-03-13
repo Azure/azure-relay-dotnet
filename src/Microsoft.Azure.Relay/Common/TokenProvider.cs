@@ -68,6 +68,8 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Implemented by derived TokenProvider types to generate their SecurityTokens.
         /// </summary>
+        /// <param name="audience">The target audience for the security token.</param>
+        /// <param name="validFor">How long the generated token should be valid for.</param>
         protected abstract Task<SecurityToken> OnGetTokenAsync(string audience, TimeSpan validFor);
 
         static string NormalizeAudience(string audience)

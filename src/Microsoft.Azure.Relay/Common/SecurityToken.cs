@@ -13,12 +13,6 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public class SecurityToken
     {
-        // per Simple Web Token draft specification
-        const string TokenAudience = "Audience";
-        const string TokenExpiresOn = "ExpiresOn";
-
-        const string KeyValueSeparator = "=";
-        const string PairSeparator = "&";
         static readonly Func<string, string> Decoder = WebUtility.UrlDecode;
         static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         readonly string token;
@@ -32,19 +26,11 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Creates a new instance of the <see cref="SecurityToken"/> class.
         /// </summary>
-        protected SecurityToken(string tokenString)
-            : this(
-                  tokenString,
-                  audienceFieldName: TokenAudience,
-                  expiresOnFieldName: TokenExpiresOn,
-                  keyValueSeparator: KeyValueSeparator,
-                  pairSeparator: PairSeparator)
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of the <see cref="SecurityToken"/> class.
-        /// </summary>
+        /// <param name="tokenString">A token in string format.</param>
+        /// <param name="audienceFieldName">The key name for the audience field.</param>
+        /// <param name="expiresOnFieldName">The key name for the expires on field.</param>
+        /// <param name="keyValueSeparator">The separator between keys and values.</param>
+        /// <param name="pairSeparator">The separator between different key/value pairs.</param>
         protected SecurityToken(string tokenString, string audienceFieldName, string expiresOnFieldName, string keyValueSeparator, string pairSeparator)
         {
             Fx.Assert(
@@ -91,18 +77,6 @@ namespace Microsoft.Azure.Relay
         public string TokenString
         {
             get { return this.token; }
-        }
-
-        string GetAudienceFromToken(string tokenString)
-        {
-            string audience;
-            IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, this.keyValueSeparator, this.pairSeparator);
-            if (!decodedToken.TryGetValue(this.audienceFieldName, out audience))
-            {
-                throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingAudience);
-            }
-
-            return audience;
         }
 
         void GetExpirationDateAndAudienceFromToken(string tokenString, out DateTime expiresOn, out string audience)

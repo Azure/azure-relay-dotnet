@@ -223,6 +223,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Opens the <see cref="HybridConnectionListener"/> and registers it as a listener in ServiceBus.
         /// </summary>
+        /// <param name="timeout">A timeout to observe.</param>
         public async Task OpenAsync(TimeSpan timeout)
         {
             TimeoutHelper.ThrowIfNegativeArgument(timeout);
@@ -235,6 +236,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Opens the <see cref="HybridConnectionListener"/> and registers it as a listener in ServiceBus.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task OpenAsync(CancellationToken cancellationToken)
         {
             lock (this.ThisLock)
@@ -271,6 +273,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Closes the <see cref="HybridConnectionListener"/> using the provided timeout.
         /// </summary>
+        /// <param name="timeout">A timeout to observe.</param>
         public async Task CloseAsync(TimeSpan timeout)
         {
             TimeoutHelper.ThrowIfNegativeArgument(timeout);
@@ -283,6 +286,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Closes the <see cref="HybridConnectionListener"/> using the provided CancellationToken.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task CloseAsync(CancellationToken cancellationToken)
         {
             List<HybridConnectionStream> clients;
@@ -366,6 +370,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the provided CancellationToken.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync(CancellationToken cancellationToken)
         {
             return ManagementOperations.GetAsync<HybridConnectionRuntimeInformation>(this.Address, this.TokenProvider, cancellationToken);
@@ -795,7 +800,11 @@ namespace Microsoft.Azure.Relay
             {
                 lock (this.ThisLock)
                 {
-                    this.LastError = lastError;
+                    if (lastError != null)
+                    {
+                        this.LastError = lastError;
+                    }
+
                     this.IsOnline = false;
                 }
 
@@ -831,8 +840,11 @@ namespace Microsoft.Azure.Relay
 
             bool ShouldReconnect(Exception exception)
             {
-                // TODO: Figure out exceptions where we shouldn't reconnect.
-                // Examples would be expired token or the HybridConnection management object was deleted.
+                if (exception is EndpointNotFoundException)
+                {
+                    return false;
+                }
+
                 return true;
             }
 

@@ -14,7 +14,11 @@ namespace Microsoft.Azure.Relay
         public static Exception ConvertToRelayContract(Exception exception)
         {
             string message = exception.Message;
-            if (exception is WebSocketException)
+            if (exception is RelayException || exception is TimeoutException)
+            {
+                return exception;
+            }
+            else if (exception is WebSocketException)
             {
                 WebException innerWebException;
                 IOException innerIOException;
