@@ -208,6 +208,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Gets the <see cref="HybridConnectionRuntimeInformation"/> for this HybridConnection entity using the provided CancellationToken.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public Task<HybridConnectionRuntimeInformation> GetRuntimeInformationAsync(CancellationToken cancellationToken)
         {
             if (this.TokenProvider == null)

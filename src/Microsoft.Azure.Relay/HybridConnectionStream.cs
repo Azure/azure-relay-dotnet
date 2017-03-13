@@ -45,6 +45,7 @@ namespace Microsoft.Azure.Relay
         /// <see cref="HybridConnectionStream"/>. To disconnect cleanly and asynchronously, call ShutdownAsync,
         /// wait for Read/ReadAsync to complete with a 0 byte read, then finally call Stream.CloseAsync();
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task ShutdownAsync(CancellationToken cancellationToken)
         {
             try
@@ -69,6 +70,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Closes this <see cref="HybridConnectionStream"/> instance.
         /// </summary>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -85,6 +87,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Closes this <see cref="HybridConnectionStream"/> instance asynchronously using a <see cref="CancellationToken"/>.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task CloseAsync(CancellationToken cancellationToken)
         {
             try
@@ -106,11 +109,13 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Derived classes implement shutdown logic in this method.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         protected abstract Task OnShutdownAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Derived classes implement close logic in this method.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token to observe.</param>
         protected abstract Task OnCloseAsync(CancellationToken cancellationToken);
     }
 }
