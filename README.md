@@ -7,6 +7,7 @@
 |Build/Package|Status|
 |------|-------------|
 |master|[![Build status](https://ci.appveyor.com/api/projects/status/qhefoxrdg068xjhj/branch/master?svg=true)](https://ci.appveyor.com/project/jtaubensee/azure-relay-dotnet/branch/master)|
+|dev|[![Build status](https://ci.appveyor.com/api/projects/status/qhefoxrdg068xjhj/branch/dev?svg=true)](https://ci.appveyor.com/project/jtaubensee/azure-relay-dotnet/branch/dev)|
 |Microsoft.Azure.Relay|[![NuGet Version and Downloads count](https://buildstats.info/nuget/Microsoft.Azure.Relay?includePreReleases=true)](https://www.nuget.org/packages/Microsoft.Azure.Relay/)|
 
 This library is built using .NET Standard 1.3. For more information on what platforms are supported see [.NET Platforms Support](https://docs.microsoft.com/en-us/dotnet/articles/standard/library#net-platforms-support).
@@ -50,8 +51,7 @@ socket connections across the Relay, including SQL Server and Remote Deskop Conn
 ## Using Hybrid Connections from C# 
 
 The API discussed here is implemented in the new Microsoft.Azure.Relay.dll
-assembly, which can be added to your .NET project via a NuGet package fromthe
-public preview on forward.
+assembly, which can be added to your .NET project via a NuGet package.
 
 ### Registering Hybrid Connections 
 
