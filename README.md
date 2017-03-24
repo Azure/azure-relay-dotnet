@@ -34,19 +34,7 @@ See our [Contribution Guidelines](./.github/CONTRIBUTING.md).
 
 ## Samples
 
-- [**Simple**](./samples/simple/README.md) - The "Simple" sample illustrates the basic functions of the API
-and shows how to bi-directionally exchange blocks of text over a connection
-- [**Thrift**](./samples/thrift/README.md) - The "Thrift" sample is a variation of the C# sample that is 
-part of the Apache Thrift project and shows how to use the Thrift RPC model
-over Hybrid Connections.
-- [**Bond**](./samples/bond/README.md) - The "Bond" sample illustrates how to use Microsoft Bond 
-Comm RPC with the Relay. The sample includes an standardalone implementation of 
-an alternate Epoxy transport that uses Hybrid Connections instead of TCP.
-- [**PortBridge**](./samples/portbridge/README.md) - The "PortBridge" sample is a port of one of the 
-classic flagship samples of the WCF Relay capability over to the new Hybrid Connection 
-Relay. PortBridge creates multiplexed socket tunnels that can bridge TCP and Named Pipe 
-socket connections across the Relay, including SQL Server and Remote Deskop Connections.
-
+For Relay Hybrid Connections samples, see the [azure/azure-relay](https://github.com/Azure/azure-relay/tree/master/samples/Hybrid%20Connections) service repository.
 
 ## Using Hybrid Connections from C# 
 
@@ -107,7 +95,7 @@ connect to a resource made available via a relayed WebSocket, the server-side
 web site can hold on to the required SAS rule and key, and use the ```TokenProvider```
 to create a short-lived token string and pass that on to the client: 
 
-``` C#
+```csharp
 var token = await TokenProvider.GetTokenAsync("http://namespace.servicebus.windows.net/path", TimeSpan.FromSeconds(30));
 var tokenString = token.TokenString;
 ```
@@ -122,7 +110,7 @@ is a listener object that is first opened to allow incoming connections to flow
 and from which the application can then accept these incoming connections for
 handling. 
 
-``` C#
+```csharp
 var listener = new HybridConnectionListener("sb://namespace.servicebus.windows.net/path", tokenProvider); 
 await listener.OpenAsync(TimeSpan.FromSeconds(60)); 
 do 
