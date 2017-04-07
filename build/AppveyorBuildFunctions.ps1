@@ -110,7 +110,7 @@ function Run-UnitTests
         $ENV:PATH = 'C:\\Python34;C:\\Python34\\Scripts;' + $ENV:PATH
         python -m pip install --upgrade pip
         pip install git+git://github.com/codecov/codecov-python.git
-        codecov -f $coverageFile -t $ENV:CodeCov
+        codecov -f $coverageFile -t $ENV:CodeCov -X gcov
     }
     else
     {
