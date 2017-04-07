@@ -113,6 +113,8 @@ function Run-UnitTests
         python -m pip install --upgrade pip
         pip install git+git://github.com/codecov/codecov-python.git
         codecov -f $coverageFile -t $ENV:CodeCov -X gcov
+
+        dotnet test \test\Microsoft.Azure.Relay.UnitTests\project.json -f net451
     }
     else
     {
