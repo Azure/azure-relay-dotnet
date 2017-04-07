@@ -98,7 +98,8 @@ function Run-UnitTests
         $openCoverConsole = $ENV:APPVEYOR_BUILD_FOLDER + '\OpenCover.4.6.519\tools\OpenCover.Console.exe'
         $coverageFile = $ENV:APPVEYOR_BUILD_FOLDER + '\coverage.xml'
         $target = '-target:C:\Program Files\dotnet\dotnet.exe'
-        $targetArgs = '-targetargs: test ' + $ENV:APPVEYOR_BUILD_FOLDER + '\test\Microsoft.Azure.Relay.UnitTests\project.json -f netcoreapp1.0'
+        $testProject = '\test\Microsoft.Azure.Relay.UnitTests\project.json'
+        $targetArgs = '-targetargs: test ' + $ENV:APPVEYOR_BUILD_FOLDER + $testProject + ' -f netcoreapp1.0'
         $filter = '-filter:+[Microsoft.Azure.Relay*]* -[Microsoft.Azure.Relay.UnitTests]*'
         $output = '-output:' + $coverageFile
 
@@ -114,7 +115,7 @@ function Run-UnitTests
         pip install git+git://github.com/codecov/codecov-python.git
         codecov -f $coverageFile -t $ENV:CodeCov -X gcov
 
-        dotnet test \test\Microsoft.Azure.Relay.UnitTests\project.json -f net451
+        & dotnet test  $testProject  -f net451
     }
     else
     {
