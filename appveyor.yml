@@ -6,6 +6,8 @@ environment:
     secure: xohonz/X8PPLOVIdT3ch2C5XeSa30RwR6NuXFh4e85svXT1mJNGGO1HQEGxCk3wp
   AppId:
     secure: c+H140oRJfHtmFHZxSRLWocv5AU0q33X7kgMcTcXxhJvtVhk2WAk1dRQkSN+SyoA
+  CodeCov:
+    secure: NAlk4Em1NARlJqd8aan0jD8SW8iE86quYwiBi2ngs5Dfl0gYuwDuZaSkpoFFf2Cz
 before_build:
 - ps: >-
     . .\build\AppveyorBuildFunctions.ps1
@@ -18,6 +20,6 @@ before_test:
 test_script:
 - ps: >-
     Run-UnitTests
-after_test:
+on_finish:
 - ps: >-
     Delete-AzureResources
