@@ -93,8 +93,8 @@ function Run-UnitTests
     {
         Write-Host "Running unit tests."
 
-        Invoke-WebRequest -Uri https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile nuget.exe
-        & 'nuget.exe install opencover'
+        Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile nuget.exe
+        & .\nuget.exe install opencover
         $openCoverConsole = $ENV:USERPROFILE + '.\OpenCover\4.6.519\tools\OpenCover.Console.exe'
         $coverageFile = $ENV:APPVEYOR_BUILD_FOLDER + '\coverage.xml'
         $target = '-target:C:\Program Files\dotnet\dotnet.exe'
