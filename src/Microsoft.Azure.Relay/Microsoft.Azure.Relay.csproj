@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>This is Azure Relay .NET Standard client library for Hybrid Connections. For more information about Relay, see https://azure.microsoft.com/en-us/services/service-bus/</Description>
+    <Description>
+      This is Azure Relay .NET Standard client library for Hybrid Connections. For more information about Relay, see https://azure.microsoft.com/en-us/services/service-bus/.
+      This package is only supported on Windows 8 / Windows Server 2012 and newer.
+    </Description>
     <AssemblyTitle>Microsoft.Azure.Relay</AssemblyTitle>
     <Authors>Microsoft</Authors>
     <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
