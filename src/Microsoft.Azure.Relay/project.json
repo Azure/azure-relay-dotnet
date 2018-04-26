@@ -20,12 +20,15 @@
     "requireLicenseAcceptance": true
   },
   "frameworks": {
-    "net45": {
+    "net451": {
       "buildOptions": {
         "compile": {
           "exclude": [ "WebSockets/NetCore/*.cs" ]
         },
         "define": [ "NET45", "SERIALIZATION" ]
+      },
+      "dependencies": {
+        "Microsoft.AspNetCore.WebUtilities": "1.0.0"
       },
       "frameworkAssemblies": {
         "System.Net.Http": "4.0.0.0",
@@ -51,7 +54,8 @@
         "System.Net.Security": "4.0.0",
         "System.Runtime.Serialization.Json": "4.0.1",
         "System.Runtime.Serialization.Primitives": "4.1.1",
-        "System.Runtime.Serialization.Xml": "4.1.1"
+        "System.Runtime.Serialization.Xml": "4.1.1",
+        "Microsoft.AspNetCore.WebUtilities": "1.0.0"
       },
       "imports": "dnxcore50"
     }

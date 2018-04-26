@@ -4,6 +4,7 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.Collections.Generic;
     using System.Net;
     using System.Net.WebSockets;
     using System.Text;
@@ -17,21 +18,17 @@ namespace Microsoft.Azure.Relay
     /// Provides access to the request and response objects representing a client request to a <see cref="HybridConnectionListener"/>.
     /// This is modeled after System.Net.HttpListenerContext.
     /// </summary>
-    public class RelayedHttpListenerContext
+    public class RelayedHttpListenerContext : ITraceSource
     {
         static readonly TimeSpan AcceptTimeout = TimeSpan.FromSeconds(20);
-        readonly Uri wssRendezvousAddress;
-        string cachedToString;
 
-        internal RelayedHttpListenerContext(HybridConnectionListener listener, ListenerCommand.AcceptCommand acceptCommand)
+        internal RelayedHttpListenerContext(HybridConnectionListener listener, Uri requestUri, string trackingId, string method, IDictionary<string, string> requestHeaders)
         {
             this.Listener = listener;
-            this.wssRendezvousAddress = new Uri(acceptCommand.Address);
-            Uri requestUri = this.GenerateRequestUri();
-            this.TrackingContext = TrackingContext.Create(acceptCommand.Id, requestUri);
-            this.Request = new RelayedHttpListenerRequest(requestUri, acceptCommand);
+            this.TrackingContext = TrackingContext.Create(trackingId, requestUri);
+            this.Request = new RelayedHttpListenerRequest(requestUri, method, requestHeaders);
             this.Response = new RelayedHttpListenerResponse(this);
-            
+
             this.FlowSubProtocol();
         }
 
@@ -45,6 +42,11 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public RelayedHttpListenerResponse Response { get; }
 
+        TrackingContext ITraceSource.TrackingContext
+        {
+            get { return this.TrackingContext; }
+        }
+
         internal HybridConnectionListener Listener { get; }
 
         internal TrackingContext TrackingContext { get; }
@@ -54,10 +56,10 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public override string ToString()
         {
-            return this.cachedToString ?? (this.cachedToString = nameof(RelayedHttpListenerContext) + "(" + this.TrackingContext + ")");
+            return nameof(RelayedHttpListenerContext);
         }
 
-        internal async Task<WebSocketStream> AcceptAsync()
+        internal async Task<WebSocketStream> AcceptAsync(Uri rendezvousUri)
         {
             // Performance: Address Resolution (ARP) work-around: When we receive the control message from a TCP connection which hasn't had any
             // outbound traffic for 2 minutes the ARP cache no longer has the MAC address required to ACK the control message.  If we also begin
@@ -77,14 +79,14 @@ namespace Microsoft.Azure.Relay
 
             using (var cancelSource = new CancellationTokenSource(AcceptTimeout))
             {
-                await clientWebSocket.ConnectAsync(this.wssRendezvousAddress, cancelSource.Token).ConfigureAwait(false);
+                await clientWebSocket.ConnectAsync(rendezvousUri, cancelSource.Token).ConfigureAwait(false);
             }
 
             var webSocketStream = new WebSocketStream(clientWebSocket, this.TrackingContext);
             return webSocketStream;
         }
 
-        internal async Task RejectAsync()
+        internal async Task RejectAsync(Uri rendezvousUri)
         {
             ClientWebSocket clientWebSocket = null;
             try
@@ -96,8 +98,8 @@ namespace Microsoft.Azure.Relay
                 }
 
                 // Add the status code/description to the URI query string
-                int requiredCapacity = this.wssRendezvousAddress.OriginalString.Length + 50 + this.Response.StatusDescription.Length;
-                var stringBuilder = new StringBuilder(this.wssRendezvousAddress.OriginalString, requiredCapacity);
+                int requiredCapacity = rendezvousUri.OriginalString.Length + 50 + this.Response.StatusDescription.Length;
+                var stringBuilder = new StringBuilder(rendezvousUri.OriginalString, requiredCapacity);
                 stringBuilder.AppendFormat("&{0}={1}", HybridConnectionConstants.StatusCode, (int)this.Response.StatusCode);
                 stringBuilder.AppendFormat("&{0}={1}", HybridConnectionConstants.StatusDescription, WebUtility.UrlEncode(this.Response.StatusDescription));
                 Uri rejectUri = new Uri(stringBuilder.ToString());
@@ -140,23 +142,6 @@ namespace Microsoft.Azure.Relay
             clientWebSocket.Options.SetRequestHeader("Host", this.Listener.Address.Host);
 #endif
             return clientWebSocket;
-        }
-
-        /// <summary>
-        /// Form the logical request Uri using the scheme://host:port from the listener and the path from the acceptCommand (minus "/$hc")
-        /// e.g. sb://contoso.servicebus.windows.net/hybrid1?foo=bar
-        /// </summary>
-        Uri GenerateRequestUri()
-        {
-            var requestUri = new UriBuilder(this.Listener.Address);
-            requestUri.Query = HybridConnectionUtility.FilterQueryString(this.wssRendezvousAddress.Query);
-            requestUri.Path = this.wssRendezvousAddress.GetComponents(UriComponents.Path, UriFormat.Unescaped);
-            if (requestUri.Path.StartsWith("$hc/", StringComparison.Ordinal))
-            {
-                requestUri.Path = requestUri.Path.Substring(4);
-            }
-
-            return requestUri.Uri;
         }
 
         void FlowSubProtocol()

@@ -294,4 +294,10 @@
   <data name="AcceptHandlerException" xml:space="preserve">
     <value>The Listener's custom AcceptHandler threw an exception. See Listener logs for details. TrackingId: {0}.</value>
   </data>
+  <data name="ArgumentException_ValueTupleIncorrectType" xml:space="preserve">
+    <value>Argument must be of type {0}.</value>
+  </data>
+  <data name="InvalidType" xml:space="preserve">
+    <value>An invalid type was received. Expected '{0}', Actual '{1}'.</value>
+  </data>
 </root>

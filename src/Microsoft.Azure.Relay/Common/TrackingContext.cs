@@ -7,16 +7,20 @@ namespace Microsoft.Azure.Relay
 
     class TrackingContext
     {
+        static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         internal const string TrackingIdName = "TrackingId";
         const string SubsystemIdName = "SubsystemId";
         const string TimestampName = "Timestamp";
         string cachedToString;
 
-        TrackingContext(string trackingId, string subsystemId)
+        TrackingContext(Guid activityId, string trackingId, string subsystemId)
         {
+            this.ActivityId = activityId;
             this.TrackingId = trackingId;
             this.SubsystemId = subsystemId;
         }
+
+        public Guid ActivityId { get; }
 
         public string TrackingId { get; }
 
@@ -27,7 +31,7 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         internal static TrackingContext Create()
         {
-            return Create(Guid.NewGuid().ToString(), (string)null);
+            return Create(Guid.NewGuid(), (string)null);
         }
 
         /// <summary>
@@ -36,26 +40,51 @@ namespace Microsoft.Azure.Relay
         /// <param name="subsystemId">subsystem-specific Uri like entity address to be used in the tracking context</param>
         internal static TrackingContext Create(Uri subsystemId)
         {
-            return Create(subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+            return Create(Guid.NewGuid(), subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
-        /// <summary>
-        /// Create a TrackingContext with a new Guid/TrackingId and given subsystemId.
-        /// </summary>
-        /// <param name="subsystemId">subsystem-specific identifier to be used in the tracking context</param>
-        internal static TrackingContext Create(string subsystemId)
+        internal static TrackingContext Create(Guid activityId, string subsystemId)
         {
-            return Create(Guid.NewGuid().ToString(), subsystemId);
-        }
-
-        internal static TrackingContext Create(string trackingId, string subsystemId)
-        {
-            return new TrackingContext(trackingId, subsystemId);
+            return Create(activityId, activityId.ToString(), subsystemId);
         }
 
         internal static TrackingContext Create(string trackingId, Uri subsystemId)
         {
-            return new TrackingContext(trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+            return Create(trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+        }
+
+        internal static TrackingContext Create(string trackingId, string subsystemId)
+        {
+            Guid activityId;
+            bool parseFailed = false;
+            if (!Guid.TryParse(trackingId.Substring(0, Math.Min(GuidStringLength, trackingId.Length)), out activityId))
+            {
+                parseFailed = true;
+                activityId = Guid.NewGuid();
+            }
+
+            var trackingContext = Create(activityId, trackingId, subsystemId);
+            if (parseFailed)
+            {
+                RelayEventSource.Log.Info(nameof(TrackingContext), trackingContext, $"Parsing TrackingId:'{trackingId}' as Guid failed, created new ActivityId:{activityId} for trace correlation.");
+            }
+
+            return trackingContext;
+        }
+
+        internal static TrackingContext Create(Guid activityId, Uri subsystemId)
+        {
+            return Create(activityId, activityId.ToString(), subsystemId);
+        }
+
+        internal static TrackingContext Create(Guid activityId, string trackingId, Uri subsystemId)
+        {
+            return Create(activityId, trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+        }
+
+        internal static TrackingContext Create(Guid activityId, string trackingId, string subsystemId)
+        {
+            return new TrackingContext(activityId, trackingId, subsystemId);
         }
 
         /// <summary>

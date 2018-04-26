@@ -146,10 +146,10 @@ namespace Microsoft.Azure.Relay
         public async Task<HybridConnectionStream> CreateConnectionAsync()
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
-            string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext.ToString() + ")";
+            string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext + ")";
             var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
 
-            RelayEventSource.Log.RelayClientConnectStart(traceSource);
+            RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
             try
             {
                 var webSocket = new ClientWebSocket();
@@ -163,7 +163,7 @@ namespace Microsoft.Azure.Relay
                     RelayEventSource.Log.GetTokenStart(traceSource);
                     string audience = this.Address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
                     var token = await this.TokenProvider.GetTokenAsync(audience, TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
-                    RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
+                    RelayEventSource.Log.GetTokenStop(traceSource, token.ExpiresAtUtc);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
                 }
 
@@ -181,15 +181,12 @@ namespace Microsoft.Azure.Relay
                     await webSocket.ConnectAsync(webSocketUri, cancelSource.Token).ConfigureAwait(false);
                 }
 
+                RelayEventSource.Log.ObjectConnected(traceSource, trackingContext);
                 return new WebSocketStream(webSocket, trackingContext);
             }
             catch (WebSocketException wsException)
             {
                 throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), traceSource);
-            }
-            finally
-            {
-                RelayEventSource.Log.RelayClientConnectStop();
             }
         }
 

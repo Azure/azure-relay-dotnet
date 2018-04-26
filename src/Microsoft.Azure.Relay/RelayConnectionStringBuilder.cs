@@ -80,8 +80,8 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-        /// <summary>Gets or sets the <see cref="System.TimeSpan" /> that specifies how long the operation has to complete before timing out.</summary> 
-        /// <value>The <see cref="System.TimeSpan" /> that specifies how long the operation has to complete before timing out.
+        /// <summary>Gets or sets the <see cref="System.TimeSpan" /> that specifies how long operations have to complete before timing out.</summary> 
+        /// <value>The <see cref="System.TimeSpan" /> that specifies how long operations have to complete before timing out.
         /// The default value is one minute.</value>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if OperationTimeout is set to a non-positive TimeSpan.</exception>
         public TimeSpan OperationTimeout

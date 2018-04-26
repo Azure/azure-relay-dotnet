@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Relay
     /// A Stream representing a connected HybridConnection.  Use it just like any other Stream with the addition of a
     /// Shutdown method for notifying the other side of this connection that shutdown is occurring.
     /// </summary>
-    public abstract class HybridConnectionStream : Stream
+    public abstract class HybridConnectionStream : Stream, ITraceSource
     {
         string cachedToString;
 
@@ -26,6 +26,11 @@ namespace Microsoft.Azure.Relay
         public WriteMode WriteMode { get; set; } = WriteMode.Binary;
 
         internal TrackingContext TrackingContext { get; }
+
+        TrackingContext ITraceSource.TrackingContext
+        {
+            get { return this.TrackingContext; }
+        }
 
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
@@ -48,15 +53,9 @@ namespace Microsoft.Azure.Relay
         /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task ShutdownAsync(CancellationToken cancellationToken)
         {
-            try
-            {
-                RelayEventSource.Log.RelayClientShutdownStart(this);
-                await this.OnShutdownAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                RelayEventSource.Log.RelayClientShutdownStop();
-            }
+            RelayEventSource.Log.Info(this, $"Shutting down. {this.TrackingContext}");
+            await this.OnShutdownAsync(cancellationToken).ConfigureAwait(false);
+            RelayEventSource.Log.Info(this, "Shut down");
         }
 
         /// <summary>
@@ -91,18 +90,15 @@ namespace Microsoft.Azure.Relay
         public async Task CloseAsync(CancellationToken cancellationToken)
         {
             try
-            {
-                RelayEventSource.Log.RelayClientCloseStart(this);
+            {                
+                RelayEventSource.Log.ObjectClosing(this);
                 await this.OnCloseAsync(cancellationToken).ConfigureAwait(false);
+                RelayEventSource.Log.ObjectClosed(this);
             }
-            catch (Exception e)
+            catch (Exception e) when (!Fx.IsFatal(e))
             {
-                RelayEventSource.Log.RelayClientCloseException(this, e);
+                RelayEventSource.Log.ThrowingException(e, this);
                 throw;
-            }
-            finally
-            {
-                RelayEventSource.Log.RelayClientCloseStop();
             }
         }
 

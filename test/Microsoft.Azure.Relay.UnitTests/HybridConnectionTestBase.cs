@@ -6,8 +6,11 @@ namespace Microsoft.Azure.Relay.UnitTests
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Net;
+    using System.Net.Http;
     using System.Net.WebSockets;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Xunit;
@@ -67,6 +70,54 @@ namespace Microsoft.Azure.Relay.UnitTests
             return new HybridConnectionListener(GetConnectionString(endpointTestType));
         }
 
+        public static void LogHttpRequest(HttpRequestMessage httpRequest, HttpClient httpClient, bool showBody = true)
+        {
+            TestUtility.Log("Sending Request:");
+            string requestUri = $"{httpClient?.BaseAddress}{httpRequest.RequestUri}";
+            TestUtility.Log($"{httpRequest.Method} {requestUri} HTTP/{httpRequest.Version}");
+            httpClient?.DefaultRequestHeaders.ToList().ForEach((kvp) => LogHttpHeader(kvp.Key, kvp.Value));
+            httpRequest.Headers.ToList().ForEach((kvp) => LogHttpHeader(kvp.Key, kvp.Value));
+            httpRequest.Content?.Headers.ToList().ForEach((kvp) => LogHttpHeader(kvp.Key, kvp.Value));
+
+            TestUtility.Log(string.Empty);
+            if (httpRequest.Content != null)
+            {
+                if (showBody)
+                {
+                    TestUtility.Log(httpRequest.Content?.ReadAsStringAsync().Result);
+                }
+                else
+                {
+                    TestUtility.Log($"(Body stream is {httpRequest.Content?.ReadAsStreamAsync().Result.Length ?? 0} bytes)");
+                }
+            }
+        }
+
+        public static void LogHttpResponse(HttpResponseMessage httpResponse, bool showBody = true)
+        {
+            TestUtility.Log("Received Response:");
+            TestUtility.Log($"HTTP/{httpResponse.Version} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");
+            httpResponse.Headers.ToList().ForEach((kvp) => LogHttpHeader(kvp.Key, kvp.Value));
+
+            TestUtility.Log(string.Empty);
+            if (httpResponse.Content != null)
+            {
+                if (showBody)
+                {
+                    TestUtility.Log(httpResponse.Content?.ReadAsStringAsync().Result);
+                }
+                else
+                {
+                    TestUtility.Log($"(Body stream is {httpResponse.Content?.ReadAsStreamAsync().Result.Length ?? 0} bytes)");
+                }
+            }
+        }
+
+        public static void LogHttpHeader(string headerName, IEnumerable<string> headerValues)
+        {
+            TestUtility.Log($"{headerName}: {string.Join(",", headerValues)}");
+        }
+
         protected async Task SafeCloseAsync(HybridConnectionListener listener)
         {
             if (listener != null)
@@ -80,6 +131,14 @@ namespace Microsoft.Azure.Relay.UnitTests
                 {
                     TestUtility.Log($"Error closing HybridConnectionListener {e.GetType()}: {e.Message}");
                 }
+            }
+        }
+
+        protected static string StreamToString(Stream stream)
+        {
+            using (var streamReader = new StreamReader(stream, Encoding.UTF8))
+            {
+                return streamReader.ReadToEnd();
             }
         }
 
@@ -217,6 +276,16 @@ namespace Microsoft.Azure.Relay.UnitTests
         /// </summary>
         protected string GetConnectionString(EndpointTestType endpointTestType)
         {
+            var connectionStringBuilder = this.GetConnectionStringBuilder(endpointTestType);
+            return connectionStringBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Since these tests all share a common connection string, this method will modify the 
+        /// endpoint / shared access keys as needed based on the EndpointTestType.
+        /// </summary>
+        protected RelayConnectionStringBuilder GetConnectionStringBuilder(EndpointTestType endpointTestType)
+        {
             var connectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString);
             if (endpointTestType == EndpointTestType.Unauthenticated)
             {
@@ -230,7 +299,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 connectionStringBuilder.EntityPath = Constants.AuthenticatedEntityPath;
             }
 
-            return connectionStringBuilder.ToString();
+            return connectionStringBuilder;
         }
 
         protected void VerifyHttpStatusCodeAndDescription(

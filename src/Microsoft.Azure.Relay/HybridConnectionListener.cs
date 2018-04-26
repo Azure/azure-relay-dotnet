@@ -5,7 +5,6 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Net;
     using System.Net.WebSockets;
@@ -19,16 +18,14 @@ namespace Microsoft.Azure.Relay
     /// <summary>
     /// Provides a listener for accepting HybridConnections from remote clients.
     /// </summary>
-    public class HybridConnectionListener : IConnectionStatus
+    public class HybridConnectionListener : IConnectionStatus, ITraceSource
     {
         const int DefaultConnectionBufferSize = 64 * 1024;
         readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
         IWebProxy proxy;
-        string cachedToString;
         TrackingContext trackingContext;
         bool openCalled;
-        volatile Func<RelayedHttpListenerContext, Task<bool>> acceptHandler;
         volatile bool closeCalled;
 
         /// <summary>
@@ -154,11 +151,12 @@ namespace Microsoft.Azure.Relay
         /// decide whether to accept or reject a web-socket upgrade request, and control the status code/description if rejecting.
         /// The AcceptHandler should return true to accept a client request or false to reject.
         /// </summary>
-        public Func<RelayedHttpListenerContext, Task<bool>> AcceptHandler
-        {
-            get { return this.acceptHandler; }
-            set { this.acceptHandler = value; }
-        }
+        public Func<RelayedHttpListenerContext, Task<bool>> AcceptHandler { get; set; }
+
+        /// <summary>
+        /// Installs a handler for Hybrid Http Requests.
+        /// </summary>
+        public Action<RelayedHttpListenerContext> RequestHandler { get; set; }
 
         /// <summary>
         /// Gets the address on which to listen for HybridConnections.  This address should be of the format
@@ -187,12 +185,17 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public TokenProvider TokenProvider { get; }
 
+        TrackingContext ITraceSource.TrackingContext
+        {
+            get { return this.TrackingContext; }
+        }
+
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         internal int ConnectionBufferSize { get; }
 
-        TimeSpan OperationTimeout { get; }
+        internal TimeSpan OperationTimeout { get; }
 
         internal TrackingContext TrackingContext
         {
@@ -205,7 +208,6 @@ namespace Microsoft.Azure.Relay
                 // We allow updating the TrackingContext in order to use the trackingId flown from the
                 // service which has the SBSFE Role instance number suffix on it (i.e. "_GX").
                 this.trackingContext = value;
-                this.cachedToString = null;
             }
         }
 
@@ -314,20 +316,20 @@ namespace Microsoft.Azure.Relay
 
             try
             {
-                RelayEventSource.Log.RelayClientCloseStart(this);
+                RelayEventSource.Log.ObjectClosing(this);
                 await this.controlConnection.CloseAsync(cancellationToken).ConfigureAwait(false);
 
                 clients.ForEach(client => ((WebSocketStream)client).Abort());
+                RelayEventSource.Log.ObjectClosed(this);
             }
             catch (Exception e) when (!Fx.IsFatal(e))
             {
-                RelayEventSource.Log.RelayClientCloseException(this, e);
+                RelayEventSource.Log.ThrowingException(e, this);
                 throw;
             }
             finally
             {
                 this.connectionInputQueue.Dispose();
-                RelayEventSource.Log.RelayClientCloseStop();
             }
         }
 
@@ -352,7 +354,7 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public override string ToString()
         {
-            return this.cachedToString ?? (this.cachedToString = nameof(HybridConnectionListener) + "(" + this.TrackingContext + ")");
+            return nameof(HybridConnectionListener);
         }
 
         /// <summary>
@@ -376,10 +378,9 @@ namespace Microsoft.Azure.Relay
             return ManagementOperations.GetAsync<HybridConnectionRuntimeInformation>(this.Address, this.TokenProvider, cancellationToken);
         }
 
-        [Conditional("DEBUG")]
-        internal void SendControlCommand(ListenerCommand listenerCommand, CancellationToken cancellationToken)
+        internal Task SendControlCommandAndStreamAsync(ListenerCommand command, Stream stream, CancellationToken cancelToken)
         {
-            this.controlConnection.SendCommandAsync(listenerCommand, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+            return this.controlConnection.SendCommandAndStreamAsync(command, stream, cancelToken);
         }
 
         void ThrowIfReadOnly()
@@ -393,24 +394,26 @@ namespace Microsoft.Azure.Relay
             }
         }       
 
-        void OnCommand(ArraySegment<byte> buffer)
+        async Task OnCommandAsync(ArraySegment<byte> commandBuffer, WebSocket webSocket)
         {
             try
             {
-                ListenerCommand listenerCommand;
-                using (var stream = new MemoryStream(buffer.Array, buffer.Offset, buffer.Count))
-                {
-                    listenerCommand = ListenerCommand.ReadObject(stream);
-                }
-
+                var listenerCommand = ListenerCommand.ReadObject(commandBuffer);
                 if (listenerCommand.Accept != null)
                 {
-                    this.OnAcceptClientCommand(listenerCommand.Accept).Fork(this);
+                    await this.OnAcceptCommandAsync(listenerCommand.Accept).ConfigureAwait(false);
+                }
+                else if (listenerCommand.Request != null)
+                {
+                    await HybridHttpConnection.CreateAsync(this, listenerCommand.Request, webSocket).ConfigureAwait(false);
                 }
                 else
                 {
-                    string json = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-                    RelayEventSource.Log.RelayListenerUnknownCommand(this.ToString(), json);
+                    string json = Encoding.UTF8.GetString(
+                        commandBuffer.Array,
+                        commandBuffer.Offset,
+                        Math.Min(commandBuffer.Count, HybridConnectionConstants.MaxUnrecognizedJson));
+                    RelayEventSource.Log.Warning(this, $"Received an unknown command: {json}.");
                 }
             }
             catch (Exception exception) when (!Fx.IsFatal(exception))
@@ -419,39 +422,74 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-        async Task OnAcceptClientCommand(ListenerCommand.AcceptCommand acceptCommand)
+        async Task OnAcceptCommandAsync(ListenerCommand.AcceptCommand acceptCommand)
         {
-            var listenerContext = new RelayedHttpListenerContext(this, acceptCommand);
-            RelayEventSource.Log.RelayListenerRendezvousStart(listenerContext, acceptCommand.Address);
+            Uri rendezvousUri = new Uri(acceptCommand.Address);
+            Uri requestUri = this.GenerateAcceptRequestUri(rendezvousUri);
+
+            var listenerContext = new RelayedHttpListenerContext(
+                this, requestUri, acceptCommand.Id, "GET", acceptCommand.ConnectHeaders);
+
+            RelayEventSource.Log.RelayListenerRendezvousStart(listenerContext.Listener, listenerContext.TrackingContext.TrackingId, acceptCommand.Address);
             try
             {
-                bool shouldAccept = true;
-                var acceptHandlerValue = this.AcceptHandler;
-                if (acceptHandlerValue != null)
+                var acceptHandler = this.AcceptHandler;
+                bool shouldAccept = acceptHandler == null;
+                if (acceptHandler != null)
                 {
                     // Invoke and await the user's AcceptHandler method
                     try
                     {
-                        shouldAccept = await acceptHandlerValue(listenerContext).ConfigureAwait(false);
+                        shouldAccept = await acceptHandler(listenerContext).ConfigureAwait(false);
                     }
                     catch (Exception userException) when (!Fx.IsFatal(userException))
                     {
                         string description = SR.GetString(SR.AcceptHandlerException, listenerContext.TrackingContext.TrackingId);
-                        RelayEventSource.Log.RelayListenerRendezvousFailed(listenerContext, description + " " + userException);
+                        RelayEventSource.Log.RelayListenerRendezvousFailed(this, listenerContext.TrackingContext.TrackingId, description + " " + userException);
                         listenerContext.Response.StatusCode = HttpStatusCode.BadGateway;
                         listenerContext.Response.StatusDescription = description;
-                        shouldAccept = false;
                     }
                 }
 
+                // Don't block the pump waiting for the rendezvous
+                this.CompleteAcceptAsync(listenerContext, rendezvousUri, shouldAccept).Fork(this);
+            }
+            catch (Exception exception) when (!Fx.IsFatal(exception))
+            {
+                RelayEventSource.Log.RelayListenerRendezvousFailed(this, listenerContext.TrackingContext.TrackingId, exception);
+                RelayEventSource.Log.RelayListenerRendezvousStop();
+            }
+        }
+
+        /// <summary>
+        /// Form the logical request Uri using the scheme://host:port from the listener and the path from the acceptCommand (minus "/$hc")
+        /// e.g. sb://contoso.servicebus.windows.net/hybrid1?foo=bar
+        /// </summary>
+        Uri GenerateAcceptRequestUri(Uri rendezvousUri)
+        {
+            var requestUri = new UriBuilder(this.Address);
+            requestUri.Query = HybridConnectionUtility.FilterQueryString(rendezvousUri.Query);
+            requestUri.Path = rendezvousUri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
+            if (requestUri.Path.StartsWith("$hc/", StringComparison.Ordinal))
+            {
+                requestUri.Path = requestUri.Path.Substring(4);
+            }
+
+            return requestUri.Uri;
+        }
+
+        async Task CompleteAcceptAsync(RelayedHttpListenerContext listenerContext, Uri rendezvousUri, bool shouldAccept)
+        {
+            try
+            {
                 if (shouldAccept)
                 {
-                    var webSocketStream = await listenerContext.AcceptAsync().ConfigureAwait(false);
+                    var webSocketStream = await listenerContext.AcceptAsync(rendezvousUri).ConfigureAwait(false);
                     lock (this.ThisLock)
                     {
                         if (this.closeCalled)
                         {
-                            RelayEventSource.Log.RelayListenerRendezvousFailed(listenerContext, SR.ObjectClosedOrAborted);
+                            RelayEventSource.Log.RelayListenerRendezvousFailed(this, listenerContext.TrackingContext.TrackingId, SR.ObjectClosedOrAborted);
                             return;
                         }
 
@@ -460,13 +498,14 @@ namespace Microsoft.Azure.Relay
                 }
                 else
                 {
-                    RelayEventSource.Log.RelayListenerRendezvousRejected(listenerContext);
-                    await listenerContext.RejectAsync().ConfigureAwait(false);
+                    RelayEventSource.Log.RelayListenerRendezvousRejected(
+                        listenerContext.TrackingContext, listenerContext.Response.StatusCode, listenerContext.Response.StatusDescription);
+                    await listenerContext.RejectAsync(rendezvousUri).ConfigureAwait(false);
                 }
             }
             catch (Exception exception) when (!Fx.IsFatal(exception))
             {
-                RelayEventSource.Log.RelayListenerRendezvousFailed(listenerContext, exception.ToString());
+                RelayEventSource.Log.RelayListenerRendezvousFailed(this, listenerContext.TrackingContext.TrackingId, exception);
             }
             finally
             {
@@ -484,6 +523,7 @@ namespace Microsoft.Azure.Relay
             handler?.Invoke(this, args);
         }
 
+        // Connects, maintains, and transparently reconnects this listener's control connection with the cloud service.
         sealed class ControlConnection : IConnectionStatus
         {
             // Retries after 0, 1, 2, 5, 10, 30 seconds
@@ -502,10 +542,11 @@ namespace Microsoft.Azure.Relay
             readonly string path;
             readonly TokenRenewer tokenRenewer;
             readonly CancellationTokenSource shutdownCancellationSource;
-            readonly AsyncLock sendLock;
+            readonly AsyncLock sendAsyncLock;
+            readonly ArraySegment<byte> receiveBuffer;
+            readonly ArraySegment<byte> sendBuffer;
             Task<WebSocket> connectAsyncTask;
             Task receivePumpTask;
-            ArraySegment<byte> receiveBuffer;
             CancellationToken closeCancellationToken;
             int connectDelayIndex;
             volatile bool closeCalled;
@@ -518,7 +559,8 @@ namespace Microsoft.Azure.Relay
                 this.path = address.AbsolutePath.TrimStart('/');
                 this.shutdownCancellationSource = new CancellationTokenSource();
                 this.receiveBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);
-                this.sendLock = new AsyncLock();
+                this.sendBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);
+                this.sendAsyncLock = new AsyncLock();
                 this.tokenRenewer = new TokenRenewer(
                     this.listener, this.address.AbsoluteUri, TokenProvider.DefaultTokenTimeout);
             }
@@ -589,19 +631,27 @@ namespace Microsoft.Azure.Relay
                 }
             }
 
-            internal async Task SendCommandAsync(ListenerCommand listenerCommand, CancellationToken cancellationToken)
+            internal async Task SendCommandAndStreamAsync(ListenerCommand command, Stream stream, CancellationToken cancelToken)
             {
-                Task<WebSocket> connectTask = this.EnsureConnectTask(cancellationToken);
+                Task<WebSocket> connectTask = this.EnsureConnectTask(cancelToken);
                 var webSocket = await connectTask.ConfigureAwait(false);
-                using (var stream = new MemoryStream())
-                {
-                    listenerCommand.WriteObject(stream);
-                    ArraySegment<byte> buffer = stream.GetArraySegment();
 
-                    using (await this.sendLock.LockAsync(cancellationToken).ConfigureAwait(false))
+                using (await this.sendAsyncLock.LockAsync(cancelToken).ConfigureAwait(false))
+                {
+                    // Since we're using the sendBuffer.Array this work needs to be inside the sendAsyncLock.
+                    ArraySegment<byte> commandBuffer;
+                    using (var commandStream = new MemoryStream(this.sendBuffer.Array, writable: true))
                     {
-                        await webSocket.SendAsync(
-                            buffer, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
+                        commandStream.SetLength(0);
+                        command.WriteObject(commandStream);
+                        commandBuffer = new ArraySegment<byte>(this.sendBuffer.Array, 0, (int)commandStream.Position);
+                    }
+
+                    await webSocket.SendAsync(commandBuffer, WebSocketMessageType.Text, true, cancelToken).ConfigureAwait(false);
+
+                    if (stream != null)
+                    {
+                        await webSocket.SendStreamAsync(stream, WebSocketMessageType.Binary, this.sendBuffer, cancelToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -633,7 +683,7 @@ namespace Microsoft.Azure.Relay
                         await Task.Delay(connectDelay, cancellationToken).ConfigureAwait(false);
                     }
 
-                    RelayEventSource.Log.RelayClientConnectStart(this.listener);
+                    RelayEventSource.Log.ObjectConnecting(this.listener);
                     var webSocket = new ClientWebSocket();
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
@@ -658,15 +708,12 @@ namespace Microsoft.Azure.Relay
                     await webSocket.ConnectAsync(webSocketUri, cancellationToken).ConfigureAwait(false);
 
                     this.OnOnline();
+                    RelayEventSource.Log.ObjectConnected(this.listener);
                     return webSocket;
                 }
                 catch (WebSocketException wsException)
                 {
                     throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), this.listener);
-                }
-                finally
-                {
-                    RelayEventSource.Log.RelayClientConnectStop();
                 }
             }
 
@@ -743,9 +790,11 @@ namespace Microsoft.Azure.Relay
                 try
                 {
                     WebSocket webSocket = await connectTask.ConfigureAwait(false);
+                    int totalBytesRead = 0;
                     do
                     {
-                        WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(this.receiveBuffer, CancellationToken.None).ConfigureAwait(false);
+                        var currentReadBuffer = new ArraySegment<byte>(this.receiveBuffer.Array, this.receiveBuffer.Offset + totalBytesRead, this.receiveBuffer.Count - totalBytesRead);
+                        WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(currentReadBuffer, CancellationToken.None).ConfigureAwait(false);
                         if (receiveResult.MessageType == WebSocketMessageType.Close)
                         {
                             await this.CloseOrAbortWebSocketAsync(
@@ -763,8 +812,13 @@ namespace Microsoft.Azure.Relay
                             break;
                         }
 
-                        Fx.Assert(receiveResult.Count > 0, "Expected a non-zero count of bytes received.");
-                        this.listener.OnCommand(new ArraySegment<byte>(this.receiveBuffer.Array, this.receiveBuffer.Offset, receiveResult.Count));
+                        totalBytesRead += receiveResult.Count;
+                        if (receiveResult.EndOfMessage)
+                        {
+                            var commandBuffer = new ArraySegment<byte>(this.receiveBuffer.Array, this.receiveBuffer.Offset, totalBytesRead);
+                            await this.listener.OnCommandAsync(commandBuffer, webSocket).ConfigureAwait(false);
+                            totalBytesRead = 0;
+                        }
                     }
                     while (!shutdownToken.IsCancellationRequested);
                 }
@@ -792,7 +846,7 @@ namespace Microsoft.Azure.Relay
                     this.connectDelayIndex = -1;
                 }
 
-                RelayEventSource.Log.RelayClientGoingOnline(this.listener.ToString());
+                RelayEventSource.Log.Info(this.listener, "Online");
                 this.Online?.Invoke(this, EventArgs.Empty);
             }
 
@@ -809,7 +863,7 @@ namespace Microsoft.Azure.Relay
                 }
 
                 // Stop attempting to connect
-                RelayEventSource.Log.RelayClientStopConnecting(this.listener.ToString(), "HybridConnection");
+                RelayEventSource.Log.Info(this.listener, $"Offline. {this.listener.TrackingContext}");
                 this.Offline?.Invoke(this, EventArgs.Empty);
             }
 
@@ -852,11 +906,10 @@ namespace Microsoft.Azure.Relay
             {
                 try
                 {
-                    var listenerCommand = new ListenerCommand();
-                    listenerCommand.RenewToken = new ListenerCommand.RenewTokenCommand();
+                    var listenerCommand = new ListenerCommand { RenewToken = new ListenerCommand.RenewTokenCommand() };
                     listenerCommand.RenewToken.Token = eventArgs.Token.TokenString;
 
-                    await this.SendCommandAsync(listenerCommand, CancellationToken.None).ConfigureAwait(false);
+                    await this.SendCommandAndStreamAsync(listenerCommand, null, CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception exception) when (!Fx.IsFatal(exception))
                 {

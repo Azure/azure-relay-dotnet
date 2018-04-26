@@ -42,16 +42,30 @@ namespace Microsoft.Azure.Relay
         [IgnoreDataMember]
         static readonly DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(ListenerCommand), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
 
-        [DataMember(Name = "accept", EmitDefaultValue = false)]
+        [DataMember(Name = "accept", EmitDefaultValue = false, IsRequired = false)]
         public AcceptCommand Accept { get; set; }
 
-        [DataMember(Name = "renewToken", EmitDefaultValue = false)]
+        [DataMember(Name = "renewToken", EmitDefaultValue = false, IsRequired = false)]
         public RenewTokenCommand RenewToken { get; set; }
 
+        [DataMember(Name = "request", EmitDefaultValue = false, IsRequired = false)]
+        public RequestCommand Request { get; set; }
+
+        [DataMember(Name = "response", EmitDefaultValue = false, IsRequired = false)]
+        public ResponseCommand Response { get; set; }
+
 #if DEBUG
-        [DataMember(Name = "injectFault", EmitDefaultValue = false)]
+        [DataMember(Name = "injectFault", EmitDefaultValue = false, IsRequired = false)]
         public InjectFaultCommand InjectFault { get; set; }
 #endif
+
+        public static ListenerCommand ReadObject(ArraySegment<byte> buffer)
+        {
+            using (var stream = new MemoryStream(buffer.Array, buffer.Offset, buffer.Count))
+            {
+                return ListenerCommand.ReadObject(stream);
+            }
+        }
 
         public static ListenerCommand ReadObject(Stream stream)
         {
@@ -121,6 +135,108 @@ namespace Microsoft.Azure.Relay
         {
             [DataMember(Name = "token", Order = 0)]
             public string Token { get; set; }
+        }
+
+        /// <summary>
+        /// DataContract for JSON such as the following:
+        /// <para/>
+        /// {
+        ///   "request" : {
+        ///     "address" : "wss://dc-node.servicebus.windows.net:443/$hc/{path}?...",
+        ///     "id" : "42c34cb5-7a04-4d40-a19f-bdc66441e736",
+        ///     "requestTarget" : "/abc/def?myarg=value&amp;otherarg=...",
+        ///     "method" : "GET",    
+        ///     "requestHeaders" : {
+        ///       "Host": "contoso.servicebus.windows.net:443"
+        ///       "Content-Type" : "...",
+        ///       "User-Agent" : "...",
+        ///     },
+        ///     "body" : true
+        ///   }
+        /// }
+        /// </summary>
+        [DataContract]
+        public class RequestCommand
+        {
+            [DataMember(Name = "address", Order = 0, EmitDefaultValue = false, IsRequired = false)]
+            public string Address { get; set; }
+
+            [DataMember(Name = "id", Order = 1, EmitDefaultValue = false, IsRequired = false)]
+            public string Id { get; set; }
+
+            [DataMember(Name = "requestTarget", Order = 2, EmitDefaultValue = false, IsRequired = false)]
+            public string RequestTarget { get; set; }
+
+            [DataMember(Name = "method", Order = 3, EmitDefaultValue = false, IsRequired = false)]
+            public string Method { get; set; }
+
+            [DataMember(Name = "requestHeaders", Order = 4, EmitDefaultValue = false, IsRequired = false)]
+            IDictionary<string, string> requestHeaders;
+
+            [DataMember(Name = "body", Order = 5, EmitDefaultValue = false, IsRequired = false)]
+            public bool? Body { get; set; }
+
+            [IgnoreDataMember]
+            public IDictionary<string, string> RequestHeaders
+            {
+                get
+                {
+                    if (this.requestHeaders == null)
+                    {
+                        this.requestHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    return this.requestHeaders;
+                }
+            }
+        }
+
+        /// <summary>
+        /// DataContract for JSON such as the following:
+        /// <para/>
+        /// {
+        ///   "response" : {
+        ///   "requestId" : "42c34cb5-7a04-4d40-a19f-bdc66441e736",
+        ///   "statusCode" : "200",
+        ///   "statusDescription" : "OK",
+        ///   "responseHeaders" : {
+        ///     "Content-Type" : "application/json",
+        ///     "Content-Encoding" : "gzip"
+        ///   }
+        ///   "body" : true
+        /// }
+        /// </summary>
+        [DataContract]
+        public class ResponseCommand
+        {
+            [DataMember(Name = "requestId", IsRequired = true)]
+            public string RequestId { get; set; }
+
+            [DataMember(Name = "statusCode", IsRequired = true)]
+            public int StatusCode { get; set; }
+
+            [DataMember(Name = "statusDescription", EmitDefaultValue = false, IsRequired = false)]
+            public string StatusDescription { get; set; }
+
+            [DataMember(Name = "responseHeaders", EmitDefaultValue = false, IsRequired = false)]
+            IDictionary<string, string> responseHeaders;
+
+            [DataMember(Name = "body", IsRequired = true)]
+            public bool Body { get; set; }
+
+            [IgnoreDataMember]
+            public IDictionary<string, string> ResponseHeaders
+            {
+                get
+                {
+                    if (this.responseHeaders == null)
+                    {
+                        this.responseHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    return this.responseHeaders;
+                }
+            }
         }
 
 #if DEBUG
