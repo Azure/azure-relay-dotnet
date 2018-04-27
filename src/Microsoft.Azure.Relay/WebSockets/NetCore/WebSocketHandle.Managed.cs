@@ -9,6 +9,8 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
     using System.Net.Security;
     using System.Net.Sockets;
     using System.Net.WebSockets;
@@ -27,6 +29,15 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         /// <summary>Default encoding for HTTP requests. Latin alphabeta no 1, ISO/IEC 8859-1.</summary>
         private static readonly Encoding s_defaultHttpEncoding = Encoding.GetEncoding(28591);
+
+        /// <summary>Cache the whitespace chars found in Http responses.</summary>
+        private static readonly char[] s_whitespaceChars = new char[] { ' ', '\t', '\r', '\n' };
+
+        /// <summary>Cache the characters used for trimming authentication header values.</summary>
+        private static readonly char[] s_trimChars = new char[] { ' ', '\t', ',' };
+
+        /// <summary>Used for reading message body from proxy server.</summary>
+        private static byte[] _readBuffer;
 
         /// <summary>Size of the receive buffer to use.</summary>
         private const int DefaultReceiveBufferSize = 0x1000;
@@ -80,16 +91,28 @@ namespace Microsoft.Azure.Relay.WebSockets
             // TODO #14480 : Not currently implemented, or explicitly ignored:
             // - ClientWebSocketOptions.UseDefaultCredentials
             // - ClientWebSocketOptions.Credentials
-            // - ClientWebSocketOptions.Proxy
             // - ClientWebSocketOptions._sendBufferSize
 
             // Establish connection to the server
             CancellationTokenRegistration registration = cancellationToken.Register(s => ((WebSocketHandle)s).Abort(), this);
             try
             {
-                // Connect to the remote server
-                Socket connectedSocket = await ConnectSocketAsync(uri.Host, uri.Port, cancellationToken).ConfigureAwait(false);
-                Stream stream = new AsyncEventArgsNetworkStream(connectedSocket);
+
+                Socket connectedSocket;
+                Stream stream;
+                if (options.Proxy != null && options.Proxy != WebRequest.DefaultWebProxy)
+                {
+                    Uri proxyUri = options.Proxy.GetProxy(uri);
+                    connectedSocket = await ConnectSocketAsync(proxyUri.Host, proxyUri.Port, cancellationToken).ConfigureAwait(false);
+                    stream = new AsyncEventArgsNetworkStream(connectedSocket);
+                    await ConnectWithProxyAsync(uri, options, stream, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    // Connect to the remote server
+                    connectedSocket = await ConnectSocketAsync(uri.Host, uri.Port, cancellationToken).ConfigureAwait(false);
+                    stream = new AsyncEventArgsNetworkStream(connectedSocket);
+                }
 
                 // Upgrade to SSL if needed
                 if (uri.Scheme == UriScheme.Wss)
@@ -197,6 +220,227 @@ namespace Microsoft.Azure.Relay.WebSockets
             throw new WebSocketException(SR.net_webstatus_ConnectFailure);
         }
 
+        private async Task ConnectWithProxyAsync(Uri uri, ClientWebSocketOptions options, Stream stream, CancellationToken cancellationToken)
+        {
+            const string successStatusCode = "HTTP/1.1 200";
+            const string proxyAuthenticationStatusCode = "HTTP/1.1 407";
+            const string Basic = "Basic ";
+            const string Digest = "Digest ";
+            AuthenticationHeaderValue ahv = null;
+
+            string statusLine = await SendRequestToProxyAsync(uri, options, stream, ahv, cancellationToken).ConfigureAwait(false);
+            if (statusLine == successStatusCode)
+            {
+                // Proxy connection succeeded.
+                return;
+            }
+
+            // Proxy requires authentication.
+            if (statusLine.StartsWith(proxyAuthenticationStatusCode))
+            {
+                if (statusLine.Length > proxyAuthenticationStatusCode.Length &&
+                    !char.IsWhiteSpace(statusLine[proxyAuthenticationStatusCode.Length]))
+                {
+                    throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                }
+
+                string line;
+                int contentLength = 0;
+                while (!string.IsNullOrEmpty((line = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false))))
+                {
+                    if (line.StartsWith("Proxy-Authenticate", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colon = line.IndexOf(':');
+                        if (colon == -1 || colon == line.Length - 1)
+                        {
+                            throw new WebSocketException(SR.net_WebSockets_InvalidResponseHeader);
+                        }
+
+                        string authenticateString = line.Substring(colon + 1);
+                        string authHeader = GetParameterForScheme(authenticateString, Digest) ?? GetParameterForScheme(authenticateString, Basic);
+                        if (authHeader != null)
+                        {
+                            ahv = AuthenticationHeaderValue.Parse(authHeader);
+                        }
+                    }
+                    else if (line.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colon = line.IndexOf(':');
+                        if (colon == -1 || colon == line.Length - 1)
+                        {
+                            throw new WebSocketException(SR.net_WebSockets_InvalidResponseHeader);
+                        }
+
+                        int.TryParse(line.Substring(colon + 1), out contentLength);
+                    }
+                    else if (line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int nextValidIndex = line.IndexOf(':') + 1;
+                        if (nextValidIndex < line.Length && line.SubstringTrim(nextValidIndex).Equals("chunked", StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                        }
+                    }
+                }
+
+                if (ahv == null)
+                {
+                    throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                }
+
+                // Read any response content from proxy.
+                await ReadResponseContent(stream, contentLength, cancellationToken).ConfigureAwait(false);
+
+                // Retry request to proxy with authorization header.
+                statusLine = await SendRequestToProxyAsync(uri, options, stream, ahv, cancellationToken).ConfigureAwait(false);
+
+                if (statusLine == successStatusCode)
+                {
+                    return;
+                }
+            }
+
+            // Failed to connect to proxy.
+            throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+        }
+
+        internal static async Task<string> SendRequestToProxyAsync(Uri uri, ClientWebSocketOptions options, Stream stream, AuthenticationHeaderValue ahv, CancellationToken cancellationToken)
+        {
+            const string successStatusCode = "HTTP/1.1 200";
+            byte[] headers = BuildProxyHeaders(uri, options, ahv);
+            // Write the proxy headers.
+            await stream.WriteAsync(headers, 0, headers.Length, cancellationToken).ConfigureAwait(false);
+            // Read the response from proxy server.
+            string statusLine = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false);
+
+            // Parse if success response.
+            if (statusLine.StartsWith(successStatusCode))
+            {
+                if (statusLine.Length > successStatusCode.Length && !char.IsWhiteSpace(statusLine[successStatusCode.Length]))
+                {
+                    throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                }
+
+                // Read response headers.
+                string line;
+                int contentLength = 0;
+                while (!string.IsNullOrEmpty((line = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false))))
+                {
+                    if (line.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colon = line.IndexOf(':');
+                        if (colon == -1 || colon == line.Length - 1)
+                        {
+                            throw new WebSocketException(SR.net_WebSockets_InvalidResponseHeader);
+                        }
+
+                        int.TryParse(line.Substring(colon + 1), out contentLength);
+                    }
+                    else if (line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int nextValidIndex = line.IndexOf(':') + 1;
+                        if (nextValidIndex < line.Length && line.SubstringTrim(nextValidIndex).Equals("chunked", StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                        }
+                    }
+                }
+
+                await ReadResponseContent(stream, contentLength, cancellationToken).ConfigureAwait(false);
+                return successStatusCode;
+            }
+
+            return statusLine;
+        }
+
+        internal static async Task ReadResponseContent(Stream stream, int contentLength, CancellationToken cancellationToken)
+        {
+            if (contentLength > 0)
+            {
+                if (_readBuffer == null)
+                {
+                    _readBuffer = new byte[1024];
+                }
+
+                int bytesRead = 0;
+                while (bytesRead < contentLength)
+                {
+                    bytesRead += await stream.ReadAsync(_readBuffer, 0, _readBuffer.Length, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        internal static string GetParameterForScheme(string line, string scheme)
+        {
+            int basicIndex = line.IndexOf(scheme, StringComparison.OrdinalIgnoreCase);
+            if (basicIndex != -1 && line.Length >= scheme.Length)
+            {
+                int i = basicIndex + scheme.Length;
+                while (i < line.Length)
+                {
+                    int indexOfComma = line.IndexOf(',', i);
+                    if (indexOfComma == -1)
+                    {
+                        return line.Substring(basicIndex).Trim(s_trimChars);
+                    }
+
+                    i = SkipWhitespace(line, indexOfComma + 1);
+                    if (i == line.Length)
+                    {
+                        return line.Substring(basicIndex).Trim(s_trimChars);
+                    }
+
+                    if (line[i] == ',')
+                    {
+                        // Empty key value pair.
+                        continue;
+                    }
+
+                    int newIndex;
+                    if (IsNextScheme(line, i, out newIndex))
+                    {
+                        return line.Substring(basicIndex, i - basicIndex).Trim(s_trimChars);
+                    }
+
+                    i = newIndex;
+                }
+
+                return line.Substring(basicIndex).Trim(s_trimChars);
+            }
+
+            return null;
+        }
+
+        internal static bool IsNextScheme(string line, int startIndex, out int endIndex)
+        {
+            while (startIndex < line.Length)
+            {
+                if (line[startIndex] == '=')
+                {
+                    endIndex = startIndex + 1;
+                    return false;
+                }
+                else if (char.IsWhiteSpace(line[startIndex]) || line[startIndex] == ',')
+                {
+                    endIndex = startIndex + 1;
+                    return true;
+                }
+
+                startIndex++;
+            }
+
+            endIndex = startIndex;
+            return true;
+        }
+
+        internal static int SkipWhitespace(string line, int startIndex)
+        {
+            if (startIndex < line.Length && char.IsWhiteSpace(line[startIndex]))
+                startIndex++;
+
+            return startIndex;
+        }
+
         /// <summary>Creates a byte[] containing the headers to send to the server.</summary>
         /// <param name="uri">The Uri of the server.</param>
         /// <param name="options">The options used to configure the websocket.</param>
@@ -274,6 +518,59 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
         }
 
+        private static byte[] BuildProxyHeaders(Uri uri, ClientWebSocketOptions options, AuthenticationHeaderValue proxyAuth)
+        {
+            StringBuilder builder = t_cachedStringBuilder ?? (t_cachedStringBuilder = new StringBuilder());
+            try
+            {
+                builder.Append("CONNECT ").Append(uri.Host + ":" + uri.Port).Append(" HTTP/1.1\r\n");
+                string hostHeader = options.RequestHeaders[HttpKnownHeaderNames.Host];
+                builder.Append("Host: ");
+                if (string.IsNullOrEmpty(hostHeader))
+                {
+                    builder.Append(uri.IdnHost).Append(':').Append(uri.Port).Append("\r\n");
+                }
+                else
+                {
+                    builder.Append(hostHeader).Append("\r\n");
+                }
+
+                builder.Append("Proxy-Connection: keep-alive\r\n");
+                builder.Append("Connection: keep-alive\r\n");
+
+                if (proxyAuth != null)
+                {
+                    var proxyUri = options.Proxy.GetProxy(uri);
+                    if (proxyAuth.Scheme.Equals("basic", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var networkCredential = options.Proxy.Credentials.GetCredential(proxyUri, "Basic");
+                        var token = AuthenticationHelper.GetBasicAuthChallengeResponse(networkCredential);
+                        if (token != null)
+                        {
+                            builder.Append("Proxy-Authorization: Basic ").Append(token).Append("\r\n");
+                        }
+                    }
+                    else if (proxyAuth.Scheme.Equals("digest", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var networkCredential = options.Proxy.Credentials.GetCredential(proxyUri, "Digest");
+                        var token = AuthenticationHelper.GetDigestAuthChallengeResponse(options.Proxy.Credentials as NetworkCredential, "CONNECT", uri.PathAndQuery, null, proxyAuth.Parameter);
+                        if (token != null)
+                        {
+                            builder.Append("Proxy-Authorization: Digest ").Append(token).Append("\r\n");
+                        }
+                    }
+                }
+
+                builder.Append("\r\n");
+
+                return s_defaultHttpEncoding.GetBytes(builder.ToString());
+            }
+            finally
+            {
+                builder.Clear();
+            }
+        }
+
         /// <summary>
         /// Creates a pair of a security key for sending in the Sec-WebSocket-Key header and
         /// the associated response we expect to receive as the Sec-WebSocket-Accept header value.
@@ -302,14 +599,13 @@ namespace Microsoft.Azure.Relay.WebSockets
         {
             // Read the first line of the response
             string statusLine = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false);
-
             // Depending on the underlying sockets implementation and timing, connecting to a server that then
             // immediately closes the connection may either result in an exception getting thrown from the connect
             // earlier, or it may result in getting to here but reading 0 bytes.  If we read 0 bytes and thus have
             // an empty status line, treat it as a connect failure.
             if (string.IsNullOrEmpty(statusLine))
             {
-                throw new WebSocketException(SR.Format(SR.net_webstatus_ConnectFailure));
+                throw new WebSocketException(SR.net_webstatus_ConnectFailure);
             }
 
             const string ExpectedStatusStart = "HTTP/1.1 ";
