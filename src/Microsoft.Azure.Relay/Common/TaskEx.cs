@@ -4,6 +4,7 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
     static class TaskEx
@@ -11,10 +12,10 @@ namespace Microsoft.Azure.Relay
         // Task.Delay is a little trick to get a completed task
         public static readonly Task CompletedTask = Task.Delay(0);
 
-        public static void Fork(this Task thisTask, object source)
+        public static void Fork(this Task thisTask, object source, [CallerMemberName] string callerMember = "")
         {
             Fx.Assert(thisTask != null, "task is required!");
-            thisTask.ContinueWith((t, s) => RelayEventSource.Log.HandledExceptionAsError(s, t.Exception), source, TaskContinuationOptions.OnlyOnFaulted);
+            thisTask.ContinueWith((t, s) => RelayEventSource.Log.HandledExceptionAsError(s, t.Exception, callerMember + "(Fork)"), source, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         /// <summary>

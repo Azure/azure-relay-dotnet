@@ -6,13 +6,18 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.Diagnostics.Tracing;
     using System.Globalization;
+    using System.Net;
+    using System.Runtime.CompilerServices;
+
+    interface ITraceSource
+    {
+        TrackingContext TrackingContext { get; }
+    }
 
     /// <summary>
     /// EventSource for the new Dynamic EventSource type of Microsoft-Azure-Relay traces.
     /// 
     /// The default Level is Informational
-    /// 
-    /// When defining Start/Stop tasks, the StopEvent.Id must be exactly StartEvent.Id + 1.
     /// 
     /// Do not explicity include the Guid here, since EventSource has a mechanism to automatically
     /// map to an EventSource Guid based on the Name (Microsoft-Azure-Relay).  The Guid will 
@@ -28,61 +33,101 @@ namespace Microsoft.Azure.Relay
         {
         }
 
-        [Event(40191, Message = "Relay object is online: Source: {0}.")]
-        public void RelayClientGoingOnline(string source)
+        [NonEvent]
+        public void ObjectConnecting(object source)
         {
-            if (this.IsEnabled())
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
-                this.WriteEvent(40191, source);
-            }
-        }
-
-        [Event(40193, Message = "Relay object stop connecting: Source: {0}, ListenerType: {1}.")]
-        public void RelayClientStopConnecting(string source, string listenerType)
-        {
-            if (this.IsEnabled())
-            {
-                this.WriteEvent(40193, source, listenerType);
+                var details = PrepareTrace(source);
+                this.ObjectConnecting(details.Source, details.TrackingContext?.ToString() ?? string.Empty);
             }
         }
 
         [NonEvent]
-        public void RelayClientConnectStart(object source)
+        public void ObjectConnecting(string source, TrackingContext trackingContext)
         {
-            if (this.IsEnabled())
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
-                this.RelayClientConnectStart(CreateSourceString(source));
+                SetCurrentThreadActivityId(trackingContext);
+                this.ObjectConnecting(source, trackingContext?.ToString() ?? string.Empty);
             }
         }
 
-        [Event(40201, Message = "Relay object Connect start: {0}.")]
-        void RelayClientConnectStart(string source)
+        [Event(40200, Level = EventLevel.Informational, Message = "{0}: Connecting. {1}")]
+        void ObjectConnecting(string source, string details)
+        {
+            this.WriteEvent(40200, source, details);
+        }
+
+        [NonEvent]
+        public void ObjectConnected(object source)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                var details = PrepareTrace(source);
+                this.ObjectConnected(details.Source);
+            }
+        }
+
+        [NonEvent]
+        public void ObjectConnected(string source, TrackingContext trackingContext)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.ObjectConnected(source);
+            }
+        }
+
+        [Event(40201, Level = EventLevel.Informational, Message = "{0}: Connected")]
+        void ObjectConnected(string source)
         {
             this.WriteEvent(40201, source);
         }
 
-        [Event(40202, Message = "Relay object Connect stop.")]
-        public void RelayClientConnectStop()
+        [NonEvent]
+        public void ObjectClosing(object source)
         {
-            if (this.IsEnabled())
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
-                this.WriteEvent(40202);
+                var details = PrepareTrace(source);
+                this.ObjectClosing(details.Source, details.TrackingContext?.ToString() ?? string.Empty);
             }
         }
 
-        // 40203 Available
+        [Event(40202, Level = EventLevel.Informational, Message = "{0}: is Closing. {1}")]
+        void ObjectClosing(string source, string details)
+        {
+            this.WriteEvent(40202, source, details);
+        }
 
         [NonEvent]
-        public void RelayListenerRendezvousStart(RelayedHttpListenerContext listenerContext, string rendezvousAddress)
+        public void ObjectClosed(object source)
         {
-            if (this.IsEnabled())
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
-                this.RelayListenerRendezvousStart(
-                    CreateSourceString(listenerContext.Listener), listenerContext.TrackingContext.TrackingId, rendezvousAddress);
+                var details = PrepareTrace(source);
+                this.ObjectClosed(details.Source);
             }
         }
 
-        [Event(40204, Message = "Relay Listener received a connection request. {0}, ConnectionId: {1}, Rendezvous Address: {2}.")]
+        [Event(40203, Level = EventLevel.Informational, Message = "{0}: is Closed.")]
+        void ObjectClosed(string source)
+        {
+            this.WriteEvent(40203, source);
+        }
+
+        [NonEvent]
+        public void RelayListenerRendezvousStart(object source, string trackingId, string rendezvousAddress)
+        {
+            if (this.IsEnabled())
+            {
+                var details = PrepareTrace(source);
+                this.RelayListenerRendezvousStart(details.Source, trackingId, rendezvousAddress);
+            }
+        }
+
+        [Event(40204, Message = "{0}: Relay Listener Received a connection request. ConnectionId: {1}, Rendezvous Address: {2}.")]
         void RelayListenerRendezvousStart(string source, string clientId, string rendezvousAddress)
         {
             this.WriteEvent(40204, source, clientId, rendezvousAddress);
@@ -98,156 +143,96 @@ namespace Microsoft.Azure.Relay
         }
 
         [NonEvent]
-        public void RelayListenerRendezvousFailed(RelayedHttpListenerContext listenerContext, string exception)
+        public void RelayListenerRendezvousFailed(object source, string trackingId, Exception exception)
         {
             if (this.IsEnabled())
             {
-                this.RelayListenerRendezvousFailed(
-                    CreateSourceString(listenerContext.Listener), listenerContext.TrackingContext.TrackingId, exception);
+                var details = PrepareTrace(source);
+                this.RelayListenerRendezvousFailed(details.Source, trackingId, ExceptionToString(exception, details.TrackingContext));
             }
         }
 
-        [Event(40206, Level = EventLevel.Warning, Message = "Relayed Listener failed to accept client. {0}, ConnectionId: {1}, Exception: {2}.")]
+        [NonEvent]
+        public void RelayListenerRendezvousFailed(object source, string trackingId, string error)
+        {
+            if (this.IsEnabled())
+            {
+                var details = PrepareTrace(source);
+                this.RelayListenerRendezvousFailed(details.Source, trackingId, error);
+            }
+        }
+
+        [Event(40206, Level = EventLevel.Warning, Message = "{0}: Relayed Listener failed to accept client. ConnectionId: {1}, Exception: {2}.")]
         void RelayListenerRendezvousFailed(string source, string clientId, string exception)
         {
             this.WriteEvent(40206, source, clientId, exception);
         }
 
         [NonEvent]
-        public void RelayListenerRendezvousRejected(RelayedHttpListenerContext listenerContext)
+        public void RelayListenerRendezvousRejected(TrackingContext trackingContext, HttpStatusCode statusCode, string statusDescription)
         {
             if (this.IsEnabled())
             {
-                var response = listenerContext.Response;
-                this.RelayListenerRendezvousRejected(
-                    listenerContext.TrackingContext.TrackingId, (int)response.StatusCode, response.StatusDescription);
+                SetCurrentThreadActivityId(trackingContext);
+                this.RelayListenerRendezvousRejected(trackingContext.ToString(), (int)statusCode, statusDescription);
             }
         }
 
         [Event(40207, Level = EventLevel.Warning, Message = "Relayed Listener is rejecting the client. ConnectionId: {0}, StatusCode: {1}, StatusDescription: {2}.")]
-        void RelayListenerRendezvousRejected(string clientId, int statusCode, string statusDescription)
+        public void RelayListenerRendezvousRejected(string connectionId, int statusCode, string statusDescription)
         {
-            this.WriteEvent(40207, clientId, statusCode, statusDescription);
-        }
-
-        [Event(40208, Level = EventLevel.Warning, Message = "Relayed Listener received an unknown command. {0}, Command: {1}.")]
-        public void RelayListenerUnknownCommand(string source, string command)
-        {
-            if (this.IsEnabled())
-            {
-                this.WriteEvent(40208, source, command);
-            }
-        }
-
-        [NonEvent]
-        public void RelayClientCloseStart(object source)
-        {
-            if (this.IsEnabled())
-            {
-                this.RelayClientCloseStart(CreateSourceString(source));
-            }
-        }
-
-        [Event(40212, Message = "Relay object closing: {0}.")]
-        void RelayClientCloseStart(string source)
-        {
-            this.WriteEvent(40212, source);
-        }
-
-        [Event(40213, Message = "Relay object closed.")]
-        public void RelayClientCloseStop()
-        {
-            if (this.IsEnabled())
-            {
-                this.WriteEvent(40213);
-            }
-        }
-
-        [NonEvent]
-        public void RelayClientCloseException(object source, Exception exception)
-        {
-            if (this.IsEnabled())
-            {
-                this.RelayClientCloseException(CreateSourceString(source), ExceptionToString(exception));
-            }
-        }
-
-        [Event(40214, Message = "Relay object closing encountered exception: {0}, Exception: {1}.", Level = EventLevel.Warning)]
-        void RelayClientCloseException(string source, string exception)
-        {
-            this.WriteEvent(40214, source, exception);
-        }
-
-        [NonEvent]
-        public void RelayClientShutdownStart(object source)
-        {
-            if (this.IsEnabled())
-            {
-                this.RelayClientShutdownStart(CreateSourceString(source));
-            }
-        }
-
-        [Event(40215, Message = "Relay object Shutdown beginning: {0}")]
-        void RelayClientShutdownStart(string source)
-        {
-            this.WriteEvent(40215, source);
-        }
-
-        [Event(40216, Message = "Relay object Shutdown complete.")]
-        public void RelayClientShutdownStop()
-        {
-            if (this.IsEnabled())
-            {
-                this.WriteEvent(40216);
-            }
+            this.WriteEvent(40207, connectionId, statusCode, statusDescription);
         }
 
         // Not the actual event definition since we're using object and Exception types
         [NonEvent]
-        public void HandledExceptionAsInformation(object source, Exception exception)
+        public void HandledExceptionAsInformation(object source, Exception exception, [CallerMemberName] string member = "")
         {
             if (this.IsEnabled())
             {
-                this.HandledExceptionAsInformation(CreateSourceString(source), ExceptionToString(exception));
+                var details = PrepareTrace(source);
+                this.HandledExceptionAsInformation(details.Source, member, ExceptionToString(exception, details.TrackingContext));
             }
         }
 
-        [Event(40249, Message = "Exception Handled: {0} {1}")]
-        void HandledExceptionAsInformation(string source, string exception)
+        [Event(40249, Message = "{0}.{1} Handled Exception: {2}")]
+        void HandledExceptionAsInformation(string source, string member, string exception)
         {
-            this.WriteEvent(40249, source, exception);
+            this.WriteEvent(40249, source, member, exception);
         }
 
         // Not the actual event definition since we're using object and Exception types
         [NonEvent]
-        public void HandledExceptionAsWarning(object source, Exception exception)
+        public void HandledExceptionAsWarning(object source, Exception exception, [CallerMemberName] string member = "")
         {
             if (this.IsEnabled())
             {
-                this.HandledExceptionAsWarning(CreateSourceString(source), ExceptionToString(exception));
+                var details = PrepareTrace(source);
+                this.HandledExceptionAsWarning(details.Source, member, ExceptionToString(exception, details.TrackingContext));
             }
         }
 
-        [Event(40250, Level = EventLevel.Warning, Message = "Exception Handled: {0} {1}")]
-        void HandledExceptionAsWarning(string source, string exception)
+        [Event(40250, Level = EventLevel.Warning, Message = "{0}.{1} Handled Exception: {2}")]
+        void HandledExceptionAsWarning(string source, string member, string exception)
         {
-            this.WriteEvent(40250, source, exception);
+            this.WriteEvent(40250, source, member, exception);
         }
 
         // Not the actual event definition since we're using object and Exception types
         [NonEvent]
-        public void HandledExceptionAsError(object source, Exception exception)
+        public void HandledExceptionAsError(object source, Exception exception, [CallerMemberName] string member = "")
         {
             if (this.IsEnabled())
             {
-                this.HandledExceptionAsError(CreateSourceString(source), ExceptionToString(exception));
+                var details = PrepareTrace(source);
+                this.HandledExceptionAsError(details.Source, member, ExceptionToString(exception, details.TrackingContext));
             }
         }
 
-        [Event(40251, Level = EventLevel.Error, Message = "Exception Handled: {0} {1}")]
-        void HandledExceptionAsError(string source, string exception)
+        [Event(40251, Level = EventLevel.Error, Message = "{0}.{1} Handled Exception {2}")]
+        void HandledExceptionAsError(string source, string member, string exception)
         {
-            this.WriteEvent(40251, source, exception);
+            this.WriteEvent(40251, source, member, exception);
         }
 
         [NonEvent]
@@ -255,21 +240,23 @@ namespace Microsoft.Azure.Relay
         {
             if (this.IsEnabled())
             {
-                this.GetTokenStart(CreateSourceString(source));
+                var details = PrepareTrace(source);
+                this.GetTokenStart(details.Source);
             }
         }
 
-        [Event(40255, Level = EventLevel.Informational, Message = "GetToken start: {0}")]
+        [Event(40255, Level = EventLevel.Informational, Message = "{0}: GetToken start")]
         void GetTokenStart(string source)
         {
             this.WriteEvent(40255, source);
         }
 
         [NonEvent]
-        public void GetTokenStop(DateTime tokenExpiry)
+        public void GetTokenStop(object source, DateTime tokenExpiry)
         {
             if (this.IsEnabled())
             {
+                PrepareTrace(source);
                 this.GetTokenStop(DateTimeToString(tokenExpiry));
             }
         }
@@ -285,11 +272,12 @@ namespace Microsoft.Azure.Relay
         {
             if (this.IsEnabled())
             {
-                this.TokenRenewScheduled(interval.ToString(), CreateSourceString(source));
+                var details = PrepareTrace(source);
+                this.TokenRenewScheduled(interval.ToString(), details.Source);
             }
         }
 
-        [Event(40257, Level = EventLevel.Informational, Message = "Scheduling Token renewal after {0}. {1}.")]
+        [Event(40257, Level = EventLevel.Informational, Message = "{1}: Scheduling Token renewal after {0}.")]
         void TokenRenewScheduled(string interval, string source)
         {
             this.WriteEvent(40257, interval, source);
@@ -314,26 +302,28 @@ namespace Microsoft.Azure.Relay
         }
 
         [NonEvent]
-        public TException ThrowingException<TException>(TException exception, object source = null, EventLevel level = EventLevel.Error)
+        public TException ThrowingException<TException>(TException exception, object source = null, EventLevel level = EventLevel.Error, [CallerMemberName] string memberName = "")
             where TException : Exception
         {
             // Avoid converting ToString, etc. if ETW tracing is not enabled.
-            if (this.IsEnabled())
+            if (this.IsEnabled(level, EventKeywords.None))
             {
+                var details = PrepareTrace(source);
+                string exceptionString = ExceptionToString(exception, details.TrackingContext);
                 switch (level)
                 {
                     case EventLevel.Critical:
                     case EventLevel.LogAlways:
                     case EventLevel.Error:
-                        this.ThrowingExceptionError(CreateSourceString(source), ExceptionToString(exception));
+                        this.ThrowingExceptionError(details.Source, exceptionString, memberName);
                         break;
                     case EventLevel.Warning:
-                        this.ThrowingExceptionWarning(CreateSourceString(source), ExceptionToString(exception));
+                        this.ThrowingExceptionWarning(details.Source, exceptionString, memberName);
                         break;
                     case EventLevel.Informational:
                     case EventLevel.Verbose:
                     default:
-                        this.ThrowingExceptionInfo(CreateSourceString(source), ExceptionToString(exception));
+                        this.ThrowingExceptionInfo(details.Source, exceptionString, memberName);
                         break;
                 }
             }
@@ -342,27 +332,208 @@ namespace Microsoft.Azure.Relay
             return exception;
         }
 
-        [Event(40262, Level = EventLevel.Error, Message = "Throwing an Exception: {0} {1}")]
-        void ThrowingExceptionError(string source, string exception)
+        [Event(40262, Level = EventLevel.Error, Message = "{0}.{2}: Throwing an Exception: {1}")]
+        void ThrowingExceptionError(string source, string exception, string memberName)
         {
             // The IsEnabled() check is in the [NonEvent] Wrapper method
-            this.WriteEvent(40262, source, exception);
+            this.WriteEvent(40262, source, exception, memberName);
         }
 
-        [Event(40263, Level = EventLevel.Warning, Message = "Throwing an Exception: {0} {1}")]
-        void ThrowingExceptionWarning(string source, string exception)
+        [Event(40263, Level = EventLevel.Warning, Message = "{0}.{2}: Throwing an Exception: {1}")]
+        void ThrowingExceptionWarning(string source, string exception, string memberName)
         {
             // The IsEnabled() check is in the [NonEvent] Wrapper method
-            this.WriteEvent(40263, source, exception);
+            this.WriteEvent(40263, source, exception, memberName);
         }
 
-        [Event(40264, Level = EventLevel.Informational, Message = "Throwing an Exception: {0} {1}")]
-        void ThrowingExceptionInfo(string source, string exception)
+        [Event(40264, Level = EventLevel.Informational, Message = "{0}.{2}: Throwing an Exception: {1}")]
+        void ThrowingExceptionInfo(string source, string exception, string memberName)
         {
             // The IsEnabled() check is in the [NonEvent] Wrapper method
-            this.WriteEvent(40264, source, exception);
+            this.WriteEvent(40264, source, exception, memberName);
         }
-        
+
+        [NonEvent]
+        public void Warning(object source, string message)
+        {
+            if (this.IsEnabled())
+            {
+                var details = PrepareTrace(source);
+                if (details.TrackingContext != null)
+                {
+                    message += " " + details.TrackingContext.ToString();
+                }
+
+                this.Warning(details.Source, message);
+            }
+        }
+
+        [Event(40303, Level = EventLevel.Informational, Message = "{0}: {1}")]
+        void Warning(string source, string details)
+        {
+            this.WriteEvent(40303, source, details);
+        }
+
+        [NonEvent]
+        public void Info(object source, string message)
+        {
+            if (this.IsEnabled())
+            {
+                var details = PrepareTrace(source);
+                this.Info(details.Source, message);
+            }
+        }
+
+        [NonEvent]
+        public void Info(string source, TrackingContext trackingContext, string message)
+        {
+            if (this.IsEnabled())
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.Info(source, message);
+            }
+        }
+
+        [Event(40304, Level = EventLevel.Informational, Message = "{0}: {1}")]
+        void Info(string source, string details)
+        {
+            this.WriteEvent(40304, source, details);
+        }
+
+        [NonEvent]
+        public void HybridHttpResponseStreamWrite(TrackingContext trackingContext, int count)
+        {
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpResponseStreamWrite(count);
+            }
+        }
+
+        [Event(40306, Level = EventLevel.Verbose, Message = "HybridHttpConnection+ResponseStream: WriteAsync(count={0})")]
+        void HybridHttpResponseStreamWrite(int count)
+        {
+            this.WriteEvent(40306, count);
+        }
+
+        [NonEvent]
+        public void HybridHttpResponseStreamFlush(TrackingContext trackingContext, string reason)
+        {
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpResponseStreamFlush(reason);
+            }
+        }
+
+        [Event(40307, Level = EventLevel.Verbose, Message = "HybridHttpConnection+ResponseStream: FlushCoreAsync(reason={0})")]
+        void HybridHttpResponseStreamFlush(string reason)
+        {
+            this.WriteEvent(40307, reason);
+        }
+
+        [NonEvent]
+        public void HybridHttpConnectionSendBytes(TrackingContext trackingContext, int count)
+        {
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpConnectionSendBytes(count);
+            }
+        }
+
+        [Event(40308, Level = EventLevel.Verbose, Message = "HybridHttpConnection: Sending {0} bytes on the rendezvous connection")]
+        void HybridHttpConnectionSendBytes(int count)
+        {
+            this.WriteEvent(40308, count);
+        }
+
+        [NonEvent]
+        public void HybridHttpCreatingRendezvousConnection(TrackingContext trackingContext)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpCreatingRendezvousConnection();
+            }
+        }
+
+        [Event(40309, Level = EventLevel.Informational, Message = "HybridHttpConnection: Creating the rendezvous connection")]
+        void HybridHttpCreatingRendezvousConnection()
+        {
+            this.WriteEvent(40309);
+        }
+
+        [NonEvent]
+        public void HybridHttpConnectionSendResponse(TrackingContext trackingContext, string connection, int status)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpConnectionSendResponse(connection, status);
+            }
+        }
+
+        [Event(40310, Level = EventLevel.Informational, Message = "HybridHttpConnection: Sending the response command on the {0} connection, status: {1}")]
+        void HybridHttpConnectionSendResponse(string connection, int status)
+        {
+            this.WriteEvent(40310, connection, status);
+        }
+
+        [NonEvent]
+        public void HybridHttpReadRendezvousValue(object source, string value)
+        {
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.None))
+            {
+                var details = PrepareTrace(source);
+                this.HybridHttpReadRendezvousValue(value);
+            }
+        }
+
+        [Event(40313, Level = EventLevel.Verbose, Message = "HybridHttpConnection: Reading {0} from the rendezvous connection")]
+        void HybridHttpReadRendezvousValue(string value)
+        {
+            this.WriteEvent(40313, value);
+        }
+
+        [NonEvent]
+        public void HybridHttpRequestStarting(TrackingContext trackingContext)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpRequestStarting(trackingContext?.ToString() ?? string.Empty);
+            }
+        }
+
+        [Event(40314, Level = EventLevel.Informational, Message = "HybridHttpConnection: request initializing. {0}")]
+        void HybridHttpRequestStarting(string details)
+        {
+            this.WriteEvent(40314, details);
+        }
+
+        [NonEvent]
+        public void HybridHttpRequestReceived(TrackingContext trackingContext, string method)
+        {
+            if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
+            {
+                SetCurrentThreadActivityId(trackingContext);
+                this.HybridHttpRequestReceived(method, trackingContext?.SubsystemId ?? string.Empty);
+            }
+        }
+
+        [Event(40315, Level = EventLevel.Informational, Message = "HybridHttpConnection: Request: {0} {1}")]
+        void HybridHttpRequestReceived(string method, string address)
+        {
+            this.WriteEvent(40315, method, address);
+        }
+
+        [Event(40316, Level = EventLevel.Informational, Message = "HybridHttpConnection: Invoking user RequestHandler")]
+        public void HybridHttpInvokingUserRequestHandler()
+        {
+            this.WriteEvent(40316);
+        }
+
         [NonEvent]
         internal static string CreateSourceString(object source)
         {
@@ -380,9 +551,15 @@ namespace Microsoft.Azure.Relay
         }
 
         [NonEvent]
-        static string ExceptionToString(Exception exception)
+        static string ExceptionToString(Exception exception, TrackingContext trackingContext = null)
         {
-            return exception?.ToString() ?? string.Empty;
+            string exceptionString = exception?.ToString() ?? string.Empty;
+            if (trackingContext != null)
+            {
+                exceptionString = $"{trackingContext}: {exceptionString}";
+            }
+
+            return exceptionString;
         }
 
         [NonEvent]
@@ -391,11 +568,54 @@ namespace Microsoft.Azure.Relay
             return dateTime.ToString(CultureInfo.InvariantCulture);
         }
 
+        static TraceDetails PrepareTrace(object source)
+        {
+            string sourceString;
+            TrackingContext trackingContext;
+
+            var traceSource = source as ITraceSource;
+            if (traceSource != null)
+            {
+                trackingContext = traceSource.TrackingContext;
+                SetCurrentThreadActivityId(trackingContext);
+                sourceString = traceSource.ToString();
+            }
+            else
+            {
+                sourceString = CreateSourceString(source);
+                trackingContext = null;
+            }
+
+            return new TraceDetails(sourceString, trackingContext);
+        }
+
+        static void SetCurrentThreadActivityId(TrackingContext trackingContext)
+        {
+#if NET45
+            if (trackingContext != null)
+            {
+                SetCurrentThreadActivityId(trackingContext.ActivityId);
+            }
+#endif
+        }
+
         public class Keywords   // This is a bitvector
         {
             //public const EventKeywords Client = (EventKeywords)0x0001;
             //public const EventKeywords Relay = (EventKeywords)0x0002;
             //public const EventKeywords Messaging = (EventKeywords)0x0002;
+        }
+
+        struct TraceDetails
+        {
+            public string Source;
+            public TrackingContext TrackingContext;
+
+            public TraceDetails(string source, TrackingContext trackingContext)
+            {
+                this.Source = source;
+                this.TrackingContext = trackingContext;
+            }
         }
     }
 }

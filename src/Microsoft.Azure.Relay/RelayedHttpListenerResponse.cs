@@ -4,14 +4,17 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.IO;
     using System.Net;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Represents a response to a request being handled by a <see cref="HybridConnectionListener"/> object.
     /// This is modeled after System.Net.HttpListenerResponse.
     /// </summary>
-    public sealed class RelayedHttpListenerResponse
+    public sealed class RelayedHttpListenerResponse : IDisposable
     {
+        bool disposed;
         HttpStatusCode statusCode;
         string statusDescription;
 
@@ -20,6 +23,7 @@ namespace Microsoft.Azure.Relay
             this.Context = context;
             this.statusCode = HttpStatusCode.Continue;
             this.Headers = new WebHeaderCollection();
+            this.OutputStream = Stream.Null;
         }
 
         /// <summary>
@@ -27,7 +31,8 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public WebHeaderCollection Headers { get; }
 
-        RelayedHttpListenerContext Context { get; }
+        /// <summary>Gets a <see cref="T:System.IO.Stream" /> object to which a response can be written.</summary>
+        public Stream OutputStream { get; internal set; }
 
         /// <summary>Gets or sets the HTTP status code to be returned to the client.</summary>
         /// <exception cref="ObjectDisposedException">This object is closed.</exception>
@@ -40,6 +45,7 @@ namespace Microsoft.Azure.Relay
             }
             set
             {
+                this.CheckDisposed();
                 int valueInt = (int)value;
                 if (valueInt < 100 || valueInt > 999)
                 {
@@ -74,6 +80,7 @@ namespace Microsoft.Azure.Relay
             }
             set
             {
+                this.CheckDisposed();
                 if (value == null)
                 {
                     throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(nameof(value)), this.Context);
@@ -90,6 +97,63 @@ namespace Microsoft.Azure.Relay
                 }
 
                 this.statusDescription = value;
+            }
+        }
+
+        RelayedHttpListenerContext Context { get; }
+
+        /// <summary>Sends the response to the client and releases the resources held by this <see cref="RelayedHttpListenerResponse"/> instance.</summary>
+        public void Close()
+        {
+            this.CloseAsync().Fork(this);
+        }
+
+        /// <summary>Sends the response to the client and releases the resources held by this <see cref="RelayedHttpListenerResponse"/> instance.</summary>
+        public async Task CloseAsync()
+        {
+            try
+            {
+                var closeAsync = this.OutputStream as ICloseAsync;
+                if (closeAsync != null)
+                {
+                    await closeAsync.CloseAsync();
+                }
+                else
+                {
+                    this.OutputStream.Dispose();
+                }
+            }
+            catch (Exception e) when (!Fx.IsFatal(e))
+            {
+                RelayEventSource.Log.ThrowingException(e, this);
+                throw;
+            }
+            finally
+            {
+                ((IDisposable)this).Dispose();
+            }
+        }
+
+        void IDisposable.Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        void Dispose(bool disposing)
+        {
+            if (disposing && !this.disposed)
+            {
+                this.OutputStream.Dispose();
+                this.disposed = true;
+            }
+        }
+
+        void CheckDisposed()
+        {
+            if (this.disposed)
+            {
+                throw RelayEventSource.Log.ThrowingException(new ObjectDisposedException(this.GetType().FullName), this);
             }
         }
     }

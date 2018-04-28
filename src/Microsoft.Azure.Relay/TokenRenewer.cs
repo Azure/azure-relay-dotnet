@@ -52,7 +52,7 @@ namespace Microsoft.Azure.Relay
             {
                 RelayEventSource.Log.GetTokenStart(this.listener);
                 var token = await this.listener.TokenProvider.GetTokenAsync(this.appliesTo, this.tokenValidFor).ConfigureAwait(false);
-                RelayEventSource.Log.GetTokenStop(token.ExpiresAtUtc);
+                RelayEventSource.Log.GetTokenStop(this.listener, token.ExpiresAtUtc);
 
                 if (raiseTokenRenewedEvent)
                 {

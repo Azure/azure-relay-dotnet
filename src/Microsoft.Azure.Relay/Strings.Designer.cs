@@ -72,6 +72,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to Argument must be of type {0}..
+        /// </summary>
+        public static string ArgumentException_ValueTupleIncorrectType {
+            get {
+                return ResourceManager.GetString("ArgumentException_ValueTupleIncorrectType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to Ensure either all or none of the following arguments are defined: &apos;{0}&apos;..
         /// </summary>
         public static string ArgumentInvalidCombination {
@@ -221,6 +230,15 @@ namespace Microsoft.Azure.Relay {
         public static string InvalidEntityNameFormatWithSlash {
             get {
                 return ResourceManager.GetString("InvalidEntityNameFormatWithSlash", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to An invalid type was received. Expected &apos;{0}&apos;, Actual &apos;{1}&apos;..
+        /// </summary>
+        public static string InvalidType {
+            get {
+                return ResourceManager.GetString("InvalidType", resourceCulture);
             }
         }
         
