@@ -591,12 +591,10 @@ namespace Microsoft.Azure.Relay
 
         static void SetCurrentThreadActivityId(TrackingContext trackingContext)
         {
-#if NET45
             if (trackingContext != null)
             {
                 SetCurrentThreadActivityId(trackingContext.ActivityId);
             }
-#endif
         }
 
         public class Keywords   // This is a bitvector
