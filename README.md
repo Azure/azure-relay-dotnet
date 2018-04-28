@@ -160,14 +160,18 @@ the connection has been established, the method returns a
 connection attempt fails, a ```RelayException``` will be raised that indicates the
 reason for why the connection could not be established.
 
-## Running the unit tests 
+## How do I run the unit tests? 
 
-In order to run the unit tests complete the following:
+In order to run the unit tests, you will need to do the following:
 
-1. Click below to deploy the ARM template that is a part of this repository.
+1. Deploy the Azure Resource Manager template located at [/build/azuredeploy.json](./build/azuredeploy.json) by clicking the following button:
 
-2. Add an Environment Variable called `azure-relay-dotnet/connectionstring` with the resulting namespace connection string.
+    <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-service-bus-dotnet%2Fmaster%2Fbuild%2Fazuredeploy.json" target="_blank">
+        <img src="http://azuredeploy.net/deploybutton.png"/>
+    </a>
 
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-relay-dotnet%2Fmaster%2Ftemplates%2Fazuredeploy.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
-</a>
+    *Running the above template will provision a namespace along with the required entities to successfully run the unit tests.*
+
+1. Add an Environment Variable named `azure-relay-dotnet/connectionstring` and set the value as the connection string of the newly created namespace. **Please note that if you are using Visual Studio, you must restart Visual Studio in order to use new Environment Variables.**
+
+Once you have completed the above, you can run `dotnet test` from the `/test/Microsoft.Azure.Relay.UnitTests` directory.
