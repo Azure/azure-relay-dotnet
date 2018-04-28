@@ -10,7 +10,6 @@ namespace Microsoft.Azure.Relay
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.WebUtilities;
-    using RequestCommandAndStream = System.ValueTuple<Microsoft.Azure.Relay.ListenerCommand.RequestCommand, System.IO.Stream>;
 #if CUSTOM_CLIENTWEBSOCKET
     using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
 #endif
@@ -70,7 +69,7 @@ namespace Microsoft.Azure.Relay
         {
             try
             {
-                var requestCommand = requestAndStream.Item1;
+                var requestCommand = requestAndStream.RequestCommand;
                 if (!requestCommand.Body.HasValue)
                 {
                     // Need to rendezvous to get the real RequestCommand
@@ -154,7 +153,7 @@ namespace Microsoft.Azure.Relay
 
         void InvokeRequestHandler(RequestCommandAndStream requestAndStream)
         {
-            ListenerCommand.RequestCommand requestCommand = requestAndStream.Item1;
+            ListenerCommand.RequestCommand requestCommand = requestAndStream.RequestCommand;
             Uri requestUri = new Uri(this.listener.Address, requestCommand.RequestTarget);
             var listenerContext = new RelayedHttpListenerContext(
                 this.listener,
@@ -167,7 +166,7 @@ namespace Microsoft.Azure.Relay
 
             RelayEventSource.Log.HybridHttpRequestReceived(listenerContext.TrackingContext, requestCommand.Method);
 
-            Stream requestStream = requestAndStream.Item2;
+            Stream requestStream = requestAndStream.Stream;
             if (requestStream != null)
             {
                 listenerContext.Request.HasEntityBody = true;
@@ -537,6 +536,18 @@ namespace Microsoft.Azure.Relay
                     this.writeBufferFlushTimer = null;
                 }
             }
+        }
+
+        struct RequestCommandAndStream
+        {
+            public RequestCommandAndStream(ListenerCommand.RequestCommand requestCommand, Stream stream)
+            {
+                this.RequestCommand = requestCommand;
+                this.Stream = stream;
+            }
+
+            public ListenerCommand.RequestCommand RequestCommand;
+            public Stream Stream;
         }
     }
 }
