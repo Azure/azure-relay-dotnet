@@ -344,15 +344,13 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
-#if NET451
+#if NET46
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
 #else
                 await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
                 await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
 #endif
-
-
             }
             finally
             {
