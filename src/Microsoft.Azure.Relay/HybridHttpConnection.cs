@@ -9,7 +9,6 @@ namespace Microsoft.Azure.Relay
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.AspNetCore.WebUtilities;
 #if CUSTOM_CLIENTWEBSOCKET
     using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
 #endif
@@ -60,7 +59,7 @@ namespace Microsoft.Azure.Relay
 
         TrackingContext GetTrackingContext()
         {
-            var queryParameters = QueryHelpers.ParseQuery(this.rendezvousAddress.Query);
+            var queryParameters = HybridConnectionUtility.ParseQueryString(this.rendezvousAddress.Query);
             string trackingId = queryParameters[HybridConnectionConstants.Id];
             return TrackingContext.Create(trackingId, this.rendezvousAddress);
         }
