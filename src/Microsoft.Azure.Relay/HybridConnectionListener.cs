@@ -24,6 +24,7 @@ namespace Microsoft.Azure.Relay
         readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
         IWebProxy proxy;
+        string cachedToString;
         TrackingContext trackingContext;
         bool openCalled;
         volatile bool closeCalled;
@@ -185,19 +186,10 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public TokenProvider TokenProvider { get; }
 
-        TrackingContext ITraceSource.TrackingContext
-        {
-            get { return this.TrackingContext; }
-        }
-
         /// <summary>
-        /// Gets or sets the connection buffer size.  Default value is 64K.
+        /// Gets the TrackingContext for this listener.
         /// </summary>
-        internal int ConnectionBufferSize { get; }
-
-        internal TimeSpan OperationTimeout { get; }
-
-        internal TrackingContext TrackingContext
+        public TrackingContext TrackingContext
         {
             get
             {
@@ -210,6 +202,13 @@ namespace Microsoft.Azure.Relay
                 this.trackingContext = value;
             }
         }
+
+        /// <summary>
+        /// Gets or sets the connection buffer size.  Default value is 64K.
+        /// </summary>
+        internal int ConnectionBufferSize { get; }
+
+        internal TimeSpan OperationTimeout { get; }
 
         object ThisLock { get { return this.connectionInputQueue; } }
 
@@ -354,7 +353,7 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public override string ToString()
         {
-            return nameof(HybridConnectionListener);
+            return this.cachedToString ?? (this.cachedToString = nameof(HybridConnectionListener) + "(" + this.TrackingContext + ")");
         }
 
         /// <summary>

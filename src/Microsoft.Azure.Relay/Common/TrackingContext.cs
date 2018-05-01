@@ -5,29 +5,35 @@ namespace Microsoft.Azure.Relay
 {
     using System;
 
-    class TrackingContext
+    /// <summary>
+    /// TrackingContext class is used for correlating end to end tracing of operations.
+    /// </summary>
+    public sealed class TrackingContext
     {
         static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         internal const string TrackingIdName = "TrackingId";
-        const string SubsystemIdName = "SubsystemId";
+        const string AddressName = "Address";
         const string TimestampName = "Timestamp";
         string cachedToString;
 
-        TrackingContext(Guid activityId, string trackingId, string subsystemId)
+        TrackingContext(Guid activityId, string trackingId, string address)
         {
             this.ActivityId = activityId;
             this.TrackingId = trackingId;
-            this.SubsystemId = subsystemId;
+            this.Address = address;
         }
 
+        /// <summary> Returns the the Guid representation of the tracking id.</summary>
         public Guid ActivityId { get; }
 
+        /// <summary> Returns the tracking id used in this context.</summary>
         public string TrackingId { get; }
 
-        public string SubsystemId { get; }
+        /// <summary> Returns the address associated with the current tracking context. </summary>
+        public string Address { get; }
 
         /// <summary>
-        /// Create a TrackingContext with a new Guid/TrackingId and no subsystemId.
+        /// Create a TrackingContext with a new Guid/TrackingId and no address.
         /// </summary>
         internal static TrackingContext Create()
         {
@@ -35,25 +41,25 @@ namespace Microsoft.Azure.Relay
         }
 
         /// <summary>
-        /// Create a TrackingContext with a new Guid/TrackingId and given subsystemId.
+        /// Create a TrackingContext with a new Guid/TrackingId and given address.
         /// </summary>
-        /// <param name="subsystemId">subsystem-specific Uri like entity address to be used in the tracking context</param>
-        internal static TrackingContext Create(Uri subsystemId)
+        /// <param name="address">subsystem-specific Uri like entity address to be used in the tracking context</param>
+        internal static TrackingContext Create(Uri address)
         {
-            return Create(Guid.NewGuid(), subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+            return Create(Guid.NewGuid(), address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
-        internal static TrackingContext Create(Guid activityId, string subsystemId)
+        internal static TrackingContext Create(Guid activityId, string address)
         {
-            return Create(activityId, activityId.ToString(), subsystemId);
+            return Create(activityId, activityId.ToString(), address);
         }
 
-        internal static TrackingContext Create(string trackingId, Uri subsystemId)
+        internal static TrackingContext Create(string trackingId, Uri address)
         {
-            return Create(trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+            return Create(trackingId, address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
-        internal static TrackingContext Create(string trackingId, string subsystemId)
+        internal static TrackingContext Create(string trackingId, string address)
         {
             Guid activityId;
             bool parseFailed = false;
@@ -63,7 +69,7 @@ namespace Microsoft.Azure.Relay
                 activityId = Guid.NewGuid();
             }
 
-            var trackingContext = Create(activityId, trackingId, subsystemId);
+            var trackingContext = Create(activityId, trackingId, address);
             if (parseFailed)
             {
                 RelayEventSource.Log.Info(nameof(TrackingContext), trackingContext, $"Parsing TrackingId:'{trackingId}' as Guid failed, created new ActivityId:{activityId} for trace correlation.");
@@ -72,19 +78,19 @@ namespace Microsoft.Azure.Relay
             return trackingContext;
         }
 
-        internal static TrackingContext Create(Guid activityId, Uri subsystemId)
+        internal static TrackingContext Create(Guid activityId, Uri address)
         {
-            return Create(activityId, activityId.ToString(), subsystemId);
+            return Create(activityId, activityId.ToString(), address);
         }
 
-        internal static TrackingContext Create(Guid activityId, string trackingId, Uri subsystemId)
+        internal static TrackingContext Create(Guid activityId, string trackingId, Uri address)
         {
-            return Create(activityId, trackingId, subsystemId.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
+            return Create(activityId, trackingId, address.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped));
         }
 
-        internal static TrackingContext Create(Guid activityId, string trackingId, string subsystemId)
+        internal static TrackingContext Create(Guid activityId, string trackingId, string address)
         {
-            return new TrackingContext(activityId, trackingId, subsystemId);
+            return new TrackingContext(activityId, trackingId, address);
         }
 
         /// <summary>
@@ -102,17 +108,20 @@ namespace Microsoft.Azure.Relay
             return trackingId.Substring(0, roleSuffixIndex);
         }
 
+        /// <summary>
+        /// Returns a string that represents the current object.
+        /// </summary>
         public override string ToString()
         {
             if (this.cachedToString == null)
             {
-                if (string.IsNullOrEmpty(this.SubsystemId))
+                if (string.IsNullOrEmpty(this.Address))
                 {
                     this.cachedToString = TrackingIdName + ":" + this.TrackingId;
                 }
                 else
                 {
-                    this.cachedToString = TrackingIdName + ":" + this.TrackingId + ", " + SubsystemIdName + ":" + this.SubsystemId;
+                    this.cachedToString = TrackingIdName + ":" + this.TrackingId + ", " + AddressName + ":" + this.Address;
                 }
             }
 
@@ -146,9 +155,9 @@ namespace Microsoft.Azure.Relay
 
         string CreateClientTrackingExceptionInfo(DateTime timestamp)
         {
-            return string.IsNullOrWhiteSpace(this.SubsystemId) ?
+            return string.IsNullOrWhiteSpace(this.Address) ?
                 TrackingIdName + ":" + this.TrackingId + ", " + TimestampName + ":" + timestamp :
-                TrackingIdName + ":" + this.TrackingId + ", " + SubsystemIdName + ":" + this.SubsystemId + ", " + TimestampName + ":" + timestamp;
+                TrackingIdName + ":" + this.TrackingId + ", " + AddressName + ":" + this.Address + ", " + TimestampName + ":" + timestamp;
         }
     }
 }

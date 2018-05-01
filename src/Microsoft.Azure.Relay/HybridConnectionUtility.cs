@@ -83,7 +83,7 @@ namespace Microsoft.Azure.Relay
 
             foreach (string key in queryStringCollection.Keys)
             {
-                if (key != null && key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix, StringComparison.Ordinal))
+                if (key == null || key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
