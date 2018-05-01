@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Relay
             if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
                 var details = PrepareTrace(source);
-                this.ObjectConnecting(details.Source, details.TrackingContext?.ToString() ?? string.Empty);
+                this.ObjectConnecting(details.Source);
             }
         }
 
@@ -49,14 +49,14 @@ namespace Microsoft.Azure.Relay
             if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
                 SetCurrentThreadActivityId(trackingContext);
-                this.ObjectConnecting(source, trackingContext?.ToString() ?? string.Empty);
+                this.ObjectConnecting(source);
             }
         }
 
-        [Event(40200, Level = EventLevel.Informational, Message = "{0}: Connecting. {1}")]
-        void ObjectConnecting(string source, string details)
+        [Event(40200, Level = EventLevel.Informational, Message = "{0}: Connecting.")]
+        void ObjectConnecting(string source)
         {
-            this.WriteEvent(40200, source, details);
+            this.WriteEvent(40200, source);
         }
 
         [NonEvent]
@@ -91,14 +91,14 @@ namespace Microsoft.Azure.Relay
             if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
                 var details = PrepareTrace(source);
-                this.ObjectClosing(details.Source, details.TrackingContext?.ToString() ?? string.Empty);
+                this.ObjectClosing(details.Source);
             }
         }
 
-        [Event(40202, Level = EventLevel.Informational, Message = "{0}: is Closing. {1}")]
-        void ObjectClosing(string source, string details)
+        [Event(40202, Level = EventLevel.Informational, Message = "{0}: is Closing")]
+        void ObjectClosing(string source)
         {
-            this.WriteEvent(40202, source, details);
+            this.WriteEvent(40202, source);
         }
 
         [NonEvent]
@@ -518,7 +518,7 @@ namespace Microsoft.Azure.Relay
             if (this.IsEnabled(EventLevel.Informational, EventKeywords.None))
             {
                 SetCurrentThreadActivityId(trackingContext);
-                this.HybridHttpRequestReceived(method, trackingContext?.SubsystemId ?? string.Empty);
+                this.HybridHttpRequestReceived(method, trackingContext?.Address ?? string.Empty);
             }
         }
 

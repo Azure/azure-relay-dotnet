@@ -20,17 +20,16 @@ namespace Microsoft.Azure.Relay
         {
             this.TrackingContext = trackingContext;
         }
+
         /// <summary>
         /// Sets or gets the WriteMode for this stream. Default is WriteMode.Binary
         /// </summary>
         public WriteMode WriteMode { get; set; } = WriteMode.Binary;
 
-        internal TrackingContext TrackingContext { get; }
-
-        TrackingContext ITraceSource.TrackingContext
-        {
-            get { return this.TrackingContext; }
-        }
+        /// <summary>
+        /// Gets the TrackingContext for this stream.
+        /// </summary>
+        public TrackingContext TrackingContext { get; }
 
         /// <summary>
         /// Initiates a graceful close process by shutting down sending through this 
@@ -53,7 +52,7 @@ namespace Microsoft.Azure.Relay
         /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task ShutdownAsync(CancellationToken cancellationToken)
         {
-            RelayEventSource.Log.Info(this, $"Shutting down. {this.TrackingContext}");
+            RelayEventSource.Log.Info(this, "Shutting down");
             await this.OnShutdownAsync(cancellationToken).ConfigureAwait(false);
             RelayEventSource.Log.Info(this, "Shut down");
         }

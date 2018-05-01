@@ -21,6 +21,7 @@ namespace Microsoft.Azure.Relay
     public class RelayedHttpListenerContext : ITraceSource
     {
         static readonly TimeSpan AcceptTimeout = TimeSpan.FromSeconds(20);
+        string cachedToString;
 
         internal RelayedHttpListenerContext(HybridConnectionListener listener, Uri requestUri, string trackingId, string method, IDictionary<string, string> requestHeaders)
         {
@@ -42,21 +43,19 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         public RelayedHttpListenerResponse Response { get; }
 
-        TrackingContext ITraceSource.TrackingContext
-        {
-            get { return this.TrackingContext; }
-        }
+        /// <summary>
+        /// Gets the TrackingContext for this listener context.
+        /// </summary>
+        public TrackingContext TrackingContext { get; }
 
         internal HybridConnectionListener Listener { get; }
-
-        internal TrackingContext TrackingContext { get; }
 
         /// <summary>
         /// Returns a string that represents the current object.  Includes a TrackingId for end to end correlation.
         /// </summary>
         public override string ToString()
         {
-            return nameof(RelayedHttpListenerContext);
+            return this.cachedToString ?? (this.cachedToString = nameof(RelayedHttpListenerContext) + "(" + this.TrackingContext + ")");
         }
 
         internal async Task<WebSocketStream> AcceptAsync(Uri rendezvousUri)
