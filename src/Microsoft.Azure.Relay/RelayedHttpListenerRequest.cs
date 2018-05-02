@@ -43,9 +43,32 @@ namespace Microsoft.Azure.Relay
             get; internal set;
         }
 
+        /// <summary>Gets the client IP address and port number from which the request originated.</summary>
+        public IPEndPoint RemoteEndPoint
+        {
+            get; private set;
+        }
+
         /// <summary>
         /// Gets the Uri requested by the client.
         /// </summary>
         public Uri Url { get; }
+
+        internal void SetRemoteAddress(ListenerCommand.Endpoint remoteEndpoint)
+        {
+            string remoteAddress = remoteEndpoint?.Address;
+            if (!string.IsNullOrEmpty(remoteAddress))
+            {
+                IPAddress ipAddress;
+                if (IPAddress.TryParse(remoteAddress, out ipAddress))
+                {
+                    this.RemoteEndPoint = new IPEndPoint(ipAddress, remoteEndpoint.Port);
+                }
+                else
+                {
+                    RelayEventSource.Log.Warning(this, "Unable to parse 'remoteEndpoint.address'.");
+                }
+            }
+        }
     }
 }

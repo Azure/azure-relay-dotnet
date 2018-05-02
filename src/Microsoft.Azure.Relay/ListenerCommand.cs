@@ -107,6 +107,9 @@ namespace Microsoft.Azure.Relay
             [DataMember(Name = "connectHeaders", Order = 2)]
             IDictionary<string, string> connectHeaders;
 
+            [DataMember(Name = "remoteEndpoint", Order = 3, EmitDefaultValue = false, IsRequired = false)]
+            Endpoint remoteEndpoint { get; set; }
+
             [IgnoreDataMember]
             public IDictionary<string, string> ConnectHeaders
             {
@@ -118,6 +121,20 @@ namespace Microsoft.Azure.Relay
                     }
 
                     return this.connectHeaders;
+                }
+            }
+
+            [IgnoreDataMember]
+            public Endpoint RemoteEndpoint
+            {
+                get
+                {
+                    if (this.remoteEndpoint == null)
+                    {
+                        this.remoteEndpoint = new Endpoint();
+                    }
+
+                    return this.remoteEndpoint;
                 }
             }
         }
@@ -142,12 +159,16 @@ namespace Microsoft.Azure.Relay
         /// <para/>
         /// {
         ///   "request" : {
-        ///     "address" : "wss://dc-node.servicebus.windows.net:443/$hc/{path}?...",
-        ///     "id" : "42c34cb5-7a04-4d40-a19f-bdc66441e736",
+        ///     "address" : "wss://dc-node.servicebus.windows.net:443/$hc/{path}?sb-hc-action=request&amp;...",
+        ///     "id" : "42c34cb5-7a04-4d40-a19f-bdc66441e736_G10",
         ///     "requestTarget" : "/abc/def?myarg=value&amp;otherarg=...",
-        ///     "method" : "GET",    
+        ///     "method" : "GET",
+        ///     "remoteEndpoint" : {
+        ///       "address" : "10.0.0.1",
+        ///       "port" : 1234,
+        ///     },
         ///     "requestHeaders" : {
-        ///       "Host": "contoso.servicebus.windows.net:443"
+        ///       "Host": "contoso.servicebus.windows.net"
         ///       "Content-Type" : "...",
         ///       "User-Agent" : "...",
         ///     },
@@ -170,11 +191,28 @@ namespace Microsoft.Azure.Relay
             [DataMember(Name = "method", Order = 3, EmitDefaultValue = false, IsRequired = false)]
             public string Method { get; set; }
 
-            [DataMember(Name = "requestHeaders", Order = 4, EmitDefaultValue = false, IsRequired = false)]
+            [DataMember(Name = "remoteEndpoint", Order = 4, EmitDefaultValue = false, IsRequired = false)]
+            Endpoint remoteEndpoint { get; set; }
+
+            [DataMember(Name = "requestHeaders", Order = 5, EmitDefaultValue = false, IsRequired = false)]
             IDictionary<string, string> requestHeaders;
 
-            [DataMember(Name = "body", Order = 5, EmitDefaultValue = false, IsRequired = false)]
+            [DataMember(Name = "body", Order = 6, EmitDefaultValue = false, IsRequired = false)]
             public bool? Body { get; set; }
+
+            [IgnoreDataMember]
+            public Endpoint RemoteEndpoint
+            {
+                get
+                {
+                    if (this.remoteEndpoint == null)
+                    {
+                        this.remoteEndpoint = new Endpoint();
+                    }
+
+                    return this.remoteEndpoint;
+                }
+            }
 
             [IgnoreDataMember]
             public IDictionary<string, string> RequestHeaders
@@ -237,6 +275,26 @@ namespace Microsoft.Azure.Relay
                     return this.responseHeaders;
                 }
             }
+        }
+
+        /// <summary>
+        /// DataContract for JSON such as the following:
+        /// <para/>
+        /// {
+        ///   "endpoint" : {
+        ///     "address" : "10.0.0.1",
+        ///     "port" : 1234
+        ///   }
+        /// }
+        /// </summary>
+        [DataContract]
+        public class Endpoint
+        {
+            [DataMember(Name = "address", EmitDefaultValue = false, IsRequired = false)]
+            public string Address { get; set; }
+
+            [DataMember(Name = "port", EmitDefaultValue = false, IsRequired = false)]
+            public int Port { get; set; }
         }
 
 #if DEBUG

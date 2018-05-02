@@ -160,6 +160,7 @@ namespace Microsoft.Azure.Relay
                 requestCommand.Id,
                 requestCommand.Method,
                 requestCommand.RequestHeaders);
+            listenerContext.Request.SetRemoteAddress(requestCommand.RemoteEndpoint);
             listenerContext.Response.StatusCode = HttpStatusCode.OK;
             listenerContext.Response.OutputStream = new ResponseStream(this, listenerContext);
 
