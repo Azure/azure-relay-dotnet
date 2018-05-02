@@ -428,6 +428,7 @@ namespace Microsoft.Azure.Relay
 
             var listenerContext = new RelayedHttpListenerContext(
                 this, requestUri, acceptCommand.Id, "GET", acceptCommand.ConnectHeaders);
+            listenerContext.Request.SetRemoteAddress(acceptCommand.RemoteEndpoint);
 
             RelayEventSource.Log.RelayListenerRendezvousStart(listenerContext.Listener, listenerContext.TrackingContext.TrackingId, acceptCommand.Address);
             try
