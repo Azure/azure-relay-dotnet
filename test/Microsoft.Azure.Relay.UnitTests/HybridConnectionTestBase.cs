@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             Unauthenticated
         }
 
-        public static IEnumerable<object> AuthenticationTestPermutations => new object[]
+        public static IEnumerable<object[]> AuthenticationTestPermutations => new object[][]
         {
             new object[] { EndpointTestType.Authenticated },
             new object[] { EndpointTestType.Unauthenticated }
