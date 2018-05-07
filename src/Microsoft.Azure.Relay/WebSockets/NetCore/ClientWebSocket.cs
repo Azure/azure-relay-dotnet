@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading.Tasks;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocket.cs
-    sealed partial class ClientWebSocket : WebSocket
+    sealed partial class ClientWebSocket : WebSocket, IClientWebSocket
     {
         private enum InternalState
         {
@@ -29,13 +29,13 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         public ClientWebSocket()
         {
-            if (NetEventSource.IsEnabled) NetEventSource.Enter(this);
+            if (NetEventSource.IsEnabled) { NetEventSource.Enter(this); }
             WebSocketHandle.CheckPlatformSupport();
 
             _state = (int)InternalState.Created;
             _options = new ClientWebSocketOptions();
 
-            if (NetEventSource.IsEnabled) NetEventSource.Exit(this);
+            if (NetEventSource.IsEnabled) { NetEventSource.Exit(this); }
         }
 
         #region Properties
@@ -47,6 +47,10 @@ namespace Microsoft.Azure.Relay.WebSockets
                 return _options;
             }
         }
+
+        IClientWebSocketOptions IClientWebSocket.Options => _options;
+
+        WebSocket IClientWebSocket.WebSocket => this;
 
         public override WebSocketCloseStatus? CloseStatus
         {
@@ -155,7 +159,7 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
             catch (Exception ex)
             {
-                if (NetEventSource.IsEnabled) NetEventSource.Error(this, ex);
+                if (NetEventSource.IsEnabled) { NetEventSource.Error(this, ex); }
                 throw;
             }
         }

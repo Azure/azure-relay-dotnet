@@ -5,15 +5,13 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.IO;
     using System.Net;
     using System.Net.WebSockets;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     /// <summary>
     /// Provides a listener for accepting HybridConnections from remote clients.
@@ -55,6 +53,7 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
+            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
         }
 
         /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> using the specified connection string.</summary>
@@ -121,6 +120,7 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
+            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
         }
 
         /// <summary>
@@ -202,6 +202,12 @@ namespace Microsoft.Azure.Relay
                 this.trackingContext = value;
             }
         }
+
+        /// <summary>
+        /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool UseBuiltInClientWebSocket { get; set; }
 
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
@@ -684,7 +690,7 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.ObjectConnecting(this.listener);
-                    var webSocket = new ClientWebSocket();
+                    var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
@@ -709,7 +715,7 @@ namespace Microsoft.Azure.Relay
 
                     this.OnOnline();
                     RelayEventSource.Log.ObjectConnected(this.listener);
-                    return webSocket;
+                    return webSocket.WebSocket;
                 }
                 catch (WebSocketException wsException)
                 {

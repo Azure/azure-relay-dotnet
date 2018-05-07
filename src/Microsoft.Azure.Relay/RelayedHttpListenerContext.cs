@@ -10,9 +10,6 @@ namespace Microsoft.Azure.Relay
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     /// <summary>
     /// Provides access to the request and response objects representing a client request to a <see cref="HybridConnectionListener"/>.
@@ -81,13 +78,13 @@ namespace Microsoft.Azure.Relay
                 await clientWebSocket.ConnectAsync(rendezvousUri, cancelSource.Token).ConfigureAwait(false);
             }
 
-            var webSocketStream = new WebSocketStream(clientWebSocket, this.TrackingContext);
+            var webSocketStream = new WebSocketStream(clientWebSocket.WebSocket, this.TrackingContext);
             return webSocketStream;
         }
 
         internal async Task RejectAsync(Uri rendezvousUri)
         {
-            ClientWebSocket clientWebSocket = null;
+            IClientWebSocket clientWebSocket = null;
             try
             {
                 if (this.Response.StatusCode == HttpStatusCode.Continue)
@@ -126,20 +123,16 @@ namespace Microsoft.Azure.Relay
             }
             finally
             {
-                clientWebSocket?.Abort();
+                clientWebSocket?.WebSocket?.Abort();
             }
         }
 
-        ClientWebSocket CreateWebSocket()
+        IClientWebSocket CreateWebSocket()
         {
-            var clientWebSocket = new ClientWebSocket();
+            var clientWebSocket = ClientWebSocketFactory.Create(this.Listener.UseBuiltInClientWebSocket);
             clientWebSocket.Options.SetBuffer(this.Listener.ConnectionBufferSize, this.Listener.ConnectionBufferSize);
             clientWebSocket.Options.Proxy = this.Listener.Proxy;
             clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
-#if CUSTOM_CLIENTWEBSOCKET
-            // The .NET Framework ClientWebSocket throws when setting the Host header, but it works in .NET Core
-            clientWebSocket.Options.SetRequestHeader("Host", this.Listener.Address.Host);
-#endif
             return clientWebSocket;
         }
 

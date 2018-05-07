@@ -9,9 +9,6 @@ namespace Microsoft.Azure.Relay
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     sealed class HybridHttpConnection : ITraceSource
     {
@@ -20,7 +17,7 @@ namespace Microsoft.Azure.Relay
         readonly HybridConnectionListener listener;
         readonly WebSocket controlWebSocket;
         readonly Uri rendezvousAddress;
-        ClientWebSocket rendezvousWebSocket;
+        WebSocket rendezvousWebSocket;
 
         HybridHttpConnection(HybridConnectionListener listener, WebSocket controlWebSocket, string rendezvousAddress)
         {
@@ -237,8 +234,9 @@ namespace Microsoft.Azure.Relay
             if (this.rendezvousWebSocket == null)
             {                
                 RelayEventSource.Log.HybridHttpCreatingRendezvousConnection(this.TrackingContext);
-                this.rendezvousWebSocket = new ClientWebSocket();
-                await this.rendezvousWebSocket.ConnectAsync(this.rendezvousAddress, cancelToken).ConfigureAwait(false);
+                var clientWebSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
+                this.rendezvousWebSocket = clientWebSocket.WebSocket;
+                await clientWebSocket.ConnectAsync(this.rendezvousAddress, cancelToken).ConfigureAwait(false);
             }
         }
 

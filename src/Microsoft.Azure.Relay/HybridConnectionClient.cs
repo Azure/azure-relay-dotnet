@@ -4,13 +4,11 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.ComponentModel;
     using System.Net;
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     /// <summary>
     /// Provides a client for initiating new send-side HybridConnections.
@@ -136,6 +134,12 @@ namespace Microsoft.Azure.Relay
         public TimeSpan OperationTimeout { get; set; }
 
         /// <summary>
+        /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool UseBuiltInClientWebSocket { get; set; }
+
+        /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         int ConnectionBufferSize { get; set; }
@@ -152,7 +156,7 @@ namespace Microsoft.Azure.Relay
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
             try
             {
-                var webSocket = new ClientWebSocket();
+                var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
                 webSocket.Options.Proxy = this.Proxy;
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
@@ -182,7 +186,7 @@ namespace Microsoft.Azure.Relay
                 }
 
                 RelayEventSource.Log.ObjectConnected(traceSource, trackingContext);
-                return new WebSocketStream(webSocket, trackingContext);
+                return new WebSocketStream(webSocket.WebSocket, trackingContext);
             }
             catch (WebSocketException wsException)
             {
@@ -256,6 +260,7 @@ namespace Microsoft.Azure.Relay
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = operationTimeout;
             this.Proxy = WebRequest.DefaultWebProxy;
+            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
         }
     }
 }
