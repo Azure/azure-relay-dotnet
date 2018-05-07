@@ -154,9 +154,9 @@ namespace Microsoft.Azure.Relay
             var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
+            var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
             try
-            {
-                var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
+            {                
                 webSocket.Options.Proxy = this.Proxy;
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
@@ -190,7 +190,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException wsException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), traceSource);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException, webSocket.Response), traceSource);
             }
         }
 

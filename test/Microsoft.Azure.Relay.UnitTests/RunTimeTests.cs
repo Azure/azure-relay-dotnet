@@ -330,7 +330,24 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact, DisplayTestMethodName]
-        async Task NonExistantHCEntityTest()
+        async Task ClientNonExistantHybridConnectionTest()
+        {
+            TestUtility.Log("Setting ConnectionStringBuilder.EntityPath to a new GUID");
+            var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                EntityPath = Guid.NewGuid().ToString()
+            };
+
+            var client = new HybridConnectionClient(fakeEndpointConnectionStringBuilder.ToString());
+
+            // Endpoint does not exist. TrackingId:GUID_G52, SystemTracker:sb://contoso.servicebus.windows.net/GUID, Timestamp:5/7/2018 5:51:25 PM
+            var exception = await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+            Assert.Contains("Endpoint does not exist", exception.Message);
+            Assert.Contains(fakeEndpointConnectionStringBuilder.EntityPath, exception.Message);
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ListenerNonExistantHybridConnectionTest()
         {
             HybridConnectionListener listener = null;
             try
@@ -340,22 +357,68 @@ namespace Microsoft.Azure.Relay.UnitTests
                 {
                     EntityPath = Guid.NewGuid().ToString()
                 };
-                var fakeEndpointConnectionString = fakeEndpointConnectionStringBuilder.ToString();
 
-                listener = new HybridConnectionListener(fakeEndpointConnectionString);
-                var client = new HybridConnectionClient(fakeEndpointConnectionString);
-#if NET46
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
-#else
-                await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
-#endif
+                listener = new HybridConnectionListener(fakeEndpointConnectionStringBuilder.ToString());
+
+                // Endpoint does not exist. TrackingId:Guid_G10, SystemTracker:sb://contoso.servicebus.windows.net/d0c500e7-2ad0-4e36-bf40-0fe2431a394e, Timestamp:5/7/2018 5:47:21 PM
+                var exception = await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
+                Assert.Contains("Endpoint does not exist", exception.Message);
+                Assert.Contains(fakeEndpointConnectionStringBuilder.EntityPath, exception.Message);
             }
             finally
             {
                 await this.SafeCloseAsync(listener);
             }
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ListenerAuthenticationFailureTest()
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                var badAuthConnectionString = new RelayConnectionStringBuilder(this.ConnectionString) { EntityPath = Constants.AuthenticatedEntityPath };
+                if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessKeyName))
+                {
+                    badAuthConnectionString.SharedAccessKey += "BAD";
+                }
+                else if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessSignature))
+                {
+                    badAuthConnectionString.SharedAccessSignature += "BAD";
+                }
+
+                listener = new HybridConnectionListener(badAuthConnectionString.ToString());
+
+                // The token has an invalid signature. TrackingId:[Guid]_G3, SystemTracker:sb://contoso.servicebus.windows.net/authenticated, Timestamp:5/7/2018 5:20:05 PM
+                var exception = await Assert.ThrowsAsync<AuthorizationFailedException>(() => listener.OpenAsync());
+                Assert.Contains("token has an invalid signature", exception.Message);
+                Assert.Contains(badAuthConnectionString.EntityPath, exception.Message, StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ClientAuthenticationFailureTest()
+        {
+            var badAuthConnectionString = new RelayConnectionStringBuilder(this.ConnectionString) { EntityPath = Constants.AuthenticatedEntityPath };
+            if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessKeyName))
+            {
+                badAuthConnectionString.SharedAccessKey += "BAD";
+            }
+            else if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessSignature))
+            {
+                badAuthConnectionString.SharedAccessSignature += "BAD";
+            }
+
+            var client = new HybridConnectionClient(badAuthConnectionString.ToString());
+
+            // The token has an invalid signature. TrackingId:[Guid]_G63, SystemTracker:sb://contoso.servicebus.windows.net/authenticated, Timestamp:5/7/2018 5:20:05 PM
+            var exception = await Assert.ThrowsAsync<AuthorizationFailedException>(() => client.CreateConnectionAsync());
+            Assert.Contains("token", exception.Message);
+            Assert.Contains(badAuthConnectionString.EntityPath, exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Theory, DisplayTestMethodName]

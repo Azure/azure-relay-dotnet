@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Net;
+    using System.Net.Http;
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
@@ -12,6 +13,8 @@ namespace Microsoft.Azure.Relay
     interface IClientWebSocket
     {
         IClientWebSocketOptions Options { get; }
+
+        HttpResponseMessage Response { get; }
 
         WebSocket WebSocket { get; }
 
@@ -56,6 +59,8 @@ namespace Microsoft.Azure.Relay
             }
 
             public IClientWebSocketOptions Options { get; }
+
+            public HttpResponseMessage Response { get => null; }
             
             public WebSocket WebSocket { get => this.client; }
 
