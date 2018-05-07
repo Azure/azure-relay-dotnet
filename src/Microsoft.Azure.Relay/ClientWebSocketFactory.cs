@@ -31,10 +31,8 @@ namespace Microsoft.Azure.Relay
         void SetRequestHeader(string name, string value);
     }
 
-    abstract class ClientWebSocketFactory
+    static class ClientWebSocketFactory
     {
-        public abstract WebSocket WebSocket { get; }
-
         public static IClientWebSocket Create(bool useBuiltInWebSocket)
         {
 #if NETSTANDARD
