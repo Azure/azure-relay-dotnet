@@ -9,9 +9,7 @@ namespace Microsoft.Azure.Relay
     /// <summary>Provides runtime information about a HybridConnection.</summary>
     [DataContract(Name = "HybridConnectionDescription", Namespace = RelayConstants.ManagementNamespace)]
     public class HybridConnectionRuntimeInformation
-#if SERIALIZATION
         : IExtensibleDataObject
-#endif
     {
         [DataMember(Name = "CreatedAt", IsRequired = false, EmitDefaultValue = false, Order = 2)]
         DateTime? createdAt { get; set; }
@@ -65,8 +63,6 @@ namespace Microsoft.Azure.Relay
             get { return this.userMetadata; }
         }
 
-#if SERIALIZATION
         ExtensionDataObject IExtensibleDataObject.ExtensionData { get; set; }
-#endif
     }
 }

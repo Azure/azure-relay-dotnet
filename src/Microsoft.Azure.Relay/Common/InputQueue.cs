@@ -197,7 +197,7 @@ namespace Microsoft.Azure.Relay
         // InputQueue lock is not held during the callback.  However, the user code will
         // not be notified of the item being available until the callback returns.  If you
         // are not sure if the callback will block for a long time, then first call 
-        // IOThreadScheduler.ScheduleCallback to get to a "safe" thread.
+        // ActionItem.Schedule to get to a "safe" thread.
         public void EnqueueAndDispatch(T item, Action dequeuedCallback)
         {
             EnqueueAndDispatch(item, dequeuedCallback, true);

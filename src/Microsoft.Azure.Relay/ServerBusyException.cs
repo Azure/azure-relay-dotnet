@@ -7,9 +7,7 @@ namespace Microsoft.Azure.Relay
     using System.Runtime.Serialization;
 
     /// <summary>Represents the exception that is thrown when a server is overloaded with logical operations.</summary>
-#if SERIALIZATION
     [Serializable]
-#endif
     public class ServerBusyException : RelayException
     {
         /// <summary>
@@ -32,7 +30,6 @@ namespace Microsoft.Azure.Relay
         public ServerBusyException(string message, Exception innerException)
             : base(message, innerException) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Creates a new instance of the <see cref="ServerBusyException"/> class with serialized data.
         /// </summary>
@@ -40,6 +37,5 @@ namespace Microsoft.Azure.Relay
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination. </param>
         protected ServerBusyException(SerializationInfo info, StreamingContext context)
             : base(info, context) { }
-#endif
     }
 }
