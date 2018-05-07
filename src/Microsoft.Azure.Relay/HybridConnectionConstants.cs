@@ -11,6 +11,7 @@ namespace Microsoft.Azure.Relay
         public const string HybridConnectionRequestUri = "/$hc";
         public const string SecureWebSocketScheme = "wss";
         public const int MaxUnrecognizedJson = 1024;
+        public static readonly bool DefaultUseBuiltInClientWebSocket = false;
 
         // Names of query string options
         public const string QueryStringKeyPrefix = "sb-hc-";
