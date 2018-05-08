@@ -681,6 +681,7 @@ namespace Microsoft.Azure.Relay
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
                 Fx.Assert(!this.closeCalled, "Shouldn't call ConnectWebSocketAsync if CloseAsync was called.");
+                var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
                 try
                 {
                     var connectDelay = ConnectDelayIntervals[this.connectDelayIndex];
@@ -690,7 +691,6 @@ namespace Microsoft.Azure.Relay
                     }
 
                     RelayEventSource.Log.ObjectConnecting(this.listener);
-                    var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     webSocket.Options.Proxy = this.listener.Proxy;
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
@@ -719,7 +719,7 @@ namespace Microsoft.Azure.Relay
                 }
                 catch (WebSocketException wsException)
                 {
-                    throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), this.listener);
+                    throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException, webSocket.Response), this.listener);
                 }
             }
 

@@ -6,12 +6,13 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.IO;
     using System.Net;
+    using System.Net.Http;
     using System.Net.Sockets;
     using System.Net.WebSockets;
 
     static class WebSocketExceptionHelper
     {
-        public static Exception ConvertToRelayContract(Exception exception)
+        public static Exception ConvertToRelayContract(Exception exception, HttpResponseMessage httpResponseMessage = null)
         {
             string message = exception.Message;
             if (exception is RelayException || exception is TimeoutException)
@@ -28,28 +29,7 @@ namespace Microsoft.Azure.Relay
                     HttpWebResponse httpWebResponse;
                     if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
                     {
-                        message = httpWebResponse.StatusDescription;
-                        switch (httpWebResponse.StatusCode)
-                        {
-                            case HttpStatusCode.BadRequest:
-                                return new RelayException(httpWebResponse.StatusCode + ": " + httpWebResponse.StatusDescription, exception);
-                            case HttpStatusCode.Unauthorized:
-                                return new AuthorizationFailedException(httpWebResponse.StatusDescription, exception);
-                            case HttpStatusCode.NotFound:
-                                return new EndpointNotFoundException(httpWebResponse.StatusDescription, exception);
-                            case HttpStatusCode.GatewayTimeout:
-                            case HttpStatusCode.RequestTimeout:
-                                // TODO: Add a way to tell if the listener failed to rendezvous or if the timeout was the application.
-                                return new TimeoutException(httpWebResponse.StatusDescription, exception);
-                            // Other values we might care about
-                            case HttpStatusCode.InternalServerError:
-                            case HttpStatusCode.NotImplemented:
-                            case HttpStatusCode.BadGateway:
-                            case HttpStatusCode.ServiceUnavailable:
-                                break;
-                            default:
-                                break;
-                        }
+                        return CreateExceptionForStatus(httpWebResponse.StatusCode, httpWebResponse.StatusDescription, exception);
                     }
                     else if (innerWebException.Status == WebExceptionStatus.NameResolutionFailure)
                     {
@@ -67,9 +47,34 @@ namespace Microsoft.Azure.Relay
                         return new EndpointNotFoundException(socketException.Message, exception);
                     }
                 }
+                else if (httpResponseMessage != null)
+                {
+                    return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception);
+                }
             }
 
             return new RelayException(message, exception);
+        }
+
+        static Exception CreateExceptionForStatus(HttpStatusCode statusCode, string statusDescription, Exception inner)
+        {            
+            switch (statusCode)
+            {
+                case HttpStatusCode.Unauthorized:
+                    return new AuthorizationFailedException(statusDescription, inner);
+                case HttpStatusCode.NotFound:
+                    return new EndpointNotFoundException(statusDescription, inner);
+                case HttpStatusCode.GatewayTimeout:
+                case HttpStatusCode.RequestTimeout:
+                    return new TimeoutException(statusCode + ": " + statusDescription, inner);
+                case HttpStatusCode.BadRequest:
+                case HttpStatusCode.InternalServerError:
+                case HttpStatusCode.NotImplemented:
+                case HttpStatusCode.BadGateway:
+                case HttpStatusCode.ServiceUnavailable:
+                default:
+                    return new RelayException(statusCode + ": " + statusDescription, inner);
+            }
         }
     }
 }

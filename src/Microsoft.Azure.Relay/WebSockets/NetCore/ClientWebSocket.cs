@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
     using System.Diagnostics;
+    using System.Net.Http;
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
@@ -51,6 +52,8 @@ namespace Microsoft.Azure.Relay.WebSockets
         IClientWebSocketOptions IClientWebSocket.Options => _options;
 
         WebSocket IClientWebSocket.WebSocket => this;
+
+        public HttpResponseMessage Response { get; internal set; }
 
         public override WebSocketCloseStatus? CloseStatus
         {
@@ -155,7 +158,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                     throw new ObjectDisposedException(GetType().FullName);
                 }
 
-                await _innerWebSocket.ConnectAsyncCore(uri, cancellationToken, _options).ConfigureAwait(false);
+                await _innerWebSocket.ConnectAsyncCore(uri, cancellationToken, this, _options).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
