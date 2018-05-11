@@ -58,7 +58,20 @@ namespace Microsoft.Azure.Relay
         {
             var queryParameters = HybridConnectionUtility.ParseQueryString(this.rendezvousAddress.Query);
             string trackingId = queryParameters[HybridConnectionConstants.Id];
-            Uri logicalAddress = new UriBuilder(this.listener.Address) { Path = this.rendezvousAddress.LocalPath, Query = null }.Uri;
+
+            string path = this.rendezvousAddress.LocalPath;
+            if (path.StartsWith(HybridConnectionConstants.HybridConnectionRequestUri, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(HybridConnectionConstants.HybridConnectionRequestUri.Length);
+            }
+
+            Uri logicalAddress = new UriBuilder()
+            {
+                Scheme = Uri.UriSchemeHttps,
+                Host = this.listener.Address.Host,
+                Path = path,
+            }.Uri;
+
             return TrackingContext.Create(trackingId, logicalAddress);
         }
 
@@ -192,7 +205,7 @@ namespace Microsoft.Azure.Relay
             {
                 RelayEventSource.Log.HybridHttpConnectionMissingRequestHandler();
                 listenerContext.Response.StatusCode = HttpStatusCode.NotImplemented;
-                listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.MissingRequestHandler);
+                listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.RequestHandlerMissing);
                 listenerContext.Response.CloseAsync().Fork(this);
             }
         }

@@ -56,10 +56,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     var getRequest = new HttpRequestMessage();
                     await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
                     getRequest.Method = HttpMethod.Get;
-                    LogHttpRequest(getRequest, client);
+                    LogRequest(getRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(getRequest, cts.Token))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(expectedStatusCode, response.StatusCode);
                         Assert.Equal("OK", response.ReasonPhrase);
                         Assert.Equal(expectedResponse, await response.Content.ReadAsStringAsync());
@@ -71,10 +71,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     string body = "{  \"a\": 11,   \"b\" :22, \"c\":\"test\",    \"d\":true}";
                     postRequest.Content = new StringContent(body);
                     postRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    LogHttpRequest(postRequest, client);
+                    LogRequest(postRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(postRequest, cts.Token))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(expectedStatusCode, response.StatusCode);
                         Assert.Equal("OK", response.ReasonPhrase);
                         Assert.Equal(expectedResponse, await response.Content.ReadAsStringAsync());
@@ -131,10 +131,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     var getRequest = new HttpRequestMessage();
                     await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
                     getRequest.Method = HttpMethod.Get;
-                    LogHttpRequest(getRequest, client);
+                    LogRequest(getRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(getRequest, cts.Token))
                     {
-                        LogHttpResponse(response, showBody: false);
+                        LogResponse(response, showBody: false);
                         Assert.Equal(expectedStatusCode, response.StatusCode);
                         Assert.Equal("TestStatusDescription", response.ReasonPhrase);
                         string responseContent = await response.Content.ReadAsStringAsync();
@@ -148,10 +148,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     string body = "{  \"a\": 11,   \"b\" :22, \"c\":\"test\",    \"d\":true}";
                     postRequest.Content = new StringContent(body);
                     postRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    LogHttpRequest(postRequest, client);
+                    LogRequest(postRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(postRequest, cts.Token))
                     {
-                        LogHttpResponse(response, showBody: false);
+                        LogResponse(response, showBody: false);
                         Assert.Equal(expectedStatusCode, response.StatusCode);
                         Assert.Equal("TestStatusDescription", response.ReasonPhrase);
                         string responseContent = await response.Content.ReadAsStringAsync();
@@ -197,10 +197,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     var getRequest = new HttpRequestMessage();
                     getRequest.Method = HttpMethod.Get;
                     await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
-                    LogHttpRequest(getRequest, client);
+                    LogRequest(getRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(getRequest))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                         Assert.Equal(0, response.Content.ReadAsStreamAsync().Result.Length);
                     }
@@ -208,10 +208,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     var postRequest = new HttpRequestMessage();
                     postRequest.Method = HttpMethod.Post;
                     await AddAuthorizationHeader(connectionString, postRequest, hybridHttpUri);
-                    LogHttpRequest(postRequest, client);
+                    LogRequest(postRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(postRequest))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                         Assert.Equal(0, response.Content.ReadAsStreamAsync().Result.Length);
                     }
@@ -257,10 +257,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     postRequest.Method = HttpMethod.Post;
                     var body = new string('y', 65 * 1024);
                     postRequest.Content = new StringContent(body);
-                    LogHttpRequest(postRequest, client, showBody: false);
+                    LogRequest(postRequest, client, showBody: false);
                     using (HttpResponseMessage response = await client.SendAsync(postRequest, cts.Token))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                         Assert.Equal(0, response.Content.ReadAsStreamAsync().Result.Length);
                         Assert.Equal(body.Length, requestBody.Length);
@@ -294,7 +294,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     listener1.OpenAsync(cts.Token),
                     listener2.OpenAsync(cts.Token));
 
-                const int TotalExpectedRequestCount = 100;
+                const int TotalExpectedRequestCount = 50;
                 long listenerRequestCount1 = 0;
                 long listenerRequestCount2 = 0;
 
@@ -406,10 +406,10 @@ namespace Microsoft.Azure.Relay.UnitTests
                     getRequest.Headers.Add(CustomHeaderName, "requestValue1");
                     getRequest.Headers.Add(CustomHeaderName, "requestValue2");
 
-                    LogHttpRequest(getRequest, client);
+                    LogRequest(getRequest, client);
                     using (HttpResponseMessage response = await client.SendAsync(getRequest))
                     {
-                        LogHttpResponse(response);
+                        LogResponse(response);
                         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                         Assert.Equal("requestValue1, requestValue2", requestHeaderValue);
                         string[] responseHeaders = string.Join(",", response.Headers.GetValues(CustomHeaderName)).Split(new[] { ',' });
@@ -419,6 +419,156 @@ namespace Microsoft.Azure.Relay.UnitTests
                         }
 
                         Assert.Equal(new [] {"responseValue1", "responseValue2" }, responseHeaders);
+                    }
+                }
+
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                await SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task QueryString(EndpointTestType endpointTestType)
+        {
+            HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);
+            try
+            {
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+
+                TestUtility.Log("Calling HybridConnectionListener.Open");
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                var queryStringTests = new[]
+                {
+                    new { Original = "?foo=bar", Output = "?foo=bar" },
+                    new { Original = "?sb-hc-id=1", Output = "" },
+                    new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" },
+                    new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" },
+                    new { Original = "?sb-hc-undefined=true", Output = "" },                    
+                    new { Original = "? Key =  Value With Space ", Output = "?+Key+=++Value+With+Space" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?key='value'", Output = "?key=%27value%27" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?key=<value>", Output = "?key=%3cvalue%3e" },
+#if PENDING_SERVICE_UPDATE
+                    new { Original = "?foo=bar&", Output = "?foo=bar&" },
+                    new { Original = "?&foo=bar", Output = "?foo=bar" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" },
+                    new { Original = "?CustomValue", Output = "?CustomValue" },
+                    new { Original = "?custom-Value", Output = "?custom-Value" },
+                    new { Original = "?custom&value", Output = "?custom&value" },
+                    new { Original = "?&custom&value&", Output = "?&custom&value&" },
+                    new { Original = "?&&value&&", Output = "?&&value&&" },
+                    new { Original = "?+", Output = "?+" },
+                    new { Original = "?%20", Output = "?+" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?&+&", Output = "?&+&" },
+                    new { Original = "?%2f%3a%3d%26", Output = "?%2f%3a%3d%26" },
+#endif
+                };
+
+                RelayedHttpListenerContext actualRequestContext = null;
+                listener.RequestHandler = async (context) =>
+                {
+                    TestUtility.Log($"RequestHandler {context.Request.HttpMethod} {context.Request.Url}");
+                    actualRequestContext = context;
+                    await context.Response.CloseAsync();
+                };
+
+                foreach (var queryStringTest in queryStringTests)
+                {
+                    string originalQueryString = queryStringTest.Original;
+                    string expectedQueryString = queryStringTest.Output;
+                    actualRequestContext = null;
+
+                    TestUtility.Log($"Testing Query String '{originalQueryString}'");
+                    Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath, originalQueryString).Uri;
+                    using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                    {
+                        client.DefaultRequestHeaders.ExpectContinue = false;
+
+                        var getRequest = new HttpRequestMessage();
+                        getRequest.Method = HttpMethod.Get;
+                        await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
+                        LogRequestLine(getRequest, client);
+                        using (HttpResponseMessage response = await client.SendAsync(getRequest))
+                        {
+                            LogResponseLine(response);
+                            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                            Assert.Equal(expectedQueryString, actualRequestContext.Request.Url.Query);
+                        }
+                    }
+                }
+
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                await SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task RequestHandlerErrors(EndpointTestType endpointTestType)
+        {
+            HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);
+            try
+            {
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+                using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                {
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    var request = new HttpRequestMessage();
+                    request.Method = HttpMethod.Get;
+                    await AddAuthorizationHeader(connectionString, request, hybridHttpUri);
+                    LogRequestLine(request, client);
+                    using (HttpResponseMessage response = await client.SendAsync(request))
+                    {
+                        LogResponse(response);
+                        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+                        Assert.Contains("RequestHandler has not been configured", response.ReasonPhrase);
+                        Assert.Contains("TrackingId", response.ReasonPhrase);
+                        Assert.Contains(hybridHttpUri.Host, response.ReasonPhrase);
+                        Assert.Contains(connectionString.EntityPath, response.ReasonPhrase);
+                        string viaHeader = response.Headers.Via.ToString();
+                        Assert.Contains(hybridHttpUri.Host, viaHeader);
+                    }
+
+                    string userExceptionMessage = "User Error";
+                    listener.RequestHandler = (context) =>
+                    {
+                        throw new InvalidOperationException(userExceptionMessage);
+                    };
+
+                    request = new HttpRequestMessage();
+                    request.Method = HttpMethod.Get;
+                    await AddAuthorizationHeader(connectionString, request, hybridHttpUri);
+                    LogRequestLine(request, client);
+                    using (HttpResponseMessage response = await client.SendAsync(request))
+                    {
+                        LogResponse(response);
+                        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+                        Assert.Contains("RequestHandler", response.ReasonPhrase);
+                        Assert.Contains("exception", response.ReasonPhrase, StringComparison.OrdinalIgnoreCase);
+                        Assert.Contains("TrackingId", response.ReasonPhrase);
+                        Assert.Contains(hybridHttpUri.Host, response.ReasonPhrase);
+                        Assert.Contains(connectionString.EntityPath, response.ReasonPhrase);
+                        string viaHeader = response.Headers.Via.ToString();
+                        Assert.Contains(hybridHttpUri.Host, viaHeader);
+
+                        // Details of the Exception in the Listener must not be sent
+                        Assert.DoesNotContain("InvalidOperationException", response.ReasonPhrase);
+                        Assert.DoesNotContain(userExceptionMessage, response.ReasonPhrase);
                     }
                 }
 
@@ -477,7 +627,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                         var getRequest = new HttpRequestMessage();
                         getRequest.Method = HttpMethod.Get;
                         await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
-                        TestUtility.Log($"Request: {getRequest.Method} {hybridHttpUri}");
+                        LogRequestLine(getRequest, client);
                         using (HttpResponseMessage response = await client.SendAsync(getRequest))
                         {
                             TestUtility.Log($"Response: HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}");
@@ -490,7 +640,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                         string body = "{  \"a\": 11,   \"b\" :22, \"c\":\"test\",    \"d\":true}";
                         postRequest.Content = new StringContent(body);
                         postRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                        TestUtility.Log($"Request: {postRequest.Method} {hybridHttpUri}");
+                        LogRequestLine(postRequest, client);
                         using (HttpResponseMessage response = await client.SendAsync(postRequest))
                         {
                             TestUtility.Log($"Response: HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}");
@@ -544,7 +694,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                         var request = new HttpRequestMessage();
                         await AddAuthorizationHeader(connectionString, request, hybridHttpUri);
                         request.Method = method;
-                        TestUtility.Log($"Request: {request.Method} {hybridHttpUri}");
+                        LogRequestLine(request, client);
                         using (HttpResponseMessage response = await client.SendAsync(request))
                         {
                             TestUtility.Log($"Response: HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}");
