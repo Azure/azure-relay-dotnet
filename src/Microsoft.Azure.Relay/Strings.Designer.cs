@@ -250,6 +250,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No RequestHandler has been configured..
+        /// </summary>
+        internal static string MissingRequestHandler {
+            get {
+                return ResourceManager.GetString("MissingRequestHandler", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The status code must be between 100 and 999 inclusive..
         /// </summary>
         internal static string net_InvalidStatus {
@@ -561,6 +570,15 @@ namespace Microsoft.Azure.Relay {
         internal static string ObjectNotOpened {
             get {
                 return ResourceManager.GetString("ObjectNotOpened", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The listener&apos;s RequestHandler threw an exception. See listener logs for more details..
+        /// </summary>
+        internal static string RequestHandlerException {
+            get {
+                return ResourceManager.GetString("RequestHandlerException", resourceCulture);
             }
         }
         
