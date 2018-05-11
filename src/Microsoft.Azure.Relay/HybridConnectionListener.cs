@@ -719,7 +719,8 @@ namespace Microsoft.Azure.Relay
                 }
                 catch (WebSocketException wsException)
                 {
-                    throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException, webSocket.Response), this.listener);
+                    throw RelayEventSource.Log.ThrowingException(
+                        WebSocketExceptionHelper.ConvertToRelayContract(wsException, this.listener.TrackingContext, webSocket.Response), this.listener);
                 }
             }
 
@@ -832,7 +833,7 @@ namespace Microsoft.Azure.Relay
                 {
                     RelayEventSource.Log.HandledExceptionAsWarning(this.listener, exception);
                     await this.CloseOrAbortWebSocketAsync(connectTask, abort: true).ConfigureAwait(false);
-                    keepGoing = this.OnDisconnect(WebSocketExceptionHelper.ConvertToRelayContract(exception));
+                    keepGoing = this.OnDisconnect(WebSocketExceptionHelper.ConvertToRelayContract(exception, this.listener.TrackingContext));
                 }
 
                 return keepGoing;

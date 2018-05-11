@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Relay
 
     static class WebSocketExceptionHelper
     {
-        public static Exception ConvertToRelayContract(Exception exception, HttpResponseMessage httpResponseMessage = null)
+        public static Exception ConvertToRelayContract(Exception exception, TrackingContext trackingContext, HttpResponseMessage httpResponseMessage = null)
         {
             string message = exception.Message;
             if (exception is RelayException || exception is TimeoutException)
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.Relay
                     HttpWebResponse httpWebResponse;
                     if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
                     {
-                        return CreateExceptionForStatus(httpWebResponse.StatusCode, httpWebResponse.StatusDescription, exception);
+                        return CreateExceptionForStatus(httpWebResponse.StatusCode, httpWebResponse.StatusDescription, exception, trackingContext);
                     }
                     else if (innerWebException.Status == WebExceptionStatus.NameResolutionFailure)
                     {
@@ -49,15 +49,25 @@ namespace Microsoft.Azure.Relay
                 }
                 else if (httpResponseMessage != null)
                 {
-                    return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception);
+                    return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception, trackingContext);
                 }
+            }
+
+            if (trackingContext != null)
+            {
+                message = trackingContext.EnsureTrackableMessage(message);
             }
 
             return new RelayException(message, exception);
         }
 
-        static Exception CreateExceptionForStatus(HttpStatusCode statusCode, string statusDescription, Exception inner)
-        {            
+        static Exception CreateExceptionForStatus(HttpStatusCode statusCode, string statusDescription, Exception inner, TrackingContext trackingContext)
+        {
+            if (trackingContext != null)
+            {
+                statusDescription = trackingContext.EnsureTrackableMessage(statusDescription);
+            }
+
             switch (statusCode)
             {
                 case HttpStatusCode.Unauthorized:
