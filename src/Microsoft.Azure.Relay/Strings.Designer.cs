@@ -565,6 +565,24 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The listener RequestHandler threw an exception. See listener logs for more details..
+        /// </summary>
+        internal static string RequestHandlerException {
+            get {
+                return ResourceManager.GetString("RequestHandlerException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The listener RequestHandler has not been configured..
+        /// </summary>
+        internal static string RequestHandlerMissing {
+            get {
+                return ResourceManager.GetString("RequestHandlerMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The request has timed out after {0} milliseconds. The successful completion of the request cannot be determined. Additional queries should be made to determine whether or not the operation has succeeded. For more information on exception types and proper exception handling, please refer to http://go.microsoft.com/fwlink/?LinkId=761101.
         /// </summary>
         internal static string RequestTimedOut {

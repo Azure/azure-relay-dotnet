@@ -116,7 +116,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 
@@ -155,7 +155,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 

@@ -20,6 +20,8 @@ namespace Microsoft.Azure.Relay
         public const string StatusCode = QueryStringKeyPrefix + "statusCode"; // sb-hc-statusCode
         public const string StatusDescription = QueryStringKeyPrefix + "statusDescription"; // sb-hc-statusDescription
         public const string Token = QueryStringKeyPrefix + "token"; // sb-hc-token
+        public const string SasKeyName = QueryStringKeyPrefix + "sas-key-name"; // sb-hc-sas-key-name
+        public const string SasKey = QueryStringKeyPrefix + "sas-key"; // sb-hc-sas-key
 
         public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromMinutes(3.5);
         public static readonly string ClientAgent = "azure-relay-dotnet/" + LookupFileVersion();

@@ -58,7 +58,21 @@ namespace Microsoft.Azure.Relay
         {
             var queryParameters = HybridConnectionUtility.ParseQueryString(this.rendezvousAddress.Query);
             string trackingId = queryParameters[HybridConnectionConstants.Id];
-            return TrackingContext.Create(trackingId, this.rendezvousAddress);
+
+            string path = this.rendezvousAddress.LocalPath;
+            if (path.StartsWith(HybridConnectionConstants.HybridConnectionRequestUri, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(HybridConnectionConstants.HybridConnectionRequestUri.Length);
+            }
+
+            Uri logicalAddress = new UriBuilder()
+            {
+                Scheme = Uri.UriSchemeHttps,
+                Host = this.listener.Address.Host,
+                Path = path,
+            }.Uri;
+
+            return TrackingContext.Create(trackingId, logicalAddress);
         }
 
         async Task ProcessFirstRequestAsync(RequestCommandAndStream requestAndStream)
@@ -180,15 +194,19 @@ namespace Microsoft.Azure.Relay
                 }
                 catch (Exception userException) when (!Fx.IsFatal(userException))
                 {
-                    RelayEventSource.Log.Warning(
-                        listenerContext,
-                        $"The Relayed Listener's custom RequestHandler threw an exception. {listenerContext.TrackingContext}, Exception: {userException}");
+                    RelayEventSource.Log.HandledExceptionAsWarning(this, userException);
+                    listenerContext.Response.StatusCode = HttpStatusCode.InternalServerError;
+                    listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.RequestHandlerException);
+                    listenerContext.Response.CloseAsync().Fork(this);
                     return;
                 }
             }
             else
             {
-                RelayEventSource.Log.HandledExceptionAsWarning(this, new InvalidOperationException("RequestHandler is not set."));
+                RelayEventSource.Log.HybridHttpConnectionMissingRequestHandler();
+                listenerContext.Response.StatusCode = HttpStatusCode.NotImplemented;
+                listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.RequestHandlerMissing);
+                listenerContext.Response.CloseAsync().Fork(this);
             }
         }
 

@@ -60,9 +60,9 @@ namespace Microsoft.Azure.Relay
 
             public IClientWebSocketOptions Options { get; }
 
-            public HttpResponseMessage Response { get => null; }
+            public HttpResponseMessage Response { get { return null; } }
             
-            public WebSocket WebSocket { get => this.client; }
+            public WebSocket WebSocket { get { return this.client; } }
 
             public Task ConnectAsync(Uri uri, CancellationToken cancellationToken)
             {
@@ -78,14 +78,14 @@ namespace Microsoft.Azure.Relay
                 }
                 public IWebProxy Proxy
                 {
-                    get => this.options.Proxy;
-                    set => this.options.Proxy = value;
+                    get { return this.options.Proxy; }
+                    set { this.options.Proxy = value; }
                 }
 
                 public TimeSpan KeepAliveInterval
                 {
-                    get => this.options.KeepAliveInterval;
-                    set => this.options.KeepAliveInterval = value;
+                    get { return this.options.KeepAliveInterval; }
+                    set { this.options.KeepAliveInterval = value; }
                 }
 
                 public void AddSubProtocol(string subProtocol)
