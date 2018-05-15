@@ -187,15 +187,6 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This &apos;{0}&apos; instance has already been started once. To start another instance, please create a new &apos;{0}&apos; object and start that..
-        /// </summary>
-        internal static string InstanceAlreadyRunning {
-            get {
-                return ResourceManager.GetString("InstanceAlreadyRunning", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to The Uri address given contains a path which is not allowed. Remove the path from the supplied Uri &apos;{0}&apos;..
         /// </summary>
         internal static string InvalidAddressPath {
