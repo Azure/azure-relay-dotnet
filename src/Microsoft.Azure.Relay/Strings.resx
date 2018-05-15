@@ -126,9 +126,6 @@
   <data name="EntityClosedOrAborted" xml:space="preserve">
     <value>The operation cannot be performed because the entity has been closed or aborted.</value>
   </data>
-  <data name="InstanceAlreadyRunning" xml:space="preserve">
-    <value>This '{0}' instance has already been started once. To start another instance, please create a new '{0}' object and start that.</value>
-  </data>
   <data name="InvalidAsyncResult" xml:space="preserve">
     <value>The specified Async result object is null or invalid.</value>
   </data>

@@ -248,15 +248,8 @@ namespace Microsoft.Azure.Relay
         {
             lock (this.ThisLock)
             {
-                if (this.openCalled)
-                {
-                    throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.GetString(SR.InstanceAlreadyRunning, this.GetType().Name)), this);
-                }
-                else if (this.closeCalled)
-                {
-                    throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.EntityClosedOrAborted), this);
-                }
-
+                this.ThrowIfDisposed();
+                this.ThrowIfReadOnly();
                 this.openCalled = true;
             }
 
@@ -296,32 +289,32 @@ namespace Microsoft.Azure.Relay
         /// <param name="cancellationToken">A cancellation token to observe.</param>
         public async Task CloseAsync(CancellationToken cancellationToken)
         {
-            List<HybridConnectionStream> clients;
-            lock (this.ThisLock)
-            {
-                if (this.closeCalled)
-                {
-                    return;
-                }
-
-                this.closeCalled = true;
-
-                // If the input queue is empty this completes all pending waiters with null and prevents
-                // any new items being added to the input queue.
-                this.connectionInputQueue.Shutdown();
-
-                // Close any unaccepted rendezvous.  DequeueAsync won't block since we've called connectionInputQueue.Shutdown().
-                clients = new List<HybridConnectionStream>(this.connectionInputQueue.PendingCount);
-                HybridConnectionStream stream;
-                while ((stream = this.connectionInputQueue.DequeueAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult()) != null)
-                {
-                    clients.Add(stream);
-                }
-            }
-
             try
             {
-                RelayEventSource.Log.ObjectClosing(this);
+                List<HybridConnectionStream> clients;
+                lock (this.ThisLock)
+                {
+                    if (this.closeCalled)
+                    {
+                        return;
+                    }
+
+                    RelayEventSource.Log.ObjectClosing(this);
+                    this.closeCalled = true;
+
+                    // If the input queue is empty this completes all pending waiters with null and prevents
+                    // any new items being added to the input queue.
+                    this.connectionInputQueue.Shutdown();
+
+                    // Close any unaccepted rendezvous.  DequeueAsync won't block since we've called connectionInputQueue.Shutdown().
+                    clients = new List<HybridConnectionStream>(this.connectionInputQueue.PendingCount);
+                    HybridConnectionStream stream;
+                    while ((stream = this.connectionInputQueue.DequeueAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult()) != null)
+                    {
+                        clients.Add(stream);
+                    }
+                }
+
                 await this.controlConnection.CloseAsync(cancellationToken).ConfigureAwait(false);
 
                 clients.ForEach(client => ((WebSocketStream)client).Abort());
@@ -386,6 +379,14 @@ namespace Microsoft.Azure.Relay
         internal Task SendControlCommandAndStreamAsync(ListenerCommand command, Stream stream, CancellationToken cancelToken)
         {
             return this.controlConnection.SendCommandAndStreamAsync(command, stream, cancelToken);
+        }
+
+        void ThrowIfDisposed()
+        {
+            if (this.closeCalled)
+            {
+                throw RelayEventSource.Log.ThrowingException(new ObjectDisposedException(this.ToString(), SR.EntityClosedOrAborted), this);
+            }
         }
 
         void ThrowIfReadOnly()
@@ -555,7 +556,6 @@ namespace Microsoft.Azure.Relay
             Task receivePumpTask;
             CancellationToken closeCancellationToken;
             int connectDelayIndex;
-            volatile bool closeCalled;
 
             public ControlConnection(HybridConnectionListener listener)
             {
@@ -609,26 +609,23 @@ namespace Microsoft.Azure.Relay
                 Task<WebSocket> connectTask;
                 lock (this.ThisLock)
                 {
-                    if (this.closeCalled)
-                    {
-                        return;
-                    }
-
                     this.closeCancellationToken = cancellationToken;
                     connectTask = this.connectAsyncTask;
                     this.connectAsyncTask = null;
-                    this.closeCalled = true;
                 }
 
                 this.tokenRenewer.Close();
                 this.shutdownCancellationSource.Cancel();
 
-                // Start a clean close by first calling CloseOutputAsync.  The finish (CloseAsync) happens when
+                // Start a clean close by first calling CloseOutputAsync. The finish (CloseAsync) happens when
                 // the receive pump task finishes working.
                 if (connectTask != null)
                 {
                     var webSocket = await connectTask.ConfigureAwait(false);
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Normal Closure", cancellationToken).ConfigureAwait(false);
+                    using (await this.sendAsyncLock.LockAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Normal Closure", cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
                 if (this.receivePumpTask != null)
@@ -680,7 +677,8 @@ namespace Microsoft.Azure.Relay
 
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
-                Fx.Assert(!this.closeCalled, "Shouldn't call ConnectWebSocketAsync if CloseAsync was called.");
+                this.listener.ThrowIfDisposed();
+
                 var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
                 try
                 {
@@ -806,7 +804,7 @@ namespace Microsoft.Azure.Relay
                         {
                             await this.CloseOrAbortWebSocketAsync(
                                 connectTask, false, receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, shutdownToken).ConfigureAwait(false);
-                            if (this.closeCalled)
+                            if (this.listener.closeCalled)
                             {
                                 // This is the cloud service responding to our clean shutdown.
                                 keepGoing = false;
