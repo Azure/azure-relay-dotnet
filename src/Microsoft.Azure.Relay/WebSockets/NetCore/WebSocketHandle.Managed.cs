@@ -99,9 +99,9 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 Socket connectedSocket;
                 Stream stream;
-                if (options.Proxy != null && options.Proxy != WebRequest.DefaultWebProxy)
+                Uri proxyUri = options.Proxy != null && options.Proxy != WebRequest.DefaultWebProxy ? options.Proxy.GetProxy(uri) : null;
+                if (proxyUri != null)
                 {
-                    Uri proxyUri = options.Proxy.GetProxy(uri);
                     connectedSocket = await ConnectSocketAsync(proxyUri.Host, proxyUri.Port, cancellationToken).ConfigureAwait(false);
                     stream = new AsyncEventArgsNetworkStream(connectedSocket);
                     await ConnectWithProxyAsync(uri, options, stream, cancellationToken).ConfigureAwait(false);
