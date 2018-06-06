@@ -541,6 +541,11 @@ namespace Microsoft.Azure.Relay.WebSockets
 
                 if (proxyAuth != null)
                 {
+                    if (options.Proxy.Credentials == null)
+                    {
+                        throw new WebSocketException(SR.net_WebSockets_proxyauthentication);
+                    }
+
                     var proxyUri = options.Proxy.GetProxy(uri);
                     if (proxyAuth.Scheme.Equals("basic", StringComparison.OrdinalIgnoreCase))
                     {

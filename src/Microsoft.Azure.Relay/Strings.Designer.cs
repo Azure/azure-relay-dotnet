@@ -457,6 +457,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Connecting to proxy requires credentials..
+        /// </summary>
+        internal static string net_WebSockets_proxyauthentication {
+            get {
+                return ResourceManager.GetString("net_WebSockets_proxyauthentication", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The close status description &apos;{0}&apos; is invalid. When using close status code &apos;{1}&apos; the description must be null..
         /// </summary>
         internal static string net_WebSockets_ReasonNotNull {
