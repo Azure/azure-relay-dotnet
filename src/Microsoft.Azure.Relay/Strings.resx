@@ -309,4 +309,7 @@
   <data name="RequestHandlerException" xml:space="preserve">
     <value>The listener RequestHandler threw an exception. See listener logs for more details.</value>
   </data>
+  <data name="net_WebSockets_proxyauthentication" xml:space="preserve">
+    <value>Connecting to proxy requires credentials.</value>
+  </data>
 </root>
