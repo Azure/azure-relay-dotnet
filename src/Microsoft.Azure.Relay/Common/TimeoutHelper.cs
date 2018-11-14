@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Relay
     {
         DateTime deadline;
         bool deadlineSet;
-        TimeSpan originalTimeout;
+        readonly TimeSpan originalTimeout;
         public static readonly TimeSpan MaxWait = TimeSpan.FromMilliseconds(Int32.MaxValue);
 
         public TimeoutHelper(TimeSpan timeout) :
@@ -46,14 +46,9 @@ namespace Microsoft.Azure.Relay
 
         public static TimeSpan FromMilliseconds(int milliseconds)
         {
-            if (milliseconds == Timeout.Infinite)
-            {
-                return TimeSpan.MaxValue;
-            }
-            else
-            {
-                return TimeSpan.FromMilliseconds(milliseconds);
-            }
+            return milliseconds == Timeout.Infinite 
+                ? TimeSpan.MaxValue 
+                : TimeSpan.FromMilliseconds(milliseconds);
         }
 
         public static int ToMilliseconds(TimeSpan timeout)
@@ -62,40 +57,24 @@ namespace Microsoft.Azure.Relay
             {
                 return Timeout.Infinite;
             }
-            else
-            {
-                long ticks = timeout.Ticks;
-                if (ticks / TimeSpan.TicksPerMillisecond > int.MaxValue)
-                {
-                    return int.MaxValue;
-                }
 
-                return checked((int)(ticks / TimeSpan.TicksPerMillisecond));
+            long ticks = timeout.Ticks;
+            if (ticks / TimeSpan.TicksPerMillisecond > int.MaxValue)
+            {
+                return int.MaxValue;
             }
+
+            return checked((int)(ticks / TimeSpan.TicksPerMillisecond));
         }
 
         public static TimeSpan Min(TimeSpan val1, TimeSpan val2)
         {
-            if (val1 > val2)
-            {
-                return val2;
-            }
-            else
-            {
-                return val1;
-            }
+            return val1 > val2 ? val2 : val1;
         }
 
         public static DateTime Min(DateTime val1, DateTime val2)
         {
-            if (val1 > val2)
-            {
-                return val2;
-            }
-            else
-            {
-                return val1;
-            }
+            return val1 > val2 ? val2 : val1;
         }
 
         public static DateTime Add(DateTime time, TimeSpan timeout)
@@ -133,22 +112,19 @@ namespace Microsoft.Azure.Relay
                 this.SetDeadline();
                 return this.originalTimeout;
             }
-            else if (this.deadline == DateTime.MaxValue)
+
+            if (this.deadline == DateTime.MaxValue)
             {
                 return TimeSpan.MaxValue;
             }
-            else
+
+            TimeSpan remaining = this.deadline - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero)
             {
-                TimeSpan remaining = this.deadline - DateTime.UtcNow;
-                if (remaining <= TimeSpan.Zero)
-                {
-                    return TimeSpan.Zero;
-                }
-                else
-                {
-                    return remaining;
-                }
+                return TimeSpan.Zero;
             }
+
+            return remaining;
         }
 
         public TimeSpan ElapsedTime()

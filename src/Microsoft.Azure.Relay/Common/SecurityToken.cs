@@ -52,32 +52,17 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Gets the audience of this token.
         /// </summary>
-        public string Audience
-        {
-            get
-            {
-                return this.audience;
-            }
-        }
+        public string Audience => this.audience;
 
         /// <summary>
         /// Gets the expiration time of this token.
         /// </summary>
-        public DateTime ExpiresAtUtc
-        {
-            get
-            {
-                return this.expiresAtUtc;
-            }
-        }
+        public DateTime ExpiresAtUtc => this.expiresAtUtc;
 
         /// <summary>
         /// Gets the actual token as a string.
         /// </summary>
-        public string TokenString
-        {
-            get { return this.token; }
-        }
+        public string TokenString => this.token;
 
         void GetExpirationDateAndAudienceFromToken(string tokenString, out DateTime expiresOn, out string audience)
         {

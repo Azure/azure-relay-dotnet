@@ -47,16 +47,9 @@ namespace Microsoft.Azure.Relay
         }
 
         // Users like ServiceModel can hook this abort ICommunicationObject or handle other non-IDisposable objects
-        public Action<T> DisposeItemCallback
-        {
-            get;
-            set;
-        }
+        public Action<T> DisposeItemCallback { get; set; }
 
-        object ThisLock
-        {
-            get { return this.itemQueue; }
-        }
+        object ThisLock => this.itemQueue;
 
         public Task<T> DequeueAsync(CancellationToken cancellationToken)
         {
@@ -142,8 +135,8 @@ namespace Microsoft.Azure.Relay
             IQueueReader reader = null;
             Item item = new Item();
             IQueueReader[] outstandingReaders = null;
-            IQueueWaiter[] waiters = null;
-            bool itemAvailable = true;
+            IQueueWaiter[] waiters;
+            bool itemAvailable;
 
             lock (ThisLock)
             {
@@ -173,7 +166,7 @@ namespace Microsoft.Azure.Relay
 
             if (outstandingReaders != null)
             {
-                ActionItem.Schedule(s => CompleteOutstandingReadersCallback(s), outstandingReaders);
+                ActionItem.Schedule(CompleteOutstandingReadersCallback, outstandingReaders);
             }
 
             if (waiters != null)
@@ -343,11 +336,11 @@ namespace Microsoft.Azure.Relay
         {
             if (itemAvailable)
             {
-                ActionItem.Schedule(s => CompleteWaitersTrueCallback(s), waiters);
+                ActionItem.Schedule(CompleteWaitersTrueCallback, waiters);
             }
             else
             {
-                ActionItem.Schedule(s => CompleteWaitersFalseCallback(s), waiters);
+                ActionItem.Schedule(CompleteWaitersFalseCallback, waiters);
             }
         }
 
@@ -365,7 +358,7 @@ namespace Microsoft.Azure.Relay
         {
             if (dequeuedCallback != null)
             {
-                ActionItem.Schedule(s => OnInvokeDequeuedCallback(s), dequeuedCallback);
+                ActionItem.Schedule(OnInvokeDequeuedCallback, dequeuedCallback);
             }
         }
 
@@ -387,8 +380,8 @@ namespace Microsoft.Azure.Relay
             bool disposeItem = false;
             IQueueReader reader = null;
             bool dispatchLater = false;
-            IQueueWaiter[] waiters = null;
-            bool itemAvailable = true;
+            IQueueWaiter[] waiters;
+            bool itemAvailable;
 
             lock (ThisLock)
             {
@@ -447,7 +440,7 @@ namespace Microsoft.Azure.Relay
 
             if (dispatchLater)
             {
-                ActionItem.Schedule(s => OnDispatchCallback(s), this);
+                ActionItem.Schedule(OnDispatchCallback, this);
             }
             else if (disposeItem)
             {
@@ -470,11 +463,9 @@ namespace Microsoft.Azure.Relay
                         itemQueue.EnqueueAvailableItem(item);
                         return false;
                     }
-                    else
-                    {
-                        itemQueue.EnqueuePendingItem(item);
-                        return true;
-                    }
+
+                    itemQueue.EnqueuePendingItem(item);
+                    return true;
                 }
             }
 
@@ -547,9 +538,9 @@ namespace Microsoft.Azure.Relay
 
         struct Item
         {
-            Action dequeuedCallback;
-            Exception exception;
-            T value;
+            readonly Action dequeuedCallback;
+            readonly Exception exception;
+            readonly T value;
 
             public Item(T value, Action dequeuedCallback)
                 : this(value, null, dequeuedCallback)
@@ -568,20 +559,11 @@ namespace Microsoft.Azure.Relay
                 this.dequeuedCallback = dequeuedCallback;
             }
 
-            public Action DequeuedCallback
-            {
-                get { return this.dequeuedCallback; }
-            }
+            public Action DequeuedCallback => this.dequeuedCallback;
 
-            public Exception Exception
-            {
-                get { return this.exception; }
-            }
+            public Exception Exception => this.exception;
 
-            public T Value
-            {
-                get { return this.value; }
-            }
+            public T Value => this.value;
 
             public T GetValue()
             {
@@ -603,7 +585,7 @@ namespace Microsoft.Azure.Relay
                 : base(state)
             {
                 this.inputQueue = inputQueue;
-                this.cancelRegistration = cancellationToken.Register(s => CancelCallback(s), this);
+                this.cancelRegistration = cancellationToken.Register(CancelCallback, this);
             }
 
             public void Set(Item inputItem)
@@ -638,7 +620,7 @@ namespace Microsoft.Azure.Relay
             public AsyncQueueWaiter(CancellationToken cancellationToken, object state)
                 : base(state)
             {
-                this.cancelRegistration = cancellationToken.Register(s => CancelCallback(s), this);
+                this.cancelRegistration = cancellationToken.Register(CancelCallback, this);
             }
 
             public void Set(bool currentItemAvailable)
@@ -667,20 +649,11 @@ namespace Microsoft.Azure.Relay
                 this.items = new Item[1];
             }
 
-            public bool HasAnyItem
-            {
-                get { return this.totalCount > 0; }
-            }
+            public bool HasAnyItem => this.totalCount > 0;
 
-            public bool HasAvailableItem
-            {
-                get { return this.totalCount > this.pendingCount; }
-            }
+            public bool HasAvailableItem => this.totalCount > this.pendingCount;
 
-            public int ItemCount
-            {
-                get { return this.totalCount; }
-            }
+            public int ItemCount => this.totalCount;
 
             public Item DequeueAnyItem()
             {
