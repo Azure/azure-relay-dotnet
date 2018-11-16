@@ -13,7 +13,7 @@ namespace Microsoft.Azure.Relay
 
         private readonly Task<LockRelease> lockRelease;
 
-        private bool disposed = false;
+        private bool disposed;
 
         public AsyncLock()
         {
@@ -111,10 +111,7 @@ namespace Microsoft.Azure.Relay
                 {
                     if (disposing)
                     {
-                        if (asyncLockRelease != null)
-                        {
-                            asyncLockRelease.asyncSemaphore.Release();
-                        }
+                        asyncLockRelease?.asyncSemaphore.Release();
                     }
 
                     this.disposed = true;
