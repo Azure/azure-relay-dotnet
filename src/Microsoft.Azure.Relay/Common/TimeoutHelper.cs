@@ -10,10 +10,10 @@ namespace Microsoft.Azure.Relay
     [DebuggerStepThrough]
     struct TimeoutHelper
     {
+        public static readonly TimeSpan MaxWait = TimeSpan.FromMilliseconds(int.MaxValue);
+        readonly TimeSpan originalTimeout;
         DateTime deadline;
         bool deadlineSet;
-        readonly TimeSpan originalTimeout;
-        public static readonly TimeSpan MaxWait = TimeSpan.FromMilliseconds(Int32.MaxValue);
 
         public TimeoutHelper(TimeSpan timeout) :
             this(timeout, false)
@@ -46,8 +46,8 @@ namespace Microsoft.Azure.Relay
 
         public static TimeSpan FromMilliseconds(int milliseconds)
         {
-            return milliseconds == Timeout.Infinite 
-                ? TimeSpan.MaxValue 
+            return milliseconds == Timeout.Infinite
+                ? TimeSpan.MaxValue
                 : TimeSpan.FromMilliseconds(milliseconds);
         }
 
@@ -112,19 +112,22 @@ namespace Microsoft.Azure.Relay
                 this.SetDeadline();
                 return this.originalTimeout;
             }
-
-            if (this.deadline == DateTime.MaxValue)
+            else if (this.deadline == DateTime.MaxValue)
             {
                 return TimeSpan.MaxValue;
             }
-
-            TimeSpan remaining = this.deadline - DateTime.UtcNow;
-            if (remaining <= TimeSpan.Zero)
+            else
             {
-                return TimeSpan.Zero;
+                TimeSpan remaining = this.deadline - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    return TimeSpan.Zero;
+                }
+                else
+                {
+                    return remaining;
+                }
             }
-
-            return remaining;
         }
 
         public TimeSpan ElapsedTime()

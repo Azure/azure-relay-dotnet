@@ -166,7 +166,7 @@ namespace Microsoft.Azure.Relay
 
             if (outstandingReaders != null)
             {
-                ActionItem.Schedule(CompleteOutstandingReadersCallback, outstandingReaders);
+                ActionItem.Schedule(s => CompleteOutstandingReadersCallback(s), outstandingReaders);
             }
 
             if (waiters != null)
@@ -290,7 +290,7 @@ namespace Microsoft.Azure.Relay
                     InvokeDequeuedCallback(item.DequeuedCallback);
                 }
             }
-        }        
+        }
 
         void DisposeItem(Item item)
         {
@@ -336,11 +336,11 @@ namespace Microsoft.Azure.Relay
         {
             if (itemAvailable)
             {
-                ActionItem.Schedule(CompleteWaitersTrueCallback, waiters);
+                ActionItem.Schedule(s => CompleteWaitersTrueCallback(s), waiters);
             }
             else
             {
-                ActionItem.Schedule(CompleteWaitersFalseCallback, waiters);
+                ActionItem.Schedule(s => CompleteWaitersFalseCallback(s), waiters);
             }
         }
 
@@ -358,7 +358,7 @@ namespace Microsoft.Azure.Relay
         {
             if (dequeuedCallback != null)
             {
-                ActionItem.Schedule(OnInvokeDequeuedCallback, dequeuedCallback);
+                ActionItem.Schedule(s => OnInvokeDequeuedCallback(s), dequeuedCallback);
             }
         }
 
@@ -440,7 +440,7 @@ namespace Microsoft.Azure.Relay
 
             if (dispatchLater)
             {
-                ActionItem.Schedule(OnDispatchCallback, this);
+                ActionItem.Schedule(s => OnDispatchCallback(s), this);
             }
             else if (disposeItem)
             {
@@ -538,10 +538,6 @@ namespace Microsoft.Azure.Relay
 
         struct Item
         {
-            readonly Action dequeuedCallback;
-            readonly Exception exception;
-            readonly T value;
-
             public Item(T value, Action dequeuedCallback)
                 : this(value, null, dequeuedCallback)
             {
@@ -554,25 +550,25 @@ namespace Microsoft.Azure.Relay
 
             Item(T value, Exception exception, Action dequeuedCallback)
             {
-                this.value = value;
-                this.exception = exception;
-                this.dequeuedCallback = dequeuedCallback;
+                this.Value = value;
+                this.Exception = exception;
+                this.DequeuedCallback = dequeuedCallback;
             }
 
-            public Action DequeuedCallback => this.dequeuedCallback;
+            public Action DequeuedCallback { get; }
 
-            public Exception Exception => this.exception;
+            public Exception Exception { get; }
 
-            public T Value => this.value;
+            public T Value { get; }
 
             public T GetValue()
             {
-                if (this.exception != null)
+                if (this.Exception != null)
                 {
-                    throw RelayEventSource.Log.ThrowingException(this.exception, this, EventLevel.Informational);
+                    throw RelayEventSource.Log.ThrowingException(this.Exception, this, EventLevel.Informational);
                 }
 
-                return this.value;
+                return this.Value;
             }
         }
 
@@ -585,7 +581,7 @@ namespace Microsoft.Azure.Relay
                 : base(state)
             {
                 this.inputQueue = inputQueue;
-                this.cancelRegistration = cancellationToken.Register(CancelCallback, this);
+                this.cancelRegistration = cancellationToken.Register(s => CancelCallback(s), this);
             }
 
             public void Set(Item inputItem)
@@ -620,7 +616,7 @@ namespace Microsoft.Azure.Relay
             public AsyncQueueWaiter(CancellationToken cancellationToken, object state)
                 : base(state)
             {
-                this.cancelRegistration = cancellationToken.Register(CancelCallback, this);
+                this.cancelRegistration = cancellationToken.Register(s => CancelCallback(s), this);
             }
 
             public void Set(bool currentItemAvailable)
