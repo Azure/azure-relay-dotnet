@@ -78,7 +78,7 @@ namespace Microsoft.Azure.Relay
                 throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingAudience);
             }
 
-            expiresOn = (EpochTime + TimeSpan.FromSeconds(double.Parse(expiresIn, CultureInfo.InvariantCulture)));
+            expiresOn = EpochTime + TimeSpan.FromSeconds(double.Parse(expiresIn, CultureInfo.InvariantCulture));
         }
 
         static IDictionary<string, string> Decode(string tokenString, Func<string, string> keyDecoder, Func<string, string> valueDecoder, string keyValueSeparator, string pairSeparator)

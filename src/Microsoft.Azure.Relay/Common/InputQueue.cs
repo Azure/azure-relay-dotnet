@@ -414,8 +414,9 @@ namespace Microsoft.Azure.Relay
                         }
                     }
                 }
-                else // queueState == QueueState.Closed || queueState == QueueState.Shutdown
+                else
                 {
+                    // queueState == QueueState.Closed || queueState == QueueState.Shutdown
                     disposeItem = true;
                 }
             }

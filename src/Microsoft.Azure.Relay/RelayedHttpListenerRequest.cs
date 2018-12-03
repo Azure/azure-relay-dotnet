@@ -20,7 +20,7 @@ namespace Microsoft.Azure.Relay
             this.Url = uri;
             this.InputStream = Stream.Null;
             this.Headers = new WebHeaderCollection();
-            foreach(var headerPair in requestHeaders)
+            foreach (var headerPair in requestHeaders)
             {
                 this.Headers[headerPair.Key] = headerPair.Value;
             }

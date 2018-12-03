@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Relay
 
     static class WebSocketExceptionHelper
     {
-        public static Exception ConvertToRelayContract(Exception exception, TrackingContext trackingContext, HttpResponseMessage httpResponseMessage = null)
+        public static Exception ConvertToRelayContract(Exception exception, TrackingContext trackingContext, HttpResponseMessage httpResponseMessage = null, bool isListener = true)
         {
             string message = exception.Message;
             if (exception is RelayException || exception is TimeoutException)
@@ -29,11 +29,11 @@ namespace Microsoft.Azure.Relay
                     HttpWebResponse httpWebResponse;
                     if ((httpWebResponse = innerWebException.Response as HttpWebResponse) != null)
                     {
-                        return CreateExceptionForStatus(httpWebResponse.StatusCode, httpWebResponse.StatusDescription, exception, trackingContext);
+                        return CreateExceptionForStatus(httpWebResponse.StatusCode, httpWebResponse.StatusDescription, exception, trackingContext, isListener);
                     }
                     else if (innerWebException.Status == WebExceptionStatus.NameResolutionFailure)
                     {
-                        return new EndpointNotFoundException(innerWebException.Message, exception);
+                        message = innerWebException.Message;
                     }
                 }
                 else if ((innerIOException = exception.InnerException as IOException) != null)
@@ -44,12 +44,12 @@ namespace Microsoft.Azure.Relay
                 {
                     if (socketException.SocketErrorCode == SocketError.HostNotFound)
                     {
-                        return new EndpointNotFoundException(socketException.Message, exception);
+                        message = socketException.Message;
                     }
                 }
                 else if (httpResponseMessage != null)
                 {
-                    return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception, trackingContext);
+                    return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception, trackingContext, isListener);
                 }
             }
 
@@ -61,7 +61,7 @@ namespace Microsoft.Azure.Relay
             return new RelayException(message, exception);
         }
 
-        static Exception CreateExceptionForStatus(HttpStatusCode statusCode, string statusDescription, Exception inner, TrackingContext trackingContext)
+        static Exception CreateExceptionForStatus(HttpStatusCode statusCode, string statusDescription, Exception inner, TrackingContext trackingContext, bool isListener)
         {
             if (trackingContext != null)
             {
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.Relay
                 case HttpStatusCode.Unauthorized:
                     return new AuthorizationFailedException(statusDescription, inner);
                 case HttpStatusCode.NotFound:
-                    return new EndpointNotFoundException(statusDescription, inner);
+                    return new EndpointNotFoundException(statusDescription, inner, isTransient: !isListener);
                 case HttpStatusCode.GatewayTimeout:
                 case HttpStatusCode.RequestTimeout:
                     return new TimeoutException(statusCode + ": " + statusDescription, inner);

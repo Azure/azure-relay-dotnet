@@ -4,9 +4,8 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
-    using System.Threading.Tasks;
-    using System.Globalization;
     using System.Threading;
+    using System.Threading.Tasks;
 
     class TokenEventArgs : EventArgs
     {

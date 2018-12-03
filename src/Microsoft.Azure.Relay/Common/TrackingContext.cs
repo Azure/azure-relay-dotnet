@@ -10,10 +10,10 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public sealed class TrackingContext
     {
-        static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         internal const string TrackingIdName = "TrackingId";
         const string AddressName = "Address";
         const string TimestampName = "Timestamp";
+        static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         string cachedToString;
 
         TrackingContext(Guid activityId, string trackingId, string address)

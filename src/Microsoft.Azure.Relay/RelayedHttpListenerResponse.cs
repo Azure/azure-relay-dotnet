@@ -105,7 +105,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>Sends the response to the client and releases the resources held by this <see cref="RelayedHttpListenerResponse"/> instance.</summary>
         public void Close()
         {
-            this.CloseAsync().Fork(this);
+            this.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         /// <summary>Sends the response to the client and releases the resources held by this <see cref="RelayedHttpListenerResponse"/> instance.</summary>
@@ -116,7 +116,7 @@ namespace Microsoft.Azure.Relay
                 var closeAsync = this.OutputStream as ICloseAsync;
                 if (closeAsync != null)
                 {
-                    await closeAsync.CloseAsync();
+                    await closeAsync.CloseAsync().ConfigureAwait(false);
                 }
                 else
                 {
