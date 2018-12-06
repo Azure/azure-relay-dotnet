@@ -320,8 +320,15 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+                TestUtility.Log($"Opening Listener");
+                var relayException = await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
+                TestUtility.Log($"Received Exception {relayException.ToStringWithoutCallstack()}");
+                Assert.True(relayException.IsTransient, "Listener.Open() should return a transient Exception");
+
+                TestUtility.Log($"Opening Client");
+                relayException = await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
+                TestUtility.Log($"Received Exception {relayException.ToStringWithoutCallstack()}");
+                Assert.True(relayException.IsTransient, "Client.Open() should return a transient Exception");
             }
             finally
             {

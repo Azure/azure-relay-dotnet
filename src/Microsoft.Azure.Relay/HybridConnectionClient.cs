@@ -15,9 +15,8 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public class HybridConnectionClient
     {
-        // Currently 64K
         const int DefaultConnectionBufferSize = 64 * 1024;
-        readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(70);
+        static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(70);
 
         /// <summary>
         /// Create a new HybridConnectionClient instance for initiating HybridConnections where no client authentication is required.
@@ -190,7 +189,9 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException wsException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException, trackingContext, webSocket.Response), traceSource);
+                throw RelayEventSource.Log.ThrowingException(
+                    WebSocketExceptionHelper.ConvertToRelayContract(wsException, trackingContext, webSocket.Response, isListener: false),
+                    traceSource);
             }
         }
 

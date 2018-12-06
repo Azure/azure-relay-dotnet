@@ -562,7 +562,7 @@ namespace Microsoft.Azure.Relay
                 this.listener = listener;
                 this.address = listener.Address;
                 this.bufferSize = listener.ConnectionBufferSize;
-                this.path = address.AbsolutePath.TrimStart('/');
+                this.path = this.address.AbsolutePath.TrimStart('/');
                 this.shutdownCancellationSource = new CancellationTokenSource();
                 this.receiveBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);
                 this.sendBuffer = new ArraySegment<byte>(new byte[this.bufferSize]);

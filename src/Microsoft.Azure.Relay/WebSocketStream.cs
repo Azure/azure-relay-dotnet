@@ -173,7 +173,10 @@ namespace Microsoft.Azure.Relay
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancelToken))
                 {
                     await this.webSocket.SendAsync(
-                        new ArraySegment<byte>(buffer, offset, count), this.WriteMode == WriteMode.Binary ? WebSocketMessageType.Binary : WebSocketMessageType.Text, true, linkedCancelSource.Token).ConfigureAwait(false);
+                        new ArraySegment<byte>(buffer, offset, count),
+                        this.WriteMode == WriteMode.Binary ? WebSocketMessageType.Binary : WebSocketMessageType.Text,
+                        true,
+                        linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (WebSocketException webSocketException)
