@@ -26,7 +26,7 @@ namespace Microsoft.Azure.Relay
 
             this.originalTimeout = timeout;
             this.deadline = DateTime.MaxValue;
-            this.deadlineSet = (timeout == TimeSpan.MaxValue);
+            this.deadlineSet = timeout == TimeSpan.MaxValue;
 
             if (startTimeout && !this.deadlineSet)
             {
@@ -137,7 +137,7 @@ namespace Microsoft.Azure.Relay
 
         void SetDeadline()
         {
-            Fx.Assert(!deadlineSet, "TimeoutHelper deadline set twice.");
+            Fx.Assert(!this.deadlineSet, "TimeoutHelper deadline set twice.");
             this.deadline = DateTime.UtcNow + this.originalTimeout;
             this.deadlineSet = true;
         }

@@ -105,8 +105,8 @@ namespace Microsoft.Azure.Relay
         static string BuildQueryString(string existingQueryString, string action, string id)
         {
             // Add enough extra buffer for our &sb-hc-action=connect&sb-hc-id=00000000-0000-0000-0000-000000000000_GXX_GYY
-            const int requiredLength = 80;
-            var buffer = new StringBuilder(existingQueryString.Length + requiredLength);
+            const int RequiredLength = 80;
+            var buffer = new StringBuilder(existingQueryString.Length + RequiredLength);
 
             if (!string.IsNullOrEmpty(existingQueryString))
             {
