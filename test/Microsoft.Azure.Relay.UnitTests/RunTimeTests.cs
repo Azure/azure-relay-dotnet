@@ -155,6 +155,77 @@ namespace Microsoft.Azure.Relay.UnitTests
 
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task RequestHeadersTest(EndpointTestType endpointTestType)
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
+
+                var listenerRequestTcs = new TaskCompletionSource<IDictionary<string, string>>();
+                listener.AcceptHandler = (context) =>
+                {
+                    try
+                    {
+                        var headers = new Dictionary<string, string>();
+                        foreach (string headerName in context.Request.Headers.AllKeys)
+                        {
+                            headers[headerName] = context.Request.Headers[headerName];
+                        }
+
+                        listenerRequestTcs.SetResult(headers);
+                        return Task.FromResult(true);
+                    }
+                    catch (Exception e)
+                    {
+                        listenerRequestTcs.TrySetException(e);
+                        throw;
+                    }
+                };
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                const string ExpectedRequestHeaderName = "CustomHeader1";
+                const string ExpectedRequestHeaderValue = "Some value here; other-value/here.";
+
+                var clientRequestHeaders = new Dictionary<string, string>();
+                clientRequestHeaders[ExpectedRequestHeaderName] = ExpectedRequestHeaderValue;
+                var clientStream = await client.CreateConnectionAsync(clientRequestHeaders);
+
+                var listenerStream = await listener.AcceptConnectionAsync();
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
+
+                Assert.True(listenerRequestTcs.Task.Wait(TimeSpan.FromSeconds(5)), "AcceptHandler should have been invoked by now.");
+                IDictionary<string, string> listenerRequestHeaders = await listenerRequestTcs.Task;
+                Assert.True(listenerRequestHeaders.ContainsKey(ExpectedRequestHeaderName), "Expected header name should be present.");
+                Assert.Equal(ExpectedRequestHeaderValue, listenerRequestHeaders[ExpectedRequestHeaderName]);
+
+                byte[] sendBuffer = this.CreateBuffer(1025, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+                await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
+
+                byte[] readBuffer = new byte[sendBuffer.Length];
+                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, sendBuffer.Length, TimeSpan.FromSeconds(30));
+                Assert.Equal(sendBuffer, readBuffer);
+
+                var clientStreamCloseTask = clientStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                await listenerStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                await clientStreamCloseTask;
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
         async Task WriteLargeDataSetTest(EndpointTestType endpointTestType, int kilobytesToSend = 1024)
         {
             HybridConnectionListener listener = null;
