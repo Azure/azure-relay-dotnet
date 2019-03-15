@@ -9,24 +9,22 @@ namespace Microsoft.Azure.Relay
 
     class AsyncLock : IDisposable
     {
-        private readonly SemaphoreSlim asyncSemaphore;
-
-        private readonly Task<LockRelease> lockRelease;
-
-        private bool disposed = false;
+        readonly SemaphoreSlim asyncSemaphore;
+        readonly Task<LockRelease> lockRelease;
+        bool disposed;
 
         public AsyncLock()
         {
-            asyncSemaphore = new SemaphoreSlim(1);
-            lockRelease = Task.FromResult(new LockRelease(this));
+            this.asyncSemaphore = new SemaphoreSlim(1);
+            this.lockRelease = Task.FromResult(new LockRelease(this));
         }
 
         public Task<LockRelease> LockAsync()
         {
-            var wait = asyncSemaphore.WaitAsync();
+            var wait = this.asyncSemaphore.WaitAsync();
             if (wait.IsCompleted)
             {
-                return lockRelease;
+                return this.lockRelease;
             }
 
             return wait.ContinueWith(
@@ -39,12 +37,12 @@ namespace Microsoft.Azure.Relay
 
         public Task<LockRelease> LockAsync(CancellationToken cancellationToken)
         {
-            var wait = asyncSemaphore.WaitAsync(cancellationToken);
+            var wait = this.asyncSemaphore.WaitAsync(cancellationToken);
 
             // Note this check is on RanToCompletion; not IsCompleted which could be RanToCompletion, Faulted, or Canceled.
             if (wait.Status == TaskStatus.RanToCompletion)
             {
-                return lockRelease;
+                return this.lockRelease;
             }
 
             // Since we pass the cancellationToken here if it gets cancelled the task returned from 
@@ -74,7 +72,7 @@ namespace Microsoft.Azure.Relay
 
         void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (!this.disposed)
             {
                 if (disposing)
                 {
@@ -91,8 +89,8 @@ namespace Microsoft.Azure.Relay
 
         public struct LockRelease : IDisposable
         {
-            private readonly AsyncLock asyncLockRelease;
-            private bool disposed;
+            readonly AsyncLock asyncLockRelease;
+            bool disposed;
 
             internal LockRelease(AsyncLock release)
             {
@@ -102,19 +100,16 @@ namespace Microsoft.Azure.Relay
 
             public void Dispose()
             {
-                Dispose(true);
+                this.Dispose(true);
             }
 
             void Dispose(bool disposing)
             {
-                if (!disposed)
+                if (!this.disposed)
                 {
                     if (disposing)
                     {
-                        if (asyncLockRelease != null)
-                        {
-                            asyncLockRelease.asyncSemaphore.Release();
-                        }
+                        this.asyncLockRelease?.asyncSemaphore.Release();
                     }
 
                     this.disposed = true;

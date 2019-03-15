@@ -10,10 +10,10 @@ namespace Microsoft.Azure.Relay
     /// </summary>
     public sealed class TrackingContext
     {
-        static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         internal const string TrackingIdName = "TrackingId";
         const string AddressName = "Address";
         const string TimestampName = "Timestamp";
+        static readonly int GuidStringLength = Guid.Empty.ToString().Length;
         string cachedToString;
 
         TrackingContext(Guid activityId, string trackingId, string address)
@@ -132,7 +132,7 @@ namespace Microsoft.Azure.Relay
         /// Ensures the given string contains a TrackingId. If one is already present, nothing occurs.
         /// Otherwise TrackingId, Timestamp, and if present, SystemTracker are added.
         /// </summary>
-        internal string CreateTrackableErrorMessage(string exceptionMessage)
+        internal string EnsureTrackableMessage(string exceptionMessage)
         {
             if (string.IsNullOrEmpty(exceptionMessage) || exceptionMessage.IndexOf(TrackingIdName, StringComparison.Ordinal) == -1)
             {

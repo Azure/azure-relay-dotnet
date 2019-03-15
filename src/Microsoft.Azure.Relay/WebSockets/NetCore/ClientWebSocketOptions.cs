@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Threading;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocketOptions.cs
-    sealed class ClientWebSocketOptions
+    sealed class ClientWebSocketOptions : IClientWebSocketOptions
     {
         private bool _isReadOnly; // After ConnectAsync is called the options cannot be modified.
         private readonly List<string> _requestedSubProtocols;

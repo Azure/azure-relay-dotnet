@@ -54,7 +54,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (Exception exception) when (!Fx.IsFatal(exception) && !(exception is RelayException))
             {
-                throw WebSocketExceptionHelper.ConvertToRelayContract(exception);
+                throw WebSocketExceptionHelper.ConvertToRelayContract(exception, null);
             }
             finally
             {

@@ -4,22 +4,20 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Net;
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     /// <summary>
     /// Provides a client for initiating new send-side HybridConnections.
     /// </summary>
     public class HybridConnectionClient
     {
-        // Currently 64K
         const int DefaultConnectionBufferSize = 64 * 1024;
-        readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(70);
+        static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(70);
 
         /// <summary>
         /// Create a new HybridConnectionClient instance for initiating HybridConnections where no client authentication is required.
@@ -136,6 +134,12 @@ namespace Microsoft.Azure.Relay
         public TimeSpan OperationTimeout { get; set; }
 
         /// <summary>
+        /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool UseBuiltInClientWebSocket { get; set; }
+
+        /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         int ConnectionBufferSize { get; set; }
@@ -143,16 +147,24 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Establishes a new send-side HybridConnection and returns the Stream.
         /// </summary>
-        public async Task<HybridConnectionStream> CreateConnectionAsync()
+        public Task<HybridConnectionStream> CreateConnectionAsync()
+        {
+            return CreateConnectionAsync(null);
+        }
+
+        /// <summary>
+        /// Establishes a new send-side HybridConnection and returns the Stream.
+        /// </summary>
+        public async Task<HybridConnectionStream> CreateConnectionAsync(IDictionary<string, string> requestHeaders)
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
             string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext + ")";
             var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
+            var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
             try
-            {
-                var webSocket = new ClientWebSocket();
+            {                
                 webSocket.Options.Proxy = this.Proxy;
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
@@ -165,6 +177,14 @@ namespace Microsoft.Azure.Relay
                     var token = await this.TokenProvider.GetTokenAsync(audience, TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
                     RelayEventSource.Log.GetTokenStop(traceSource, token.ExpiresAtUtc);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
+                }
+
+                if (requestHeaders != null)
+                {
+                    foreach (KeyValuePair<string, string> header in requestHeaders)
+                    {
+                        webSocket.Options.SetRequestHeader(header.Key, header.Value);
+                    }
                 }
 
                 // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$hc/endpoint1?sb-hc-action=connect&sb-hc-id=E2E_TRACKING_ID"
@@ -182,11 +202,13 @@ namespace Microsoft.Azure.Relay
                 }
 
                 RelayEventSource.Log.ObjectConnected(traceSource, trackingContext);
-                return new WebSocketStream(webSocket, trackingContext);
+                return new WebSocketStream(webSocket.WebSocket, trackingContext);
             }
             catch (WebSocketException wsException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(wsException), traceSource);
+                throw RelayEventSource.Log.ThrowingException(
+                    WebSocketExceptionHelper.ConvertToRelayContract(wsException, trackingContext, webSocket.Response, isListener: false),
+                    traceSource);
             }
         }
 
@@ -256,6 +278,7 @@ namespace Microsoft.Azure.Relay
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = operationTimeout;
             this.Proxy = WebRequest.DefaultWebProxy;
+            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
         }
     }
 }

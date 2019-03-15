@@ -86,7 +86,7 @@ namespace Microsoft.Azure.Relay.WebSockets
         public Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) =>
             _webSocket.CloseOutputAsync(closeStatus, statusDescription, cancellationToken);
 
-        public async Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken, ClientWebSocketOptions options)
+        public async Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken, ClientWebSocket clientWebSocket, ClientWebSocketOptions options)
         {
             // TODO #14480 : Not currently implemented, or explicitly ignored:
             // - ClientWebSocketOptions.UseDefaultCredentials
@@ -97,12 +97,11 @@ namespace Microsoft.Azure.Relay.WebSockets
             CancellationTokenRegistration registration = cancellationToken.Register(s => ((WebSocketHandle)s).Abort(), this);
             try
             {
-
                 Socket connectedSocket;
                 Stream stream;
-                if (options.Proxy != null && options.Proxy != WebRequest.DefaultWebProxy)
+                Uri proxyUri = options.Proxy != null && options.Proxy != WebRequest.DefaultWebProxy ? options.Proxy.GetProxy(uri) : null;
+                if (proxyUri != null)
                 {
-                    Uri proxyUri = options.Proxy.GetProxy(uri);
                     connectedSocket = await ConnectSocketAsync(proxyUri.Host, proxyUri.Port, cancellationToken).ConfigureAwait(false);
                     stream = new AsyncEventArgsNetworkStream(connectedSocket);
                     await ConnectWithProxyAsync(uri, options, stream, cancellationToken).ConfigureAwait(false);
@@ -134,7 +133,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                 await stream.WriteAsync(requestHeader, 0, requestHeader.Length, cancellationToken).ConfigureAwait(false);
 
                 // Parse the response and store our state for the remainder of the connection
-                string subprotocol = await ParseAndValidateConnectResponseAsync(stream, options, secKeyAndSecWebSocketAccept.Value, cancellationToken).ConfigureAwait(false);
+                string subprotocol = await ParseAndValidateConnectResponseAsync(stream, clientWebSocket, options, secKeyAndSecWebSocketAccept.Value, cancellationToken).ConfigureAwait(false);
 
                 _webSocket = ManagedWebSocket.CreateFromConnectedStream(
                     stream, false, subprotocol, options.KeepAliveInterval, options.ReceiveBufferSize, options.Buffer);
@@ -253,7 +252,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                         int colon = line.IndexOf(':');
                         if (colon == -1 || colon == line.Length - 1)
                         {
-                            throw new WebSocketException(SR.net_WebSockets_InvalidResponseHeader);
+                            throw new WebSocketException(SR.Format(SR.net_WebSockets_InvalidResponseHeader, "Proxy-Authenticate", line));
                         }
 
                         string authenticateString = line.Substring(colon + 1);
@@ -268,7 +267,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                         int colon = line.IndexOf(':');
                         if (colon == -1 || colon == line.Length - 1)
                         {
-                            throw new WebSocketException(SR.net_WebSockets_InvalidResponseHeader);
+                            throw new WebSocketException(SR.Format(SR.net_WebSockets_InvalidResponseHeader, "Content-Length", line));
                         }
 
                         int.TryParse(line.Substring(colon + 1), out contentLength);
@@ -278,7 +277,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                         int nextValidIndex = line.IndexOf(':') + 1;
                         if (nextValidIndex < line.Length && line.SubstringTrim(nextValidIndex).Equals("chunked", StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                            throw new WebSocketException(SR.net_webstatus_ConnectFailure + " " + line);
                         }
                     }
                 }
@@ -436,7 +435,9 @@ namespace Microsoft.Azure.Relay.WebSockets
         internal static int SkipWhitespace(string line, int startIndex)
         {
             if (startIndex < line.Length && char.IsWhiteSpace(line[startIndex]))
+            {
                 startIndex++;
+            }
 
             return startIndex;
         }
@@ -540,6 +541,11 @@ namespace Microsoft.Azure.Relay.WebSockets
 
                 if (proxyAuth != null)
                 {
+                    if (options.Proxy.Credentials == null)
+                    {
+                        throw new WebSocketException(SR.net_WebSockets_proxyauthentication);
+                    }
+
                     var proxyUri = options.Proxy.GetProxy(uri);
                     if (proxyAuth.Scheme.Equals("basic", StringComparison.OrdinalIgnoreCase))
                     {
@@ -590,12 +596,13 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         /// <summary>Read and validate the connect response headers from the server.</summary>
         /// <param name="stream">The stream from which to read the response headers.</param>
+        /// <param name="webSocket">The client web socket.</param>
         /// <param name="options">The options used to configure the websocket.</param>
         /// <param name="expectedSecWebSocketAccept">The expected value of the Sec-WebSocket-Accept header.</param>
         /// <param name="cancellationToken">The CancellationToken to use to cancel the websocket.</param>
         /// <returns>The agreed upon subprotocol with the server, or null if there was none.</returns>
         private async Task<string> ParseAndValidateConnectResponseAsync(
-            Stream stream, ClientWebSocketOptions options, string expectedSecWebSocketAccept, CancellationToken cancellationToken)
+            Stream stream, ClientWebSocket webSocket, ClientWebSocketOptions options, string expectedSecWebSocketAccept, CancellationToken cancellationToken)
         {
             // Read the first line of the response
             string statusLine = await ReadResponseHeaderLineAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -605,24 +612,41 @@ namespace Microsoft.Azure.Relay.WebSockets
             // an empty status line, treat it as a connect failure.
             if (string.IsNullOrEmpty(statusLine))
             {
-                throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                // "The response status line value '' is invalid."
+                throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_ResponseStatusInvalid, string.Empty));
             }
 
-            const string ExpectedStatusStart = "HTTP/1.1 ";
-            const string ExpectedStatusStatWithCode = "HTTP/1.1 101"; // 101 == SwitchingProtocols
+            const string ExpectedStatusVersion = "HTTP/1.1";
+            const HttpStatusCode ExpectedStatusCode = HttpStatusCode.SwitchingProtocols;
+            webSocket.Response = new HttpResponseMessage();
+            string[] statusLineParts = statusLine.Split(new[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
+            string statusVerion = statusLineParts[0];
 
-            // If the status line doesn't begin with "HTTP/1.1" or isn't long enough to contain a status code, fail.
-            if (!statusLine.StartsWith(ExpectedStatusStart, StringComparison.Ordinal) || statusLine.Length < ExpectedStatusStatWithCode.Length)
+            // If the status line doesn't begin with "HTTP/1.1", fail.
+            if (!string.Equals(statusVerion, ExpectedStatusVersion, StringComparison.Ordinal) || statusLineParts.Length < 2)
             {
-                throw new WebSocketException(WebSocketError.HeaderError);
+                // "The response status line value 'HTTP/1.0' is invalid."
+                throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_ResponseStatusInvalid, statusLine));
+            }
+        
+            int statusCode;
+            if (!int.TryParse(statusLineParts[1], out statusCode))
+            {
+                // "The response status line value 'HTTP/1.0 BADSTUFF' is invalid."
+                throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_ResponseStatusInvalid, statusLine));
+            }
+
+            webSocket.Response.StatusCode = (HttpStatusCode)statusCode;
+            if (statusLineParts.Length > 2)
+            {
+                webSocket.Response.ReasonPhrase = statusLineParts[2];
             }
 
             // If the status line doesn't contain a status code 101, or if it's long enough to have a status description
             // but doesn't contain whitespace after the 101, fail.
-            if (!statusLine.StartsWith(ExpectedStatusStatWithCode, StringComparison.Ordinal) ||
-                (statusLine.Length > ExpectedStatusStatWithCode.Length && !char.IsWhiteSpace(statusLine[ExpectedStatusStatWithCode.Length])))
+            if (webSocket.Response.StatusCode != ExpectedStatusCode)
             {
-                throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                throw CreateExceptionForUnexpectedStatus(webSocket.Response);
             }
 
             // Read each response header. Be liberal in parsing the response header, treating
@@ -636,11 +660,13 @@ namespace Microsoft.Azure.Relay.WebSockets
                 int colonIndex = line.IndexOf(':');
                 if (colonIndex == -1)
                 {
-                    throw new WebSocketException(WebSocketError.HeaderError);
+                    // $"The '{line}' header value '(Missing separator)' is invalid."
+                    throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_InvalidResponseHeader, line, "(Missing separator)"));
                 }
 
                 string headerName = line.SubstringTrim(0, colonIndex);
                 string headerValue = line.SubstringTrim(colonIndex + 1);
+                webSocket.Response.Headers.Add(headerName, headerValue);
 
                 // The Connection, Upgrade, and SecWebSocketAccept headers are required and with specific values.
                 ValidateAndTrackHeader(HttpKnownHeaderNames.Connection, "Upgrade", headerName, headerValue, ref foundConnection);
@@ -663,9 +689,12 @@ namespace Microsoft.Azure.Relay.WebSockets
                     subprotocol = newSubprotocol;
                 }
             }
+
             if (!foundUpgrade || !foundConnection || !foundSecWebSocketAccept)
             {
-                throw new WebSocketException(SR.net_webstatus_ConnectFailure);
+                // The response header 'Upgrade|Connection|Sec-WebSocket-Accept' was not found.
+                string missingHeaderName = !foundUpgrade ? HttpKnownHeaderNames.Upgrade : !foundConnection ? HttpKnownHeaderNames.Connection : HttpKnownHeaderNames.SecWebSocketAccept;
+                throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_ResponseHeaderMissing, missingHeaderName));
             }
 
             return subprotocol;
@@ -698,7 +727,7 @@ namespace Microsoft.Azure.Relay.WebSockets
             {
                 if (isTargetHeader)
                 {
-                    throw new WebSocketException(SR.Format(SR.net_webstatus_ConnectFailure));
+                    throw new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_webstatus_ConnectFailure + $"(Duplicate '{foundHeaderName}' Header)"));
                 }
             }
         }
@@ -755,6 +784,15 @@ namespace Microsoft.Azure.Relay.WebSockets
                 sb.Clear();
                 t_cachedStringBuilder = sb;
             }
+        }
+
+        static WebSocketException CreateExceptionForUnexpectedStatus(HttpResponseMessage response)
+        {
+            // The server returned status code '401 Authentication Failure ...' when status code '101' was expected.
+            var webSocketException = new WebSocketException(
+                WebSocketError.HeaderError,
+                SR.Format(SR.net_WebSockets_Connect101Expected, (int)response.StatusCode + " " + response.ReasonPhrase));
+            return webSocketException;
         }
     }
 }

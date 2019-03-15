@@ -126,9 +126,6 @@
   <data name="EntityClosedOrAborted" xml:space="preserve">
     <value>The operation cannot be performed because the entity has been closed or aborted.</value>
   </data>
-  <data name="InstanceAlreadyRunning" xml:space="preserve">
-    <value>This '{0}' instance has already been started once. To start another instance, please create a new '{0}' object and start that.</value>
-  </data>
   <data name="InvalidAsyncResult" xml:space="preserve">
     <value>The specified Async result object is null or invalid.</value>
   </data>
@@ -181,7 +178,7 @@
     <value>Only Uris starting with 'ws://' or 'wss://' are supported.</value>
   </data>
   <data name="net_webstatus_ConnectFailure" xml:space="preserve">
-    <value>Unable to connect to the remote server</value>
+    <value>Unable to connect to the remote server.</value>
   </data>
   <data name="ObjectClosedOrAborted" xml:space="preserve">
     <value>The operation cannot be performed because the object has been closed or aborted.</value>
@@ -299,5 +296,20 @@
   </data>
   <data name="InvalidType" xml:space="preserve">
     <value>An invalid type was received. Expected '{0}', Actual '{1}'.</value>
+  </data>
+  <data name="net_WebSockets_ResponseStatusInvalid" xml:space="preserve">
+    <value>The response status line value '{0}' is invalid.</value>
+  </data>
+  <data name="net_WebSockets_ResponseHeaderMissing" xml:space="preserve">
+    <value>The response header '{0}' was not found.</value>
+  </data>
+  <data name="RequestHandlerMissing" xml:space="preserve">
+    <value>The listener RequestHandler has not been configured.</value>
+  </data>
+  <data name="RequestHandlerException" xml:space="preserve">
+    <value>The listener RequestHandler threw an exception. See listener logs for more details.</value>
+  </data>
+  <data name="net_WebSockets_proxyauthentication" xml:space="preserve">
+    <value>Connecting to proxy requires credentials.</value>
   </data>
 </root>

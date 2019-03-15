@@ -34,7 +34,7 @@ See our [Contribution Guidelines](./.github/CONTRIBUTING.md).
 
 ## Samples
 
-For Relay Hybrid Connections samples, see the [azure/azure-relay](https://github.com/Azure/azure-relay/tree/master/samples/Hybrid%20Connections) service repository.
+For Relay Hybrid Connections samples, see the [azure/azure-relay](https://github.com/Azure/azure-relay/tree/master/samples/hybrid-connections) service repository.
 
 ## Using Hybrid Connections from C# 
 

@@ -9,24 +9,24 @@ namespace Microsoft.Azure.Relay
     /// <summary>Provides runtime information about a HybridConnection.</summary>
     [DataContract(Name = "HybridConnectionDescription", Namespace = RelayConstants.ManagementNamespace)]
     public class HybridConnectionRuntimeInformation
-#if SERIALIZATION
         : IExtensibleDataObject
-#endif
     {
+#pragma warning disable 0649 // Field 'xxx' is never assigned to - assigned through serialization
         [DataMember(Name = "CreatedAt", IsRequired = false, EmitDefaultValue = false, Order = 2)]
-        DateTime? createdAt { get; set; }
+        DateTime? createdAt;
 
         [DataMember(Name = "UpdatedAt", IsRequired = false, EmitDefaultValue = false, Order = 3)]
-        DateTime? updatedAt { get; set; }
+        DateTime? updatedAt;
 
         [DataMember(Name = "RequiresClientAuthorization", IsRequired = false, EmitDefaultValue = false, Order = 4)]
-        bool? requiresClientAuthorization { get; set; }
+        bool? requiresClientAuthorization;
 
         [DataMember(Name = "UserMetadata", IsRequired = false, EmitDefaultValue = false, Order = 8)]
-        string userMetadata { get; set; }
+        string userMetadata;
 
         [DataMember(Name = "ListenerCount", IsRequired = false, EmitDefaultValue = false, Order = 9)]
-        int? listenerCount { get; set; }
+        int? listenerCount;
+#pragma warning restore 0649 // Field 'xxx' is never assigned to
 
         internal HybridConnectionRuntimeInformation()
         {
@@ -65,8 +65,6 @@ namespace Microsoft.Azure.Relay
             get { return this.userMetadata; }
         }
 
-#if SERIALIZATION
         ExtensionDataObject IExtensibleDataObject.ExtensionData { get; set; }
-#endif
     }
 }

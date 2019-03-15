@@ -47,16 +47,9 @@ namespace Microsoft.Azure.Relay
         }
 
         // Users like ServiceModel can hook this abort ICommunicationObject or handle other non-IDisposable objects
-        public Action<T> DisposeItemCallback
-        {
-            get;
-            set;
-        }
+        public Action<T> DisposeItemCallback { get; set; }
 
-        object ThisLock
-        {
-            get { return this.itemQueue; }
-        }
+        object ThisLock => this.itemQueue;
 
         public Task<T> DequeueAsync(CancellationToken cancellationToken)
         {
@@ -142,8 +135,8 @@ namespace Microsoft.Azure.Relay
             IQueueReader reader = null;
             Item item = new Item();
             IQueueReader[] outstandingReaders = null;
-            IQueueWaiter[] waiters = null;
-            bool itemAvailable = true;
+            IQueueWaiter[] waiters;
+            bool itemAvailable;
 
             lock (ThisLock)
             {
@@ -197,7 +190,7 @@ namespace Microsoft.Azure.Relay
         // InputQueue lock is not held during the callback.  However, the user code will
         // not be notified of the item being available until the callback returns.  If you
         // are not sure if the callback will block for a long time, then first call 
-        // IOThreadScheduler.ScheduleCallback to get to a "safe" thread.
+        // ActionItem.Schedule to get to a "safe" thread.
         public void EnqueueAndDispatch(T item, Action dequeuedCallback)
         {
             EnqueueAndDispatch(item, dequeuedCallback, true);
@@ -297,7 +290,7 @@ namespace Microsoft.Azure.Relay
                     InvokeDequeuedCallback(item.DequeuedCallback);
                 }
             }
-        }        
+        }
 
         void DisposeItem(Item item)
         {
@@ -387,8 +380,8 @@ namespace Microsoft.Azure.Relay
             bool disposeItem = false;
             IQueueReader reader = null;
             bool dispatchLater = false;
-            IQueueWaiter[] waiters = null;
-            bool itemAvailable = true;
+            IQueueWaiter[] waiters;
+            bool itemAvailable;
 
             lock (ThisLock)
             {
@@ -421,8 +414,9 @@ namespace Microsoft.Azure.Relay
                         }
                     }
                 }
-                else // queueState == QueueState.Closed || queueState == QueueState.Shutdown
+                else
                 {
+                    // queueState == QueueState.Closed || queueState == QueueState.Shutdown
                     disposeItem = true;
                 }
             }
@@ -470,11 +464,9 @@ namespace Microsoft.Azure.Relay
                         itemQueue.EnqueueAvailableItem(item);
                         return false;
                     }
-                    else
-                    {
-                        itemQueue.EnqueuePendingItem(item);
-                        return true;
-                    }
+
+                    itemQueue.EnqueuePendingItem(item);
+                    return true;
                 }
             }
 
@@ -547,10 +539,6 @@ namespace Microsoft.Azure.Relay
 
         struct Item
         {
-            Action dequeuedCallback;
-            Exception exception;
-            T value;
-
             public Item(T value, Action dequeuedCallback)
                 : this(value, null, dequeuedCallback)
             {
@@ -563,34 +551,25 @@ namespace Microsoft.Azure.Relay
 
             Item(T value, Exception exception, Action dequeuedCallback)
             {
-                this.value = value;
-                this.exception = exception;
-                this.dequeuedCallback = dequeuedCallback;
+                this.Value = value;
+                this.Exception = exception;
+                this.DequeuedCallback = dequeuedCallback;
             }
 
-            public Action DequeuedCallback
-            {
-                get { return this.dequeuedCallback; }
-            }
+            public Action DequeuedCallback { get; }
 
-            public Exception Exception
-            {
-                get { return this.exception; }
-            }
+            public Exception Exception { get; }
 
-            public T Value
-            {
-                get { return this.value; }
-            }
+            public T Value { get; }
 
             public T GetValue()
             {
-                if (this.exception != null)
+                if (this.Exception != null)
                 {
-                    throw RelayEventSource.Log.ThrowingException(this.exception, this, EventLevel.Informational);
+                    throw RelayEventSource.Log.ThrowingException(this.Exception, this, EventLevel.Informational);
                 }
 
-                return this.value;
+                return this.Value;
             }
         }
 
@@ -667,20 +646,11 @@ namespace Microsoft.Azure.Relay
                 this.items = new Item[1];
             }
 
-            public bool HasAnyItem
-            {
-                get { return this.totalCount > 0; }
-            }
+            public bool HasAnyItem => this.totalCount > 0;
 
-            public bool HasAvailableItem
-            {
-                get { return this.totalCount > this.pendingCount; }
-            }
+            public bool HasAvailableItem => this.totalCount > this.pendingCount;
 
-            public int ItemCount
-            {
-                get { return this.totalCount; }
-            }
+            public int ItemCount => this.totalCount;
 
             public Item DequeueAnyItem()
             {

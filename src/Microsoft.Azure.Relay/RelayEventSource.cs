@@ -480,6 +480,12 @@ namespace Microsoft.Azure.Relay
             this.WriteEvent(40310, connection, status);
         }
 
+        [Event(40311, Level = EventLevel.Warning, Message = "HybridHttpConnection: No RequestHandler is configured on the listener")]
+        public void HybridHttpConnectionMissingRequestHandler()
+        {
+            this.WriteEvent(40311);
+        }
+
         [NonEvent]
         public void HybridHttpReadRendezvousValue(object source, string value)
         {

@@ -116,7 +116,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 
@@ -155,7 +155,7 @@ namespace Microsoft.Azure.Relay
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 
@@ -173,12 +173,15 @@ namespace Microsoft.Azure.Relay
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancelSource.Token, cancelToken))
                 {
                     await this.webSocket.SendAsync(
-                        new ArraySegment<byte>(buffer, offset, count), this.WriteMode == WriteMode.Binary ? WebSocketMessageType.Binary : WebSocketMessageType.Text, true, linkedCancelSource.Token).ConfigureAwait(false);
+                        new ArraySegment<byte>(buffer, offset, count),
+                        this.WriteMode == WriteMode.Binary ? WebSocketMessageType.Binary : WebSocketMessageType.Text,
+                        true,
+                        linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
             catch (WebSocketException webSocketException)
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
             }
         }
 

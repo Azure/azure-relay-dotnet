@@ -155,6 +155,100 @@ namespace Microsoft.Azure.Relay.UnitTests
 
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task RequestHeadersTest(EndpointTestType endpointTestType)
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListener(endpointTestType);
+                var client = GetHybridConnectionClient(endpointTestType);
+
+                var listenerRequestTcs = new TaskCompletionSource<IDictionary<string, string>>();
+                listener.AcceptHandler = (context) =>
+                {
+                    try
+                    {
+                        var headers = new Dictionary<string, string>();
+                        foreach (string headerName in context.Request.Headers.AllKeys)
+                        {
+                            headers[headerName] = context.Request.Headers[headerName];
+                        }
+
+                        listenerRequestTcs.SetResult(headers);
+                        return Task.FromResult(true);
+                    }
+                    catch (Exception e)
+                    {
+                        listenerRequestTcs.TrySetException(e);
+                        throw;
+                    }
+                };
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                const string ExpectedRequestHeaderName = "CustomHeader1";
+                const string ExpectedRequestHeaderValue = "Some value here; other-value/here.";
+
+                var clientRequestHeaders = new Dictionary<string, string>();
+                clientRequestHeaders[ExpectedRequestHeaderName] = ExpectedRequestHeaderValue;
+                var clientStream = await client.CreateConnectionAsync(clientRequestHeaders);
+
+                var listenerStream = await listener.AcceptConnectionAsync();
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
+
+                Assert.True(listenerRequestTcs.Task.Wait(TimeSpan.FromSeconds(5)), "AcceptHandler should have been invoked by now.");
+                IDictionary<string, string> listenerRequestHeaders = await listenerRequestTcs.Task;
+                Assert.True(listenerRequestHeaders.ContainsKey(ExpectedRequestHeaderName), "Expected header name should be present.");
+                Assert.Equal(ExpectedRequestHeaderValue, listenerRequestHeaders[ExpectedRequestHeaderName]);
+
+                byte[] sendBuffer = this.CreateBuffer(1025, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+                await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
+
+                byte[] readBuffer = new byte[sendBuffer.Length];
+                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, sendBuffer.Length, TimeSpan.FromSeconds(30));
+                Assert.Equal(sendBuffer, readBuffer);
+
+                var clientStreamCloseTask = clientStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                await listenerStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                await clientStreamCloseTask;
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task RequestHeadersNegativeTest()
+        {
+            async Task CheckBadHeaderAsync(HybridConnectionClient client, string headerName, string headerValue)
+            {
+                TestUtility.Log($"CheckBadHeader: \"{headerName}\": \"{headerValue}\"");
+                await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+                {
+                    var clientRequestHeaders = new Dictionary<string, string>();
+                    clientRequestHeaders[headerName] = headerValue;
+                    return client.CreateConnectionAsync(clientRequestHeaders);
+                });
+            }
+
+            var hybridConnectionClient = GetHybridConnectionClient(EndpointTestType.Unauthenticated);
+            await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, string.Empty);
+            await CheckBadHeaderAsync(hybridConnectionClient, null, null);
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad\nHeader", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad:Header", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\rValue");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\nValue");
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
         async Task WriteLargeDataSetTest(EndpointTestType endpointTestType, int kilobytesToSend = 1024)
         {
             HybridConnectionListener listener = null;
@@ -320,8 +414,15 @@ namespace Microsoft.Azure.Relay.UnitTests
                 listener = new HybridConnectionListener(fakeEndpointConnectionString);
                 var client = new HybridConnectionClient(fakeEndpointConnectionString);
 
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+                TestUtility.Log($"Opening Listener");
+                var relayException = await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
+                TestUtility.Log($"Received Exception {relayException.ToStringWithoutCallstack()}");
+                Assert.True(relayException.IsTransient, "Listener.Open() should return a transient Exception");
+
+                TestUtility.Log($"Opening Client");
+                relayException = await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
+                TestUtility.Log($"Received Exception {relayException.ToStringWithoutCallstack()}");
+                Assert.True(relayException.IsTransient, "Client.Open() should return a transient Exception");
             }
             finally
             {
@@ -330,7 +431,24 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Fact, DisplayTestMethodName]
-        async Task NonExistantHCEntityTest()
+        async Task ClientNonExistantHybridConnectionTest()
+        {
+            TestUtility.Log("Setting ConnectionStringBuilder.EntityPath to a new GUID");
+            var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
+            {
+                EntityPath = Guid.NewGuid().ToString()
+            };
+
+            var client = new HybridConnectionClient(fakeEndpointConnectionStringBuilder.ToString());
+
+            // Endpoint does not exist. TrackingId:GUID_G52, SystemTracker:sb://contoso.servicebus.windows.net/GUID, Timestamp:5/7/2018 5:51:25 PM
+            var exception = await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
+            Assert.Contains("Endpoint does not exist", exception.Message);
+            Assert.Contains(fakeEndpointConnectionStringBuilder.EntityPath, exception.Message);
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ListenerNonExistantHybridConnectionTest()
         {
             HybridConnectionListener listener = null;
             try
@@ -340,22 +458,68 @@ namespace Microsoft.Azure.Relay.UnitTests
                 {
                     EntityPath = Guid.NewGuid().ToString()
                 };
-                var fakeEndpointConnectionString = fakeEndpointConnectionStringBuilder.ToString();
 
-                listener = new HybridConnectionListener(fakeEndpointConnectionString);
-                var client = new HybridConnectionClient(fakeEndpointConnectionString);
-#if NET46
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<EndpointNotFoundException>(() => client.CreateConnectionAsync());
-#else
-                await Assert.ThrowsAsync<RelayException>(() => listener.OpenAsync());
-                await Assert.ThrowsAsync<RelayException>(() => client.CreateConnectionAsync());
-#endif
+                listener = new HybridConnectionListener(fakeEndpointConnectionStringBuilder.ToString());
+
+                // Endpoint does not exist. TrackingId:Guid_G10, SystemTracker:sb://contoso.servicebus.windows.net/d0c500e7-2ad0-4e36-bf40-0fe2431a394e, Timestamp:5/7/2018 5:47:21 PM
+                var exception = await Assert.ThrowsAsync<EndpointNotFoundException>(() => listener.OpenAsync());
+                Assert.Contains("Endpoint does not exist", exception.Message);
+                Assert.Contains(fakeEndpointConnectionStringBuilder.EntityPath, exception.Message);
             }
             finally
             {
                 await this.SafeCloseAsync(listener);
             }
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ListenerAuthenticationFailureTest()
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                var badAuthConnectionString = new RelayConnectionStringBuilder(this.ConnectionString) { EntityPath = Constants.AuthenticatedEntityPath };
+                if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessKeyName))
+                {
+                    badAuthConnectionString.SharedAccessKey += "BAD";
+                }
+                else if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessSignature))
+                {
+                    badAuthConnectionString.SharedAccessSignature += "BAD";
+                }
+
+                listener = new HybridConnectionListener(badAuthConnectionString.ToString());
+
+                // The token has an invalid signature. TrackingId:[Guid]_G3, SystemTracker:sb://contoso.servicebus.windows.net/authenticated, Timestamp:5/7/2018 5:20:05 PM
+                var exception = await Assert.ThrowsAsync<AuthorizationFailedException>(() => listener.OpenAsync());
+                Assert.Contains("token has an invalid signature", exception.Message);
+                Assert.Contains(badAuthConnectionString.EntityPath, exception.Message, StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Fact, DisplayTestMethodName]
+        async Task ClientAuthenticationFailureTest()
+        {
+            var badAuthConnectionString = new RelayConnectionStringBuilder(this.ConnectionString) { EntityPath = Constants.AuthenticatedEntityPath };
+            if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessKeyName))
+            {
+                badAuthConnectionString.SharedAccessKey += "BAD";
+            }
+            else if (!string.IsNullOrEmpty(badAuthConnectionString.SharedAccessSignature))
+            {
+                badAuthConnectionString.SharedAccessSignature += "BAD";
+            }
+
+            var client = new HybridConnectionClient(badAuthConnectionString.ToString());
+
+            // The token has an invalid signature. TrackingId:[Guid]_G63, SystemTracker:sb://contoso.servicebus.windows.net/authenticated, Timestamp:5/7/2018 5:20:05 PM
+            var exception = await Assert.ThrowsAsync<AuthorizationFailedException>(() => client.CreateConnectionAsync());
+            Assert.Contains("token", exception.Message);
+            Assert.Contains(badAuthConnectionString.EntityPath, exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Theory, DisplayTestMethodName]

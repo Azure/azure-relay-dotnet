@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             Unauthenticated
         }
 
-        public static IEnumerable<object> AuthenticationTestPermutations => new object[]
+        public static IEnumerable<object[]> AuthenticationTestPermutations => new object[][]
         {
             new object[] { EndpointTestType.Authenticated },
             new object[] { EndpointTestType.Unauthenticated }
@@ -70,7 +70,13 @@ namespace Microsoft.Azure.Relay.UnitTests
             return new HybridConnectionListener(GetConnectionString(endpointTestType));
         }
 
-        public static void LogHttpRequest(HttpRequestMessage httpRequest, HttpClient httpClient, bool showBody = true)
+        public static void LogRequestLine(HttpRequestMessage httpRequest, HttpClient httpClient)
+        {
+            string requestUri = $"{httpClient?.BaseAddress}{httpRequest.RequestUri}";
+            TestUtility.Log($"Request: {httpRequest.Method} {requestUri} HTTP/{httpRequest.Version}");
+        }
+
+        public static void LogRequest(HttpRequestMessage httpRequest, HttpClient httpClient, bool showBody = true)
         {
             TestUtility.Log("Sending Request:");
             string requestUri = $"{httpClient?.BaseAddress}{httpRequest.RequestUri}";
@@ -93,7 +99,12 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        public static void LogHttpResponse(HttpResponseMessage httpResponse, bool showBody = true)
+        public static void LogResponseLine(HttpResponseMessage httpResponse)
+        {
+            TestUtility.Log($"Response: HTTP/{httpResponse.Version} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");
+        }
+
+        public static void LogResponse(HttpResponseMessage httpResponse, bool showBody = true)
         {
             TestUtility.Log("Received Response:");
             TestUtility.Log($"HTTP/{httpResponse.Version} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");

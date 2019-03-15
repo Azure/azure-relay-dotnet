@@ -9,9 +9,6 @@ namespace Microsoft.Azure.Relay
     using System.Net.WebSockets;
     using System.Threading;
     using System.Threading.Tasks;
-#if CUSTOM_CLIENTWEBSOCKET
-    using ClientWebSocket = Microsoft.Azure.Relay.WebSockets.ClientWebSocket;
-#endif
 
     sealed class HybridHttpConnection : ITraceSource
     {
@@ -20,14 +17,14 @@ namespace Microsoft.Azure.Relay
         readonly HybridConnectionListener listener;
         readonly WebSocket controlWebSocket;
         readonly Uri rendezvousAddress;
-        ClientWebSocket rendezvousWebSocket;
+        WebSocket rendezvousWebSocket;
 
         HybridHttpConnection(HybridConnectionListener listener, WebSocket controlWebSocket, string rendezvousAddress)
         {
             this.listener = listener;
             this.controlWebSocket = controlWebSocket;
             this.rendezvousAddress = new Uri(rendezvousAddress);
-            this.TrackingContext = GetTrackingContext();
+            this.TrackingContext = this.GetTrackingContext();
             RelayEventSource.Log.HybridHttpRequestStarting(this.TrackingContext);
         }
 
@@ -48,7 +45,7 @@ namespace Microsoft.Azure.Relay
                 requestAndStream = await hybridHttpConnection.ReceiveRequestBodyOverControlAsync(requestCommand).ConfigureAwait(false);
             }
 
-            // ContinueAsync runs without blocking the listener control connection:
+            // ProcessFirstRequestAsync runs without blocking the listener control connection:
             Task.Run(() => hybridHttpConnection.ProcessFirstRequestAsync(requestAndStream)).Fork(hybridHttpConnection);
         }
 
@@ -61,7 +58,21 @@ namespace Microsoft.Azure.Relay
         {
             var queryParameters = HybridConnectionUtility.ParseQueryString(this.rendezvousAddress.Query);
             string trackingId = queryParameters[HybridConnectionConstants.Id];
-            return TrackingContext.Create(trackingId, this.rendezvousAddress);
+
+            string path = this.rendezvousAddress.LocalPath;
+            if (path.StartsWith(HybridConnectionConstants.HybridConnectionRequestUri, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(HybridConnectionConstants.HybridConnectionRequestUri.Length);
+            }
+
+            Uri logicalAddress = new UriBuilder()
+            {
+                Scheme = Uri.UriSchemeHttps,
+                Host = this.listener.Address.Host,
+                Path = path,
+            }.Uri;
+
+            return TrackingContext.Create(trackingId, logicalAddress);
         }
 
         async Task ProcessFirstRequestAsync(RequestCommandAndStream requestAndStream)
@@ -183,15 +194,19 @@ namespace Microsoft.Azure.Relay
                 }
                 catch (Exception userException) when (!Fx.IsFatal(userException))
                 {
-                    RelayEventSource.Log.Warning(
-                        listenerContext,
-                        $"The Relayed Listener's custom RequestHandler threw an exception. {listenerContext.TrackingContext}, Exception: {userException}");
+                    RelayEventSource.Log.HandledExceptionAsWarning(this, userException);
+                    listenerContext.Response.StatusCode = HttpStatusCode.InternalServerError;
+                    listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.RequestHandlerException);
+                    listenerContext.Response.CloseAsync().Fork(this);
                     return;
                 }
             }
             else
             {
-                RelayEventSource.Log.HandledExceptionAsWarning(this, new InvalidOperationException("RequestHandler is not set."));
+                RelayEventSource.Log.HybridHttpConnectionMissingRequestHandler();
+                listenerContext.Response.StatusCode = HttpStatusCode.NotImplemented;
+                listenerContext.Response.StatusDescription = this.TrackingContext.EnsureTrackableMessage(SR.RequestHandlerMissing);
+                listenerContext.Response.CloseAsync().Fork(this);
             }
         }
 
@@ -220,7 +235,7 @@ namespace Microsoft.Azure.Relay
                     if (responseCommand.Body && responseBodyStream != null)
                     {
                         buffer = new ArraySegment<byte>(buffer.Array, 0, buffer.Array.Length);
-                        await this.rendezvousWebSocket.SendStreamAsync(responseBodyStream, WebSocketMessageType.Binary, buffer, cancelToken);
+                        await this.rendezvousWebSocket.SendStreamAsync(responseBodyStream, WebSocketMessageType.Binary, buffer, cancelToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -237,8 +252,10 @@ namespace Microsoft.Azure.Relay
             if (this.rendezvousWebSocket == null)
             {                
                 RelayEventSource.Log.HybridHttpCreatingRendezvousConnection(this.TrackingContext);
-                this.rendezvousWebSocket = new ClientWebSocket();
-                await this.rendezvousWebSocket.ConnectAsync(this.rendezvousAddress, cancelToken).ConfigureAwait(false);
+                var clientWebSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
+                clientWebSocket.Options.Proxy = this.listener.Proxy;
+                this.rendezvousWebSocket = clientWebSocket.WebSocket;
+                await clientWebSocket.ConnectAsync(this.rendezvousAddress, cancelToken).ConfigureAwait(false);
             }
         }
 
@@ -250,6 +267,7 @@ namespace Microsoft.Azure.Relay
                 {
                     RelayEventSource.Log.ObjectClosing(this);
                     await this.rendezvousWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NormalClosure", cts.Token).ConfigureAwait(false);
+                    RelayEventSource.Log.ObjectClosed(this);
                 }
             }
         }
@@ -287,7 +305,7 @@ namespace Microsoft.Azure.Relay
                 this.asyncLock = new AsyncLock();
             }
 
-            enum FlushReason { BufferFull, RendezvousExists, Timer, User }
+            enum FlushReason { BufferFull, RendezvousExists, Timer }
 
             public override bool CanRead { get { return false; } }
 
@@ -327,17 +345,19 @@ namespace Microsoft.Azure.Relay
 
             public override void Flush()
             {
-                this.FlushAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                // Nothing to do here. Either:
+                // 1. We're still buffering data to see if it will all fit into a single response on the control connection
+                // - Or -
+                // 2. We've got a rendezvous and each Write[Async] call flushes to the websocket immediately
             }
 
-            public override async Task FlushAsync(CancellationToken cancelToken)
+            public override Task FlushAsync(CancellationToken cancelToken)
             {
-                using (var timeoutCancelSource = new CancellationTokenSource(this.WriteTimeout))
-                using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, timeoutCancelSource.Token))
-                using (await this.asyncLock.LockAsync(linkedCancelSource.Token))
-                {
-                    await this.FlushCoreAsync(FlushReason.User, linkedCancelSource.Token).ConfigureAwait(false);
-                }
+                // Nothing to do here. Either:
+                // 1. We're still buffering data to see if it will all fit into a single response on the control connection
+                // - Or -
+                // 2. We've got a rendezvous and each Write[Async] call flushes to the websocket immediately
+                return TaskEx.CompletedTask;
             }
 
             // The caller of this method must have acquired this.asyncLock
@@ -393,7 +413,7 @@ namespace Microsoft.Azure.Relay
                 RelayEventSource.Log.HybridHttpResponseStreamWrite(this.TrackingContext, count);
                 using (var timeoutCancelSource = new CancellationTokenSource(this.WriteTimeout))
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, timeoutCancelSource.Token))
-                using (await this.asyncLock.LockAsync(linkedCancelSource.Token))
+                using (await this.asyncLock.LockAsync(linkedCancelSource.Token).ConfigureAwait(false))
                 {
                     if (!this.responseCommandSent)
                     {
@@ -422,7 +442,7 @@ namespace Microsoft.Azure.Relay
                             flushReason = FlushReason.BufferFull;
                         }
 
-                        // FlushAsync will rendezvous, send the responseCommand, and any writeBufferStream bytes
+                        // FlushCoreAsync will rendezvous, send the responseCommand, and any writeBufferStream bytes
                         await this.FlushCoreAsync(flushReason, linkedCancelSource.Token).ConfigureAwait(false);
                     }
 
@@ -474,7 +494,7 @@ namespace Microsoft.Azure.Relay
                 {
                     RelayEventSource.Log.ObjectClosing(this);
                     using (var cancelSource = new CancellationTokenSource(this.WriteTimeout))
-                    using (await this.asyncLock.LockAsync(cancelSource.Token))
+                    using (await this.asyncLock.LockAsync(cancelSource.Token).ConfigureAwait(false))
                     {
                         if (!this.responseCommandSent)
                         {
@@ -516,7 +536,7 @@ namespace Microsoft.Azure.Relay
                 try
                 {
                     using (var cancelSource = new CancellationTokenSource(this.WriteTimeout))
-                    using (await this.asyncLock.LockAsync(cancelSource.Token))
+                    using (await this.asyncLock.LockAsync(cancelSource.Token).ConfigureAwait(false))
                     {
                         await this.FlushCoreAsync(FlushReason.Timer, cancelSource.Token).ConfigureAwait(false);
                     }

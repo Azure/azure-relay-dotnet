@@ -6,12 +6,27 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{93B7A5D6-F65E-4C90-9BB7-094C66302766}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8222D593-5AD9-401D-B15C-975EDE77153E}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Relay", "src\Microsoft.Azure.Relay\Microsoft.Azure.Relay.csproj", "{6747D8BD-AC7B-4100-ACE5-E45F14931153}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2C7349A8-BE85-4D88-8788-973914215467}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Relay.UnitTests", "test\Microsoft.Azure.Relay.UnitTests\Microsoft.Azure.Relay.UnitTests.csproj", "{D5315449-B89C-458F-811C-8BA264CA5777}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{B3CFC271-C96A-4887-9189-5864B5BFE4B7}"
+	ProjectSection(SolutionItems) = preProject
+		build\azuredeploy.json = build\azuredeploy.json
+		build\build.ps1 = build\build.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{B4CD2FF5-0BEB-4072-B37B-631EDB8C5CD1}"
+	ProjectSection(SolutionItems) = preProject
+		tools\GetNamespaceInfo.ps1 = tools\GetNamespaceInfo.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,5 +49,9 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{6747D8BD-AC7B-4100-ACE5-E45F14931153} = {93B7A5D6-F65E-4C90-9BB7-094C66302766}
 		{D5315449-B89C-458F-811C-8BA264CA5777} = {2C7349A8-BE85-4D88-8788-973914215467}
+		{B3CFC271-C96A-4887-9189-5864B5BFE4B7} = {8222D593-5AD9-401D-B15C-975EDE77153E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D8FCDD52-1645-49ED-8DE9-20AA541E506E}
 	EndGlobalSection
 EndGlobal

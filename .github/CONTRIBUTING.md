@@ -30,6 +30,10 @@ To open your own pull request, click [here](https://github.com/Azure/azure-relay
 - Make sure you are pointing to the fork and branch that your changes were made in
 - The pull request template that is provided **should be filled out**; this is not something that should just be deleted or ignored when the pull request is created
     - Deleting or ignoring this template will elongate the time it takes for your pull request to be reviewed
+- Please adhere to the guidelines regarding updating style of existing code specified [here](https://github.com/dotnet/corefx/blob/master/Documentation/project-docs/contributing.md#coding-style-changes), namely:
+    - **DO NOT** send PRs for style changes. For example, do not send PRs that are focused on changing usage of Int32 to int.
+    - **DO NOT** send PRs for upgrading code to use newer language features, though it's ok to use newer language features as part of new code that's written. For example, it's ok to use expression-bodied members as part of new code you write, but do not send a PR focused on changing existing properties or methods to use the feature.
+    - **DO** give priority to the current style of the project or file you're changing.
 
 #### General guidelines
 

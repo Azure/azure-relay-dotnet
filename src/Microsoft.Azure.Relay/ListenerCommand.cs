@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Net;
     using System.Runtime.Serialization;
     using System.Runtime.Serialization.Json;
 
@@ -108,7 +107,7 @@ namespace Microsoft.Azure.Relay
             IDictionary<string, string> connectHeaders;
 
             [DataMember(Name = "remoteEndpoint", Order = 3, EmitDefaultValue = false, IsRequired = false)]
-            Endpoint remoteEndpoint { get; set; }
+            Endpoint remoteEndpoint;
 
             [IgnoreDataMember]
             public IDictionary<string, string> ConnectHeaders
@@ -192,7 +191,7 @@ namespace Microsoft.Azure.Relay
             public string Method { get; set; }
 
             [DataMember(Name = "remoteEndpoint", Order = 4, EmitDefaultValue = false, IsRequired = false)]
-            Endpoint remoteEndpoint { get; set; }
+            Endpoint remoteEndpoint;
 
             [DataMember(Name = "requestHeaders", Order = 5, EmitDefaultValue = false, IsRequired = false)]
             IDictionary<string, string> requestHeaders;
