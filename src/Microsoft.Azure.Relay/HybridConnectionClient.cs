@@ -4,6 +4,7 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Net;
     using System.Net.WebSockets;
@@ -146,7 +147,15 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Establishes a new send-side HybridConnection and returns the Stream.
         /// </summary>
-        public async Task<HybridConnectionStream> CreateConnectionAsync()
+        public Task<HybridConnectionStream> CreateConnectionAsync()
+        {
+            return CreateConnectionAsync(null);
+        }
+
+        /// <summary>
+        /// Establishes a new send-side HybridConnection and returns the Stream.
+        /// </summary>
+        public async Task<HybridConnectionStream> CreateConnectionAsync(IDictionary<string, string> requestHeaders)
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
             string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext + ")";
@@ -168,6 +177,14 @@ namespace Microsoft.Azure.Relay
                     var token = await this.TokenProvider.GetTokenAsync(audience, TokenProvider.DefaultTokenTimeout).ConfigureAwait(false);
                     RelayEventSource.Log.GetTokenStop(traceSource, token.ExpiresAtUtc);
                     webSocket.Options.SetRequestHeader(RelayConstants.ServiceBusAuthorizationHeaderName, token.TokenString);
+                }
+
+                if (requestHeaders != null)
+                {
+                    foreach (KeyValuePair<string, string> header in requestHeaders)
+                    {
+                        webSocket.Options.SetRequestHeader(header.Key, header.Value);
+                    }
                 }
 
                 // Build the websocket uri, e.g. "wss://contoso.servicebus.windows.net:443/$hc/endpoint1?sb-hc-action=connect&sb-hc-id=E2E_TRACKING_ID"
