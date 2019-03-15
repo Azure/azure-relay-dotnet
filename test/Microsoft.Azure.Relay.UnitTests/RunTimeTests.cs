@@ -224,6 +224,29 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Fact, DisplayTestMethodName]
+        async Task RequestHeadersNegativeTest()
+        {
+            async Task CheckBadHeaderAsync(HybridConnectionClient client, string headerName, string headerValue)
+            {
+                TestUtility.Log($"CheckBadHeader: \"{headerName}\": \"{headerValue}\"");
+                await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+                {
+                    var clientRequestHeaders = new Dictionary<string, string>();
+                    clientRequestHeaders[headerName] = headerValue;
+                    return client.CreateConnectionAsync(clientRequestHeaders);
+                });
+            }
+
+            var hybridConnectionClient = GetHybridConnectionClient(EndpointTestType.Unauthenticated);
+            await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, string.Empty);
+            await CheckBadHeaderAsync(hybridConnectionClient, null, null);
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad\nHeader", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad:Header", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\rValue");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\nValue");
+        }
+
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
         async Task WriteLargeDataSetTest(EndpointTestType endpointTestType, int kilobytesToSend = 1024)
