@@ -20,7 +20,7 @@
     <PackageReleaseNotes>https://github.com/Azure/azure-relay-dotnet/releases</PackageReleaseNotes>
     <PackageIconUrl>https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/relay.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/Azure/azure-relay-dotnet</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/LICENSE</PackageLicenseUrl>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>true</GenerateAssemblyCompanyAttribute>
