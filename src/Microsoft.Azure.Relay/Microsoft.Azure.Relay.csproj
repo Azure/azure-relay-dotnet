@@ -5,7 +5,7 @@
       This package is only supported on Windows 8 / Windows Server 2012 and newer.</Description>
     <AssemblyTitle>Microsoft.Azure.Relay</AssemblyTitle>
     <Authors>Microsoft</Authors>
-    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
     <TargetFrameworks>net451;netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
