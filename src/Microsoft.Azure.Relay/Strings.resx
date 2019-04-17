@@ -312,4 +312,7 @@
   <data name="net_WebSockets_proxyauthentication" xml:space="preserve">
     <value>Connecting to proxy requires credentials.</value>
   </data>
+  <data name="ResponseBodyStarted" xml:space="preserve">
+    <value>The HTTP status code, status description, and headers cannot be modified after writing to the output stream.</value>
+  </data>
 </root>

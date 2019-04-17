@@ -12,8 +12,9 @@ namespace Microsoft.Azure.Relay
     /// Represents a response to a request being handled by a <see cref="HybridConnectionListener"/> object.
     /// This is modeled after System.Net.HttpListenerResponse.
     /// </summary>
-    public sealed class RelayedHttpListenerResponse : IDisposable
+    public sealed class RelayedHttpListenerResponse : ITraceSource, IDisposable
     {
+        bool readOnly;
         bool disposed;
         HttpStatusCode statusCode;
         string statusDescription;
@@ -22,7 +23,7 @@ namespace Microsoft.Azure.Relay
         {
             this.Context = context;
             this.statusCode = HttpStatusCode.Continue;
-            this.Headers = new WebHeaderCollection();
+            this.Headers = new ResponseWebHeaderCollection(this);
             this.OutputStream = Stream.Null;
         }
 
@@ -37,6 +38,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>Gets or sets the HTTP status code to be returned to the client.</summary>
         /// <exception cref="ObjectDisposedException">This object is closed.</exception>
         /// <exception cref="ProtocolViolationException">The value specified for a set operation is not valid. Valid values are between 100 and 999 inclusive.</exception>
+        /// <exception cref="InvalidOperationException">An attempt was made to change this value after writing to the output stream.</exception>
         public HttpStatusCode StatusCode
         {
             get
@@ -45,7 +47,7 @@ namespace Microsoft.Azure.Relay
             }
             set
             {
-                this.CheckDisposed();
+                this.CheckDisposedOrReadOnly();
                 int valueInt = (int)value;
                 if (valueInt < 100 || valueInt > 999)
                 {
@@ -60,6 +62,7 @@ namespace Microsoft.Azure.Relay
         /// <returns>The text description of the HTTP status code returned to the client.</returns>
         /// <exception cref="ArgumentNullException">The value specified for a set operation is null.</exception>
         /// <exception cref="ArgumentException">The value specified for a set operation contains non-printable characters.</exception>
+        /// <exception cref="InvalidOperationException">An attempt was made to change this value after writing to the output stream.</exception>
         public string StatusDescription
         {
             get
@@ -80,7 +83,7 @@ namespace Microsoft.Azure.Relay
             }
             set
             {
-                this.CheckDisposed();
+                this.CheckDisposedOrReadOnly();
                 if (value == null)
                 {
                     throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(nameof(value)), this.Context);
@@ -99,6 +102,8 @@ namespace Microsoft.Azure.Relay
                 this.statusDescription = value;
             }
         }
+
+        TrackingContext ITraceSource.TrackingContext => this.Context.TrackingContext;
 
         RelayedHttpListenerContext Context { get; }
 
@@ -149,11 +154,51 @@ namespace Microsoft.Azure.Relay
             }
         }
 
-        void CheckDisposed()
+        internal void SetReadOnly()
+        {
+            this.readOnly = true;
+        }
+
+        void CheckDisposedOrReadOnly()
         {
             if (this.disposed)
             {
-                throw RelayEventSource.Log.ThrowingException(new ObjectDisposedException(this.GetType().FullName), this);
+                string message = this.Context.TrackingContext.EnsureTrackableMessage(this.ToString());
+                throw RelayEventSource.Log.ThrowingException(new ObjectDisposedException(message), this);
+            }
+
+            if (this.readOnly)
+            {
+                string message = this.Context.TrackingContext.EnsureTrackableMessage(SR.ResponseBodyStarted);
+                throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(message), this);
+            }
+        }
+
+        class ResponseWebHeaderCollection : WebHeaderCollection
+        {
+            readonly RelayedHttpListenerResponse response;
+
+            public ResponseWebHeaderCollection(RelayedHttpListenerResponse response)
+            {
+                this.response = response;
+            }
+
+            public override void Add(string name, string value)
+            {
+                this.response.CheckDisposedOrReadOnly();
+                base.Add(name, value);
+            }
+
+            public override void Remove(string name)
+            {
+                this.response.CheckDisposedOrReadOnly();
+                base.Remove(name);
+            }
+
+            public override void Set(string name, string value)
+            {
+                this.response.CheckDisposedOrReadOnly();
+                base.Set(name, value);
             }
         }
     }
