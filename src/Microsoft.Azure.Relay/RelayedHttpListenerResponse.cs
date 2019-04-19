@@ -188,6 +188,12 @@ namespace Microsoft.Azure.Relay
                 this.response.CheckDisposedOrReadOnly();
                 base.Add(name, value);
             }
+            
+            public override void Clear()
+            {
+                this.response.CheckDisposedOrReadOnly();
+                base.Clear();
+            }
 
             public override void Remove(string name)
             {
