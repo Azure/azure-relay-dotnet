@@ -411,6 +411,7 @@ namespace Microsoft.Azure.Relay
             public override async Task WriteAsync(byte[] array, int offset, int count, CancellationToken cancelToken)
             {
                 RelayEventSource.Log.HybridHttpResponseStreamWrite(this.TrackingContext, count);
+                this.context.Response.SetReadOnly();
                 using (var timeoutCancelSource = new CancellationTokenSource(this.WriteTimeout))
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, timeoutCancelSource.Token))
                 using (await this.asyncLock.LockAsync(linkedCancelSource.Token).ConfigureAwait(false))

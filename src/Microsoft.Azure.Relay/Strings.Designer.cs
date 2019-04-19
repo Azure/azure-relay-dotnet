@@ -592,6 +592,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The HTTP status code, status description, and headers cannot be modified after writing to the output stream..
+        /// </summary>
+        internal static string ResponseBodyStarted {
+            get {
+                return ResourceManager.GetString("ResponseBodyStarted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0} cannot be specified along with {1}. {0} alone should be sufficient to Authenticate the request..
         /// </summary>
         internal static string SasTokenShouldBeAlone {
