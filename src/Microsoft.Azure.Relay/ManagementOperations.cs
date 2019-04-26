@@ -49,12 +49,12 @@ namespace Microsoft.Azure.Relay
                 }
                 else
                 {
-                    throw await CreateExceptionForFailedResponseAsync(httpResponse).ConfigureAwait(false);
+                    throw RelayEventSource.Log.ThrowingException(await CreateExceptionForFailedResponseAsync(httpResponse).ConfigureAwait(false));
                 }
             }
             catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
-                throw WebSocketExceptionHelper.ConvertToRelayContract(exception, null);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(exception, null));
             }
             finally
             {
