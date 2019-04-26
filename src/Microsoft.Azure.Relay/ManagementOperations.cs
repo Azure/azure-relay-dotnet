@@ -52,7 +52,7 @@ namespace Microsoft.Azure.Relay
                     throw await CreateExceptionForFailedResponseAsync(httpResponse).ConfigureAwait(false);
                 }
             }
-            catch (Exception exception) when (!Fx.IsFatal(exception) && !(exception is RelayException))
+            catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
                 throw WebSocketExceptionHelper.ConvertToRelayContract(exception, null);
             }
