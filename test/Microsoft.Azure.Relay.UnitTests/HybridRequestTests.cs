@@ -227,7 +227,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
-        async Task LarseRequestEmptyResponse(EndpointTestType endpointTestType)
+        async Task LargeRequestEmptyResponse(EndpointTestType endpointTestType)
         {
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);

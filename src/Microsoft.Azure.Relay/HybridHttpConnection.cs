@@ -135,7 +135,9 @@ namespace Microsoft.Azure.Relay
             ListenerCommand.RequestCommand requestCommand;
             using (var rendezvousCommandStream = new WebSocketMessageStream(this.rendezvousWebSocket, this.OperationTimeout))
             {
-                requestCommand = ListenerCommand.ReadObject(rendezvousCommandStream).Request;
+                // Deserializing the object from stream makes a sync-over-async call which can deadlock
+                // if performed on the websocket transport's callback thread.
+                requestCommand = await Task.Run(() => ListenerCommand.ReadObject(rendezvousCommandStream).Request).ConfigureAwait(false);
                 if (rendezvousCommandStream.MessageType == WebSocketMessageType.Close)
                 {
                     throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.EntityClosedOrAborted), this);
