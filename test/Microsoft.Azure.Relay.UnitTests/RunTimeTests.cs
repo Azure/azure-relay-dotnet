@@ -227,11 +227,10 @@ namespace Microsoft.Azure.Relay.UnitTests
         [Fact, DisplayTestMethodName]
         async Task RequestHeadersNegativeTest()
         {
-            async Task CheckBadHeaderAsync<TException>(HybridConnectionClient client, string headerName, string headerValue)
-                where TException : Exception
+            async Task CheckBadHeaderAsync(HybridConnectionClient client, string headerName, string headerValue)
             {
                 TestUtility.Log($"CheckBadHeader: \"{headerName}\": \"{headerValue}\"");
-                await Assert.ThrowsAnyAsync<TException>(() =>
+                await Assert.ThrowsAnyAsync<RelayException>(() =>
                 {
                     var clientRequestHeaders = new Dictionary<string, string>();
                     clientRequestHeaders[headerName] = headerValue;
@@ -240,12 +239,12 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
 
             var hybridConnectionClient = GetHybridConnectionClient(EndpointTestType.Unauthenticated);
-            await CheckBadHeaderAsync<RelayException>(hybridConnectionClient, string.Empty, string.Empty);
-            await CheckBadHeaderAsync<ArgumentNullException>(hybridConnectionClient, null, null);
-            await CheckBadHeaderAsync<RelayException>(hybridConnectionClient, "Bad\nHeader", "Value");
-            await CheckBadHeaderAsync<RelayException>(hybridConnectionClient, "Bad:Header", "Value");
-            await CheckBadHeaderAsync<RelayException>(hybridConnectionClient, "Header", "Bad\rValue");
-            await CheckBadHeaderAsync<RelayException>(hybridConnectionClient, "Header", "Bad\nValue");
+            await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, string.Empty);
+            await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, null);
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad\nHeader", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Bad:Header", "Value");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\rValue");
+            await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\nValue");
         }
 
         [Theory, DisplayTestMethodName]
