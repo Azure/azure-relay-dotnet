@@ -230,7 +230,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             async Task CheckBadHeaderAsync(HybridConnectionClient client, string headerName, string headerValue)
             {
                 TestUtility.Log($"CheckBadHeader: \"{headerName}\": \"{headerValue}\"");
-                await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+                await Assert.ThrowsAnyAsync<RelayException>(() =>
                 {
                     var clientRequestHeaders = new Dictionary<string, string>();
                     clientRequestHeaders[headerName] = headerValue;
@@ -240,7 +240,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             var hybridConnectionClient = GetHybridConnectionClient(EndpointTestType.Unauthenticated);
             await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, string.Empty);
-            await CheckBadHeaderAsync(hybridConnectionClient, null, null);
+            await CheckBadHeaderAsync(hybridConnectionClient, string.Empty, null);
             await CheckBadHeaderAsync(hybridConnectionClient, "Bad\nHeader", "Value");
             await CheckBadHeaderAsync(hybridConnectionClient, "Bad:Header", "Value");
             await CheckBadHeaderAsync(hybridConnectionClient, "Header", "Bad\rValue");

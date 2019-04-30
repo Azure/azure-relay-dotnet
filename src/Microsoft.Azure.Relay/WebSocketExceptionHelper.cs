@@ -12,10 +12,17 @@ namespace Microsoft.Azure.Relay
 
     static class WebSocketExceptionHelper
     {
+        public static bool IsRelayContract(Exception exception)
+        {
+            return Fx.IsFatal(exception) ||
+                exception is RelayException || 
+                exception is TimeoutException;
+        }
+
         public static Exception ConvertToRelayContract(Exception exception, TrackingContext trackingContext, HttpResponseMessage httpResponseMessage = null, bool isListener = true)
         {
             string message = exception.Message;
-            if (exception is RelayException || exception is TimeoutException)
+            if (IsRelayContract(exception))
             {
                 return exception;
             }

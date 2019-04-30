@@ -204,10 +204,10 @@ namespace Microsoft.Azure.Relay
                 RelayEventSource.Log.ObjectConnected(traceSource, trackingContext);
                 return new WebSocketStream(webSocket.WebSocket, trackingContext);
             }
-            catch (WebSocketException wsException)
+            catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
                 throw RelayEventSource.Log.ThrowingException(
-                    WebSocketExceptionHelper.ConvertToRelayContract(wsException, trackingContext, webSocket.Response, isListener: false),
+                    WebSocketExceptionHelper.ConvertToRelayContract(exception, trackingContext, webSocket.Response, isListener: false),
                     traceSource);
             }
         }
