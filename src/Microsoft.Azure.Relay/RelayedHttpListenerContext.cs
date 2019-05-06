@@ -131,7 +131,7 @@ namespace Microsoft.Azure.Relay
         {
             var clientWebSocket = ClientWebSocketFactory.Create(this.Listener.UseBuiltInClientWebSocket);
             clientWebSocket.Options.SetBuffer(this.Listener.ConnectionBufferSize, this.Listener.ConnectionBufferSize);
-            clientWebSocket.Options.Proxy = this.Listener.Proxy;
+            DefaultWebProxy.ConfigureProxy(clientWebSocket.Options, this.Listener.Proxy);
             clientWebSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
             return clientWebSocket;
         }

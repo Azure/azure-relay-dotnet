@@ -164,8 +164,8 @@ namespace Microsoft.Azure.Relay
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
             var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
             try
-            {                
-                webSocket.Options.Proxy = this.Proxy;
+            {
+                DefaultWebProxy.ConfigureProxy(webSocket.Options, this.Proxy);
                 webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
                 webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
@@ -277,7 +277,7 @@ namespace Microsoft.Azure.Relay
             this.TokenProvider = tokenProvider;
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = operationTimeout;
-            this.Proxy = WebRequest.DefaultWebProxy;
+            this.Proxy = DefaultWebProxy.Instance;
             this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
         }
     }

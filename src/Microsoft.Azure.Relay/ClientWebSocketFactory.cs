@@ -45,14 +45,14 @@ namespace Microsoft.Azure.Relay
             }
 #endif // NETSTANDARD
 
-            return new FrameworkClientWebSocketProxy(new System.Net.WebSockets.ClientWebSocket());
+            return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
         }
 
-        class FrameworkClientWebSocketProxy : IClientWebSocket
+        class FrameworkClientWebSocket : IClientWebSocket
         {
             readonly System.Net.WebSockets.ClientWebSocket client;
 
-            public FrameworkClientWebSocketProxy(System.Net.WebSockets.ClientWebSocket client)
+            public FrameworkClientWebSocket(System.Net.WebSockets.ClientWebSocket client)
             {
                 this.client = client;
                 this.Options = new FrameworkClientWebSocketOptions(this.client.Options);
@@ -76,6 +76,7 @@ namespace Microsoft.Azure.Relay
                 {
                     this.options = options;
                 }
+
                 public IWebProxy Proxy
                 {
                     get { return this.options.Proxy; }

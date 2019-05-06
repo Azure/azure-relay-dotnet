@@ -64,6 +64,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 {
                     EntityPath = Constants.UnauthenticatedEntityPath
                 };
+
                 return new HybridConnectionListener(connectionStringBuilder.ToString());
             }
 
