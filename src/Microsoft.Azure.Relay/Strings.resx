@@ -315,4 +315,10 @@
   <data name="ResponseBodyStarted" xml:space="preserve">
     <value>The HTTP status code, status description, and headers cannot be modified after writing to the output stream.</value>
   </data>
+  <data name="net_invalid_enum" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="net_WebSockets_MissingResponseHeader" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>

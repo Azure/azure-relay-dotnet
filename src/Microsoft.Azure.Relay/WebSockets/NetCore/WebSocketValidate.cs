@@ -4,6 +4,7 @@
 namespace Microsoft.Azure.Relay.WebSockets
 {
     using System;
+    using System.Diagnostics;
     using System.Globalization;
     using System.Net.WebSockets;
     using System.Text;
@@ -31,7 +32,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                         // Ordering is important to maintain .NET 4.5 WebSocket implementation exception behavior.
                         if (isDisposed)
                         {
-                            throw new ObjectDisposedException(nameof(ClientWebSocket));
+                            throw new ObjectDisposedException(nameof(WebSocket));
                         }
 
                         return;
@@ -118,16 +119,21 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
         }
 
-        internal static void ThrowPlatformNotSupportedException()
-        {
-            throw new PlatformNotSupportedException(SR.net_WebSockets_UnsupportedPlatform);
-        }
-
         internal static void ValidateArraySegment(ArraySegment<byte> arraySegment, string parameterName)
         {
+            Debug.Assert(!string.IsNullOrEmpty(parameterName), "'parameterName' MUST NOT be NULL or string.Empty");
+
             if (arraySegment.Array == null)
             {
-                throw new ArgumentNullException(parameterName + ".Array");
+                throw new ArgumentNullException(parameterName + "." + nameof(arraySegment.Array));
+            }
+            if (arraySegment.Offset < 0 || arraySegment.Offset > arraySegment.Array.Length)
+            {
+                throw new ArgumentOutOfRangeException(parameterName + "." + nameof(arraySegment.Offset));
+            }
+            if (arraySegment.Count < 0 || arraySegment.Count > (arraySegment.Array.Length - arraySegment.Offset))
+            {
+                throw new ArgumentOutOfRangeException(parameterName + "." + nameof(arraySegment.Count));
             }
         }
 

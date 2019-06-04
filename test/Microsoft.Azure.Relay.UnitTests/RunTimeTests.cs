@@ -390,14 +390,15 @@ namespace Microsoft.Azure.Relay.UnitTests
         [MemberData(nameof(AuthenticationTestPermutations))]
         async Task NonExistantNamespaceTest(EndpointTestType endpointTestType)
         {
+            string badAddress = $"sb://fakeendpoint.{Guid.NewGuid()}.com";
             HybridConnectionListener listener = null;
             try
             {
-                TestUtility.Log("Setting ConnectionStringBuilder.Endpoint to 'sb://fakeendpoint.com'");
+                TestUtility.Log($"Setting ConnectionStringBuilder.Endpoint to '{badAddress}'");
 
                 var fakeEndpointConnectionStringBuilder = new RelayConnectionStringBuilder(this.ConnectionString)
                 {
-                    Endpoint = new Uri("sb://fakeendpoint.com")
+                    Endpoint = new Uri(badAddress)
                 };
 
                 if (endpointTestType == EndpointTestType.Authenticated)

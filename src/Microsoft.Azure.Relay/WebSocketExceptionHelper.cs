@@ -54,7 +54,8 @@ namespace Microsoft.Azure.Relay
                         message = socketException.Message;
                     }
                 }
-                else if (httpResponseMessage != null)
+                else if (httpResponseMessage != null ||
+                    (httpResponseMessage = (HttpResponseMessage)exception.Data[typeof(HttpResponseMessage).FullName]) != null)
                 {
                     return CreateExceptionForStatus(httpResponseMessage.StatusCode, httpResponseMessage.ReasonPhrase, exception, trackingContext, isListener);
                 }

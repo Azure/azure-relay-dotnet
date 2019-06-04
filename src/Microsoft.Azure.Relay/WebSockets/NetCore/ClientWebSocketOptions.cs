@@ -8,6 +8,8 @@ namespace Microsoft.Azure.Relay.WebSockets
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Net;
+    using System.Net.Security;
+    using System.Net.WebSockets;
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
@@ -15,23 +17,20 @@ namespace Microsoft.Azure.Relay.WebSockets
     sealed class ClientWebSocketOptions : IClientWebSocketOptions
     {
         private bool _isReadOnly; // After ConnectAsync is called the options cannot be modified.
-        private readonly List<string> _requestedSubProtocols;
-        private readonly WebHeaderCollection _requestHeaders;
-        private TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(30); // Same as WebSocket.DefaultKeepAliveInterval.  TODO #11735: Switch to that when it's available.
+        private TimeSpan _keepAliveInterval = WebSocket.DefaultKeepAliveInterval;
         private bool _useDefaultCredentials;
         private ICredentials _credentials;
         private IWebProxy _proxy;
-        private X509CertificateCollection _clientCertificates;
         private CookieContainer _cookies;
         private int _receiveBufferSize = 0x1000;
-        private int _sendBufferSize = 0x1000;
         private ArraySegment<byte>? _buffer;
+        private RemoteCertificateValidationCallback _remoteCertificateValidationCallback;
 
-        internal ClientWebSocketOptions()
-        {
-            _requestedSubProtocols = new List<string>();
-            _requestHeaders = new WebHeaderCollection();
-        }
+        internal X509CertificateCollection _clientCertificates;
+        internal WebHeaderCollection _requestHeaders;
+        internal List<string> _requestedSubProtocols;
+
+        internal ClientWebSocketOptions() { } // prevent external instantiation
 
         #region HTTP Settings
 
@@ -41,12 +40,14 @@ namespace Microsoft.Azure.Relay.WebSockets
             ThrowIfReadOnly();
 
             // WebHeaderCollection performs validation of headerName/headerValue.
-            _requestHeaders[headerName] = headerValue;
+            RequestHeaders.Set(headerName, headerValue);
         }
 
-        internal WebHeaderCollection RequestHeaders { get { return _requestHeaders; } }
+        internal WebHeaderCollection RequestHeaders =>
+            _requestHeaders ?? (_requestHeaders = new WebHeaderCollection());
 
-        internal List<string> RequestedSubProtocols { get { return _requestedSubProtocols; } }
+        internal List<string> RequestedSubProtocols =>
+            _requestedSubProtocols ?? (_requestedSubProtocols = new List<string>());
 
         public bool UseDefaultCredentials
         {
@@ -110,6 +111,16 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
         }
 
+        public RemoteCertificateValidationCallback RemoteCertificateValidationCallback
+        {
+            get => _remoteCertificateValidationCallback;
+            set
+            {
+                ThrowIfReadOnly();
+                _remoteCertificateValidationCallback = value;
+            }
+        }
+
         public CookieContainer Cookies
         {
             get
@@ -133,14 +144,15 @@ namespace Microsoft.Azure.Relay.WebSockets
             WebSocketValidate.ValidateSubprotocol(subProtocol);
 
             // Duplicates not allowed.
-            foreach (string item in _requestedSubProtocols)
+            List<string> subprotocols = RequestedSubProtocols; // force initialization of the list
+            foreach (string item in subprotocols)
             {
                 if (string.Equals(item, subProtocol, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new ArgumentException(SR.Format(SR.net_WebSockets_NoDuplicateProtocol, subProtocol), nameof(subProtocol));
                 }
             }
-            _requestedSubProtocols.Add(subProtocol);
+            subprotocols.Add(subProtocol);
         }
 
         public TimeSpan KeepAliveInterval
@@ -163,7 +175,6 @@ namespace Microsoft.Azure.Relay.WebSockets
         }
 
         internal int ReceiveBufferSize => _receiveBufferSize;
-        internal int SendBufferSize => _sendBufferSize;
         internal ArraySegment<byte>? Buffer => _buffer;
 
         public void SetBuffer(int receiveBufferSize, int sendBufferSize)
@@ -180,7 +191,6 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
 
             _receiveBufferSize = receiveBufferSize;
-            _sendBufferSize = sendBufferSize;
             _buffer = null;
         }
 
@@ -204,7 +214,6 @@ namespace Microsoft.Azure.Relay.WebSockets
             }
 
             _receiveBufferSize = receiveBufferSize;
-            _sendBufferSize = sendBufferSize;
             _buffer = buffer;
         }
 
