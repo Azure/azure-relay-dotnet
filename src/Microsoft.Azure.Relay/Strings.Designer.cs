@@ -241,15 +241,6 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
-        /// </summary>
-        internal static string net_invalid_enum {
-            get {
-                return ResourceManager.GetString("net_invalid_enum", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to The status code must be between 100 and 999 inclusive..
         /// </summary>
         internal static string net_InvalidStatus {
@@ -448,7 +439,7 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to The server&apos;s response was missing the required header &apos;{0}&apos;..
         /// </summary>
         internal static string net_WebSockets_MissingResponseHeader {
             get {
