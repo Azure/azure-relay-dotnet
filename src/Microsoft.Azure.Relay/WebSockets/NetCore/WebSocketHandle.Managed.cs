@@ -179,9 +179,11 @@ namespace Microsoft.Azure.Relay.WebSockets
 
                 if (response.StatusCode != HttpStatusCode.SwitchingProtocols)
                 {
+                    // <RELAY_CUSTOM Comment="Include the HttpResponseMessage in the Exception.Data">
                     var wsException = new WebSocketException(WebSocketError.NotAWebSocket, SR.Format(SR.net_WebSockets_Connect101Expected, (int)response.StatusCode));
                     wsException.Data[typeof(HttpResponseMessage).FullName] = response;
                     throw wsException;
+                    // </RELAY_CUSTOM>
                 }
 
                 // The Connection, Upgrade, and SecWebSocketAccept headers are required and with specific values.
@@ -214,18 +216,19 @@ namespace Microsoft.Azure.Relay.WebSockets
                 Stream connectedStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 Debug.Assert(connectedStream.CanWrite);
                 Debug.Assert(connectedStream.CanRead);
+
+                // <RELAY_CUSTOM Comment="WebSocket.CreateFromStream we need is in netcoreapp2.1 but not part of netstandard1.0.">
                 MethodInfo createFromStreamMethod = typeof(WebSocket).GetMethod(
-                    "CreateFromStream",
+                    "CreateFromStream", 
                     new Type[] { typeof(Stream), typeof(bool), typeof(string), typeof(TimeSpan) });
+                if (createFromStreamMethod == null)
+                {
+                    throw new MissingMethodException(typeof(WebSocket).FullName, "CreateFromStream(Stream, bool, string, TimeSpan)");
+                }
+
                 _webSocket = (WebSocket)createFromStreamMethod.Invoke(
-                    null,
-                    new object[]
-                    {
-                        connectedStream,
-                        false, // isServer
-                        subprotocol,
-                        options.KeepAliveInterval
-                    });
+                    null, new object [] { connectedStream, /* isServer: */ false, subprotocol, options.KeepAliveInterval });
+                // </RELAY_CUSTOM>
             }
             catch (Exception exc)
             {
@@ -288,18 +291,22 @@ namespace Microsoft.Azure.Relay.WebSockets
         {
             if (!response.Headers.TryGetValues(name, out IEnumerable<string> values))
             {
+                // <RELAY_CUSTOM Comment="Include the HttpResponseMessage in the Exception.Data">
                 var wsException = new WebSocketException(WebSocketError.Faulted, SR.Format(SR.net_WebSockets_MissingResponseHeader, name));
                 wsException.Data[typeof(HttpResponseMessage).FullName] = response;
                 throw wsException;
+                // </RELAY_CUSTOM>
             }
 
             Debug.Assert(values is string[]);
             string[] array = (string[])values;
             if (array.Length != 1 || !string.Equals(array[0], expectedValue, StringComparison.OrdinalIgnoreCase))
             {
+                // <RELAY_CUSTOM Comment="Include the HttpResponseMessage in the Exception.Data">
                 var wsException = new WebSocketException(WebSocketError.HeaderError, SR.Format(SR.net_WebSockets_InvalidResponseHeader, name, string.Join(", ", array)));
                 wsException.Data[typeof(HttpResponseMessage).FullName] = response;
                 throw wsException;
+                // </RELAY_CUSTOM>
             }
         }
     }
