@@ -31,6 +31,14 @@ namespace Microsoft.Azure.Relay.UnitTests
             new object[] { EndpointTestType.Unauthenticated }
         };
 
+        public static IEnumerable<object[]> AuthenticationAndBuiltInClientWebSocketTestPermutations => new List<object[]>
+        {
+            new object[] { EndpointTestType.Authenticated, false },
+            new object[] { EndpointTestType.Unauthenticated, false },
+            new object[] { EndpointTestType.Authenticated, true },
+            new object[] { EndpointTestType.Unauthenticated, true },
+        };
+
         public HybridConnectionTestBase()
         {
             var envConnectionString = Environment.GetEnvironmentVariable(Constants.ConnectionStringEnvironmentVariable);

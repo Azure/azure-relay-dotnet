@@ -1,13 +1,11 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay.WebSockets.NetCore21
 {
     using System;
     using System.Net;
     using System.Net.Http;
-    using System.Net.Security;
-    using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
     
@@ -79,6 +77,23 @@ namespace Microsoft.Azure.Relay.WebSockets
             set => this.SetProperty(nameof(Proxy), value);
         }
 
+        internal static bool IsSupported()
+        {
+            return GetSocketsHttpHandlerType(throwOnError: false) != null;
+        }
+
+        static Type GetSocketsHttpHandlerType(bool throwOnError)
+        {
+            if (socketsHttpHandlerType == null)
+            {
+                var systemNetHttpAssembly = typeof(HttpClient).Assembly;
+                socketsHttpHandlerType = systemNetHttpAssembly.GetType(
+                    "System.Net.Http.SocketsHttpHandler", throwOnError);
+            }
+
+            return socketsHttpHandlerType;
+        }
+
         public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return this.invoker.SendAsync(request, cancellationToken);
@@ -90,14 +105,8 @@ namespace Microsoft.Azure.Relay.WebSockets
         }
 
         static HttpMessageHandler CreateSocketsHttpHandler()
-        {
-            if (socketsHttpHandlerType == null)
-            {
-                var systemNetHttpAssembly = typeof(HttpClient).Assembly;
-                socketsHttpHandlerType = systemNetHttpAssembly.GetType(
-                    "System.Net.Http.SocketsHttpHandler", throwOnError: true);
-            }
-
+        {           
+            GetSocketsHttpHandlerType(throwOnError: true);
             return (HttpMessageHandler)Activator.CreateInstance(socketsHttpHandlerType);
         }
     }

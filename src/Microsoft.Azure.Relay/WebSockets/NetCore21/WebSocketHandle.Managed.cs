@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay.WebSockets.NetCore21
 {
     using System;
     using System.Collections.Generic;
@@ -43,6 +43,31 @@ namespace Microsoft.Azure.Relay.WebSockets
         public string SubProtocol => _webSocket?.SubProtocol;
 
         public static void CheckPlatformSupport() { /* nop */ }
+
+        // <RELAY_CUSTOM Comment="WebSocket.CreateFromStream we need is in netcoreapp2.1 but not part of netstandard1.0.">
+        static MethodInfo s_createFromStreamMethod;
+
+        public static bool IsSupported()
+        {
+            return GetCreateFromStreamMethod(throwOnError: false) != null;
+        }
+
+        static MethodInfo GetCreateFromStreamMethod(bool throwOnError)
+        {
+            if (s_createFromStreamMethod == null)
+            {
+                s_createFromStreamMethod = typeof(WebSocket).GetMethod(
+                    "CreateFromStream",
+                    new Type[] { typeof(Stream), typeof(bool), typeof(string), typeof(TimeSpan) });
+                if (s_createFromStreamMethod == null && throwOnError)
+                {
+                    throw new MissingMethodException(typeof(WebSocket).FullName, "CreateFromStream(Stream, bool, string, TimeSpan)");
+                }
+            }
+
+            return s_createFromStreamMethod;
+        }
+        // </RELAY_CUSTOM>
 
         public void Dispose()
         {
@@ -218,14 +243,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                 Debug.Assert(connectedStream.CanRead);
 
                 // <RELAY_CUSTOM Comment="WebSocket.CreateFromStream we need is in netcoreapp2.1 but not part of netstandard1.0.">
-                MethodInfo createFromStreamMethod = typeof(WebSocket).GetMethod(
-                    "CreateFromStream", 
-                    new Type[] { typeof(Stream), typeof(bool), typeof(string), typeof(TimeSpan) });
-                if (createFromStreamMethod == null)
-                {
-                    throw new MissingMethodException(typeof(WebSocket).FullName, "CreateFromStream(Stream, bool, string, TimeSpan)");
-                }
-
+                MethodInfo createFromStreamMethod = GetCreateFromStreamMethod(throwOnError: true);
                 _webSocket = (WebSocket)createFromStreamMethod.Invoke(
                     null, new object [] { connectedStream, /* isServer: */ false, subprotocol, options.KeepAliveInterval });
                 // </RELAY_CUSTOM>

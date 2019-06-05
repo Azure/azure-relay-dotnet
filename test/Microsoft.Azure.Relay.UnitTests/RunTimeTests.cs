@@ -12,14 +12,16 @@ namespace Microsoft.Azure.Relay.UnitTests
     public class RunTimeTests : HybridConnectionTestBase
     {
         [Theory, DisplayTestMethodName]
-        [MemberData(nameof(AuthenticationTestPermutations))]
-        async Task HybridConnectionTest(EndpointTestType endpointTestType)
+        [MemberData(nameof(AuthenticationAndBuiltInClientWebSocketTestPermutations))]
+        async Task HybridConnectionTest(EndpointTestType endpointTestType, bool useBuiltInClientWebSocket)
         {
             HybridConnectionListener listener = null;
             try
             {
                 listener = this.GetHybridConnectionListener(endpointTestType);
+                listener.UseBuiltInClientWebSocket = useBuiltInClientWebSocket;
                 var client = GetHybridConnectionClient(endpointTestType);
+                client.UseBuiltInClientWebSocket = useBuiltInClientWebSocket;
 
                 TestUtility.Log($"Opening {listener}");
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));

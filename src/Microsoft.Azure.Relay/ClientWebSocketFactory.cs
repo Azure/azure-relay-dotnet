@@ -41,7 +41,12 @@ namespace Microsoft.Azure.Relay
 #if NETSTANDARD
             if (!useBuiltInWebSocket)
             {
-                return new Microsoft.Azure.Relay.WebSockets.ClientWebSocket();
+                if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
+                {
+                    return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
+                }
+
+                return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
             }
 #endif // NETSTANDARD
 

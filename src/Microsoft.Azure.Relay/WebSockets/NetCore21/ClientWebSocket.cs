@@ -1,18 +1,21 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay.WebSockets.NetCore21
 {
     using System;
     using System.Diagnostics;
     using System.Net.Http;
     using System.Net.WebSockets;
+    using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocket.cs
     sealed partial class ClientWebSocket : WebSocket, IClientWebSocket
     {
+        static bool? isSupported;
+
         private enum InternalState
         {
             Created = 0,
@@ -38,6 +41,20 @@ namespace Microsoft.Azure.Relay.WebSockets
 
             if (NetEventSource.IsEnabled) { NetEventSource.Exit(this); }
         }
+
+        // <RELAY_CUSTOM Comment="Check if all the .NET CoreApp 2.1+ types we use via reflection are available">
+        internal static bool IsSupported()
+        {
+            if (!isSupported.HasValue)
+            {
+                isSupported = SocketsHttpHandler.IsSupported() &&
+                    SslClientAuthenticationOptions.IsSupported() &&
+                    WebSocketHandle.IsSupported();
+            }
+
+            return isSupported.Value;
+        }
+        // </RELAY_CUSTOM>
 
         #region Properties
 
