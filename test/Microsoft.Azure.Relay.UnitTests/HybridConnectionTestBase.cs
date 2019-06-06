@@ -31,6 +31,14 @@ namespace Microsoft.Azure.Relay.UnitTests
             new object[] { EndpointTestType.Unauthenticated }
         };
 
+        public static IEnumerable<object[]> AuthenticationAndBuiltInClientWebSocketTestPermutations => new List<object[]>
+        {
+            new object[] { EndpointTestType.Authenticated, false },
+            new object[] { EndpointTestType.Unauthenticated, false },
+            new object[] { EndpointTestType.Authenticated, true },
+            new object[] { EndpointTestType.Unauthenticated, true },
+        };
+
         public HybridConnectionTestBase()
         {
             var envConnectionString = Environment.GetEnvironmentVariable(Constants.ConnectionStringEnvironmentVariable);
@@ -320,25 +328,27 @@ namespace Microsoft.Azure.Relay.UnitTests
             string expectedStatusDescription,
             bool exactMatchDescription = true)
         {
-            Assert.NotNull(webSocketException.InnerException);
-
             // TODO: Error details aren't available in .NET Core due to issue:
             // https://github.com/dotnet/corefx/issues/13773
-            ////Assert.IsAssignableFrom<WebException>(webSocketException.InnerException);
-            ////var webException = (WebException)webSocketException.InnerException;
-            ////Assert.NotNull(webException.Response);
-            ////Assert.IsAssignableFrom<HttpWebResponse>(webException.Response);
-            ////var httpWebResponse = (HttpWebResponse)webException.Response;
-            ////TestUtility.Log($"Actual HTTP Status: {(int)httpWebResponse.StatusCode}: {httpWebResponse.StatusDescription}");
-            ////Assert.Equal(expectedStatusCode, httpWebResponse.StatusCode);
-            ////if (exactMatchDescription)
-            ////{
-            ////    Assert.Equal(expectedStatusDescription, httpWebResponse.StatusDescription);
-            ////}
-            ////else
-            ////{
-            ////    Assert.Contains(expectedStatusDescription, httpWebResponse.StatusDescription);
-            ////}
+#if NET46
+            Assert.NotNull(webSocketException.InnerException);
+
+            Assert.IsAssignableFrom<WebException>(webSocketException.InnerException);
+            var webException = (WebException)webSocketException.InnerException;
+            Assert.NotNull(webException.Response);
+            Assert.IsAssignableFrom<HttpWebResponse>(webException.Response);
+            var httpWebResponse = (HttpWebResponse)webException.Response;
+            TestUtility.Log($"Actual HTTP Status: {(int)httpWebResponse.StatusCode}: {httpWebResponse.StatusDescription}");
+            Assert.Equal(expectedStatusCode, httpWebResponse.StatusCode);
+            if (exactMatchDescription)
+            {
+                Assert.Equal(expectedStatusDescription, httpWebResponse.StatusDescription);
+            }
+            else
+            {
+                Assert.Contains(expectedStatusDescription, httpWebResponse.StatusDescription);
+            }
+#endif // NET46
         }
     }
 }

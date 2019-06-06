@@ -33,11 +33,10 @@
 **
 ===========================================================*/
 
-using System.Threading;
-using System.Text;
-
-namespace System.IO
+namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
 {
+    using System;
+    using System.Text;
     internal static class StringBuilderCache
     {
         private const int MAX_BUILDER_SIZE = 260;

@@ -2,17 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace System.Net.Http
+namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
 {
+    using System;
+    using System.Net;
+    using System.Text;
+
     internal static partial class AuthenticationHelper
     {
         public static string GetBasicAuthChallengeResponse(NetworkCredential credential)

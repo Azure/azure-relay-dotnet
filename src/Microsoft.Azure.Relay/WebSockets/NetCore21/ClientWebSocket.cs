@@ -1,18 +1,21 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay.WebSockets.NetCore21
 {
     using System;
     using System.Diagnostics;
     using System.Net.Http;
     using System.Net.WebSockets;
+    using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/System.Net.WebSockets.Client/src/System/Net/WebSockets/ClientWebSocket.cs
     sealed partial class ClientWebSocket : WebSocket, IClientWebSocket
     {
+        static bool? isSupported;
+
         private enum InternalState
         {
             Created = 0,
@@ -34,10 +37,24 @@ namespace Microsoft.Azure.Relay.WebSockets
             WebSocketHandle.CheckPlatformSupport();
 
             _state = (int)InternalState.Created;
-            _options = new ClientWebSocketOptions();
+            _options = new ClientWebSocketOptions() { Proxy = DefaultWebProxy.Instance };
 
             if (NetEventSource.IsEnabled) { NetEventSource.Exit(this); }
         }
+
+        // <RELAY_CUSTOM Comment="Check if all the .NET CoreApp 2.1+ types we use via reflection are available">
+        internal static bool IsSupported()
+        {
+            if (!isSupported.HasValue)
+            {
+                isSupported = SocketsHttpHandler.IsSupported() &&
+                    SslClientAuthenticationOptions.IsSupported() &&
+                    WebSocketHandle.IsSupported();
+            }
+
+            return isSupported.Value;
+        }
+        // </RELAY_CUSTOM>
 
         #region Properties
 
@@ -158,7 +175,7 @@ namespace Microsoft.Azure.Relay.WebSockets
                     throw new ObjectDisposedException(GetType().FullName);
                 }
 
-                await _innerWebSocket.ConnectAsyncCore(uri, cancellationToken, this, _options).ConfigureAwait(false);
+                await _innerWebSocket.ConnectAsyncCore(uri, cancellationToken, _options).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -174,12 +191,26 @@ namespace Microsoft.Azure.Relay.WebSockets
             return _innerWebSocket.SendAsync(buffer, messageType, endOfMessage, cancellationToken);
         }
 
+        // Requires .Net Standard 2.1
+        ////public override ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
+        ////{
+        ////    ThrowIfNotConnected();
+        ////    return _innerWebSocket.SendAsync(buffer, messageType, endOfMessage, cancellationToken);
+        ////}
+
         public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer,
             CancellationToken cancellationToken)
         {
             ThrowIfNotConnected();
             return _innerWebSocket.ReceiveAsync(buffer, cancellationToken);
         }
+
+        // Requires .Net Standard 2.1
+        ////public override ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        ////{
+        ////    ThrowIfNotConnected();
+        ////    return _innerWebSocket.ReceiveAsync(buffer, cancellationToken);
+        ////}
 
         public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription,
             CancellationToken cancellationToken)

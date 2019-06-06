@@ -315,4 +315,7 @@
   <data name="ResponseBodyStarted" xml:space="preserve">
     <value>The HTTP status code, status description, and headers cannot be modified after writing to the output stream.</value>
   </data>
+  <data name="net_WebSockets_MissingResponseHeader" xml:space="preserve">
+    <value>The server's response was missing the required header '{0}'.</value>
+  </data>
 </root>

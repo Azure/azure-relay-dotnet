@@ -1,9 +1,8 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Microsoft.Azure.Relay.WebSockets
+namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
 {
-    using System;
     using System.Diagnostics;
 
     // From: https://github.com/dotnet/corefx/blob/master/src/Common/src/System/StringExtensions.cs
