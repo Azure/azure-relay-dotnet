@@ -19,7 +19,7 @@ namespace Microsoft.Azure.Relay {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Strings {
@@ -439,6 +439,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The server&apos;s response was missing the required header &apos;{0}&apos;..
+        /// </summary>
+        internal static string net_WebSockets_MissingResponseHeader {
+            get {
+                return ResourceManager.GetString("net_WebSockets_MissingResponseHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Duplicate protocols are not allowed: &apos;{0}&apos;..
         /// </summary>
         internal static string net_WebSockets_NoDuplicateProtocol {
@@ -588,6 +597,15 @@ namespace Microsoft.Azure.Relay {
         internal static string RequestTimedOut {
             get {
                 return ResourceManager.GetString("RequestTimedOut", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The HTTP status code, status description, and headers cannot be modified after writing to the output stream..
+        /// </summary>
+        internal static string ResponseBodyStarted {
+            get {
+                return ResourceManager.GetString("ResponseBodyStarted", resourceCulture);
             }
         }
         

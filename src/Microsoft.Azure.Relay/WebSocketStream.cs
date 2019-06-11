@@ -114,9 +114,9 @@ namespace Microsoft.Azure.Relay
                     return result.Count;
                 }
             }
-            catch (WebSocketException webSocketException)
+            catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(exception, this.TrackingContext), this);
             }
         }
 
@@ -153,9 +153,9 @@ namespace Microsoft.Azure.Relay
                     await this.webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Shutdown", linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
-            catch (WebSocketException webSocketException)
+            catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(exception, this.TrackingContext), this);
             }
         }
 
@@ -179,9 +179,9 @@ namespace Microsoft.Azure.Relay
                         linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
-            catch (WebSocketException webSocketException)
+            catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
-                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(webSocketException, this.TrackingContext), this);
+                throw RelayEventSource.Log.ThrowingException(WebSocketExceptionHelper.ConvertToRelayContract(exception, this.TrackingContext), this);
             }
         }
 

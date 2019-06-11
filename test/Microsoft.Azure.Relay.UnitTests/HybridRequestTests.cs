@@ -227,7 +227,7 @@ namespace Microsoft.Azure.Relay.UnitTests
 
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
-        async Task LarseRequestEmptyResponse(EndpointTestType endpointTestType)
+        async Task LargeRequestEmptyResponse(EndpointTestType endpointTestType)
         {
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);
@@ -573,6 +573,74 @@ namespace Microsoft.Azure.Relay.UnitTests
                 }
 
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                await SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task ResponseHeadersAfterBody(EndpointTestType endpointTestType)
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var listener = this.GetHybridConnectionListener(endpointTestType);
+            try
+            {
+                await listener.OpenAsync(cts.Token);
+
+                var requestHandlerComplete = new TaskCompletionSource<object>();
+                listener.RequestHandler = (context) =>
+                {
+                    TestUtility.Log($"RequestHandler: {context.Request.HttpMethod} {context.Request.Url}");
+                    try
+                    {
+                        // Begin writing to the output stream
+                        context.Response.OutputStream.WriteByte((byte)'X');
+
+                        // Now try to change some things which are no longer mutable
+                        var exception = Assert.Throws<InvalidOperationException>(() => context.Response.StatusCode = HttpStatusCode.Found);
+                        Assert.Contains("TrackingId", exception.Message, StringComparison.OrdinalIgnoreCase);
+                        exception = Assert.Throws<InvalidOperationException>(() => context.Response.StatusDescription = "Test Description");
+                        Assert.Contains("TrackingId", exception.Message, StringComparison.OrdinalIgnoreCase);
+                        exception = Assert.Throws<InvalidOperationException>(() => context.Response.Headers["CustomHeader"] = "Header value");
+                        Assert.Contains("TrackingId", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+                        context.Response.OutputStream.Close();
+                        requestHandlerComplete.TrySetResult(null);
+                    }
+                    catch (Exception e)
+                    {
+                        requestHandlerComplete.TrySetException(e);
+                    }
+                };
+
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+                Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+
+                using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                {
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    var getRequest = new HttpRequestMessage();
+                    await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
+                    LogRequest(getRequest, client);
+                    var sendTask = client.SendAsync(getRequest);
+
+                    // This will throw if anything failed in the RequestHandler
+                    await requestHandlerComplete.Task;
+
+                    using (HttpResponseMessage response = await sendTask)
+                    {
+                        LogResponse(response);
+                        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                        Assert.Equal(1, (await response.Content.ReadAsStreamAsync()).Length);
+                    }
+                }
+
+                await listener.CloseAsync(cts.Token);
             }
             finally
             {

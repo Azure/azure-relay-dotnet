@@ -135,7 +135,9 @@ namespace Microsoft.Azure.Relay
             ListenerCommand.RequestCommand requestCommand;
             using (var rendezvousCommandStream = new WebSocketMessageStream(this.rendezvousWebSocket, this.OperationTimeout))
             {
-                requestCommand = ListenerCommand.ReadObject(rendezvousCommandStream).Request;
+                // Deserializing the object from stream makes a sync-over-async call which can deadlock
+                // if performed on the websocket transport's callback thread.
+                requestCommand = await Task.Run(() => ListenerCommand.ReadObject(rendezvousCommandStream).Request).ConfigureAwait(false);
                 if (rendezvousCommandStream.MessageType == WebSocketMessageType.Close)
                 {
                     throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.EntityClosedOrAborted), this);
@@ -253,7 +255,7 @@ namespace Microsoft.Azure.Relay
             {                
                 RelayEventSource.Log.HybridHttpCreatingRendezvousConnection(this.TrackingContext);
                 var clientWebSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
-                clientWebSocket.Options.Proxy = this.listener.Proxy;
+                DefaultWebProxy.ConfigureProxy(clientWebSocket.Options, this.listener.Proxy);
                 this.rendezvousWebSocket = clientWebSocket.WebSocket;
                 await clientWebSocket.ConnectAsync(this.rendezvousAddress, cancelToken).ConfigureAwait(false);
             }
@@ -411,6 +413,7 @@ namespace Microsoft.Azure.Relay
             public override async Task WriteAsync(byte[] array, int offset, int count, CancellationToken cancelToken)
             {
                 RelayEventSource.Log.HybridHttpResponseStreamWrite(this.TrackingContext, count);
+                this.context.Response.SetReadOnly();
                 using (var timeoutCancelSource = new CancellationTokenSource(this.WriteTimeout))
                 using (var linkedCancelSource = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, timeoutCancelSource.Token))
                 using (await this.asyncLock.LockAsync(linkedCancelSource.Token).ConfigureAwait(false))

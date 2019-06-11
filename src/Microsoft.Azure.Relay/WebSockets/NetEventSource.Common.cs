@@ -65,7 +65,19 @@ namespace Microsoft.Azure.Relay.WebSockets
         private const int CriticalFailureEventId = 6;
         private const int DumpArrayEventId = 7;
 
-        private const int NextAvailableEventId = 8; // Update this value whenever new events are added.  Derived types should base all events off of this to avoid conflicts.
+        // These events are implemented in NetEventSource.Security.cs.
+        // Define the ids here so that projects that include NetEventSource.Security.cs will not have conflicts.
+        private const int EnumerateSecurityPackagesId = 8;
+        private const int SspiPackageNotFoundId = 9;
+        private const int AcquireDefaultCredentialId = 10;
+        private const int AcquireCredentialsHandleId = 11;
+        private const int InitializeSecurityContextId = 12;
+        private const int SecurityContextInputBufferId = 13;
+        private const int SecurityContextInputBuffersId = 14;
+        private const int AcceptSecuritContextId = 15;
+        private const int OperationReturnedSomethingId = 16;
+
+        private const int NextAvailableEventId = 17; // Update this value whenever new events are added.  Derived types should base all events off of this to avoid conflicts.
         #endregion
 
         #region Events
@@ -230,7 +242,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         [Event(ErrorEventId, Level = EventLevel.Warning, Keywords = Keywords.Default)]
         private void ErrorMessage(string thisOrContextObject, string memberName, string message) =>
-            WriteEvent(InfoEventId, thisOrContextObject, memberName ?? MissingMember, message);
+            WriteEvent(ErrorEventId, thisOrContextObject, memberName ?? MissingMember, message);
         #endregion
 
         #region Fail
@@ -264,7 +276,7 @@ namespace Microsoft.Azure.Relay.WebSockets
 
         [Event(CriticalFailureEventId, Level = EventLevel.Critical, Keywords = Keywords.Debug)]
         private void CriticalFailure(string thisOrContextObject, string memberName, string message) =>
-            WriteEvent(InfoEventId, thisOrContextObject, memberName ?? MissingMember, message);
+            WriteEvent(CriticalFailureEventId, thisOrContextObject, memberName ?? MissingMember, message);
         #endregion
 
         #region DumpBuffer
@@ -385,7 +397,9 @@ namespace Microsoft.Azure.Relay.WebSockets
             Debug.Assert(IsEnabled || arg == null, $"Should not be formatting FormattableString \"{arg}\" if tracing isn't enabled");
         }
 
-        public static new bool IsEnabled => Log.IsEnabled();
+        public static new bool IsEnabled =>
+            Log.IsEnabled();
+        //true; // uncomment for debugging only
 
         [NonEvent]
         public static string IdOf(object value) => value != null ? value.GetType().Name + "#" + GetHashCode(value) : NullInstance;
@@ -473,36 +487,6 @@ namespace Microsoft.Azure.Relay.WebSockets
         #endregion
 
         #region Custom WriteEvent overloads
-        [NonEvent]
-        private unsafe void WriteEvent(int eventId, int arg1, int arg2, string arg3, string arg4)
-        {
-            if (IsEnabled())
-            {
-                if (arg3 == null) arg3 = "";
-                if (arg4 == null) arg4 = "";
-
-                fixed (char* string3Bytes = arg3)
-                fixed (char* string4Bytes = arg4)
-                {
-                    const int NumEventDatas = 4;
-                    var descrs = stackalloc EventData[NumEventDatas];
-
-                    descrs[0].DataPointer = (IntPtr)(&arg1);
-                    descrs[0].Size = sizeof(int);
-
-                    descrs[1].DataPointer = (IntPtr)(&arg2);
-                    descrs[1].Size = sizeof(int);
-
-                    descrs[2].DataPointer = (IntPtr)string3Bytes;
-                    descrs[2].Size = ((arg3.Length + 1) * 2);
-
-                    descrs[3].DataPointer = (IntPtr)string4Bytes;
-                    descrs[3].Size = ((arg4.Length + 1) * 2);
-
-                    WriteEventCore(eventId, NumEventDatas, descrs);
-                }
-            }
-        }
 
         [NonEvent]
         private unsafe void WriteEvent(int eventId, string arg1, string arg2, string arg3, string arg4)
@@ -522,17 +506,26 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 4;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)string1Bytes;
-                    descrs[0].Size = ((arg1.Length + 1) * 2);
-
-                    descrs[1].DataPointer = (IntPtr)string2Bytes;
-                    descrs[1].Size = ((arg2.Length + 1) * 2);
-
-                    descrs[2].DataPointer = (IntPtr)string3Bytes;
-                    descrs[2].Size = ((arg3.Length + 1) * 2);
-
-                    descrs[3].DataPointer = (IntPtr)string4Bytes;
-                    descrs[3].Size = ((arg4.Length + 1) * 2);
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)string1Bytes,
+                        Size = ((arg1.Length + 1) * 2)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)string2Bytes,
+                        Size = ((arg2.Length + 1) * 2)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)string3Bytes,
+                        Size = ((arg3.Length + 1) * 2)
+                    };
+                    descrs[3] = new EventData
+                    {
+                        DataPointer = (IntPtr)string4Bytes,
+                        Size = ((arg4.Length + 1) * 2)
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -556,17 +549,26 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 4;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)arg1Ptr;
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)arg2Ptr;
-                    descrs[1].Size = (arg2.Length + 1) * sizeof(char);
-
-                    descrs[2].DataPointer = (IntPtr)(&bufferLength);
-                    descrs[2].Size = 4;
-
-                    descrs[3].DataPointer = (IntPtr)arg3Ptr;
-                    descrs[3].Size = bufferLength;
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)arg2Ptr,
+                        Size = (arg2.Length + 1) * sizeof(char)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&bufferLength),
+                        Size = 4
+                    };
+                    descrs[3] = new EventData
+                    {
+                        DataPointer = (IntPtr)arg3Ptr,
+                        Size = bufferLength
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -585,58 +587,26 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 4;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)(arg1Ptr);
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)(&arg2);
-                    descrs[1].Size = sizeof(int);
-
-                    descrs[2].DataPointer = (IntPtr)(&arg3);
-                    descrs[2].Size = sizeof(int);
-
-                    descrs[3].DataPointer = (IntPtr)(&arg4);
-                    descrs[3].Size = sizeof(int);
-
-                    WriteEventCore(eventId, NumEventDatas, descrs);
-                }
-            }
-        }
-
-        [NonEvent]
-        private unsafe void WriteEvent(int eventId, string arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8)
-        {
-            if (IsEnabled())
-            {
-                if (arg1 == null) arg1 = "";
-
-                fixed (char* arg1Ptr = arg1)
-                {
-                    const int NumEventDatas = 8;
-                    var descrs = stackalloc EventData[NumEventDatas];
-
-                    descrs[0].DataPointer = (IntPtr)(arg1Ptr);
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)(&arg2);
-                    descrs[1].Size = sizeof(int);
-
-                    descrs[2].DataPointer = (IntPtr)(&arg3);
-                    descrs[2].Size = sizeof(int);
-
-                    descrs[3].DataPointer = (IntPtr)(&arg4);
-                    descrs[3].Size = sizeof(int);
-
-                    descrs[4].DataPointer = (IntPtr)(&arg5);
-                    descrs[4].Size = sizeof(int);
-
-                    descrs[5].DataPointer = (IntPtr)(&arg6);
-                    descrs[5].Size = sizeof(int);
-
-                    descrs[6].DataPointer = (IntPtr)(&arg7);
-                    descrs[6].Size = sizeof(int);
-
-                    descrs[7].DataPointer = (IntPtr)(&arg8);
-                    descrs[7].Size = sizeof(int);
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg1Ptr),
+                        Size = (arg1.Length + 1) * sizeof(char)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg2),
+                        Size = sizeof(int)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg3),
+                        Size = sizeof(int)
+                    };
+                    descrs[3] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg4),
+                        Size = sizeof(int)
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -657,14 +627,21 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 3;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)(arg1Ptr);
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)(&arg2);
-                    descrs[1].Size = sizeof(int);
-
-                    descrs[2].DataPointer = (IntPtr)(arg3Ptr);
-                    descrs[2].Size = (arg3.Length + 1) * sizeof(char);
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg1Ptr),
+                        Size = (arg1.Length + 1) * sizeof(char)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg2),
+                        Size = sizeof(int)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg3Ptr),
+                        Size = (arg3.Length + 1) * sizeof(char)
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -685,14 +662,21 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 3;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)(arg1Ptr);
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)(arg2Ptr);
-                    descrs[1].Size = (arg2.Length + 1) * sizeof(char);
-
-                    descrs[2].DataPointer = (IntPtr)(&arg3);
-                    descrs[2].Size = sizeof(int);
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg1Ptr),
+                        Size = (arg1.Length + 1) * sizeof(char)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg2Ptr),
+                        Size = (arg2.Length + 1) * sizeof(char)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg3),
+                        Size = sizeof(int)
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -715,17 +699,26 @@ namespace Microsoft.Azure.Relay.WebSockets
                     const int NumEventDatas = 4;
                     var descrs = stackalloc EventData[NumEventDatas];
 
-                    descrs[0].DataPointer = (IntPtr)(arg1Ptr);
-                    descrs[0].Size = (arg1.Length + 1) * sizeof(char);
-
-                    descrs[1].DataPointer = (IntPtr)(arg2Ptr);
-                    descrs[1].Size = (arg2.Length + 1) * sizeof(char);
-
-                    descrs[2].DataPointer = (IntPtr)(arg3Ptr);
-                    descrs[2].Size = (arg3.Length + 1) * sizeof(char);
-
-                    descrs[3].DataPointer = (IntPtr)(&arg4);
-                    descrs[3].Size = sizeof(int);
+                    descrs[0] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg1Ptr),
+                        Size = (arg1.Length + 1) * sizeof(char)
+                    };
+                    descrs[1] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg2Ptr),
+                        Size = (arg2.Length + 1) * sizeof(char)
+                    };
+                    descrs[2] = new EventData
+                    {
+                        DataPointer = (IntPtr)(arg3Ptr),
+                        Size = (arg3.Length + 1) * sizeof(char)
+                    };
+                    descrs[3] = new EventData
+                    {
+                        DataPointer = (IntPtr)(&arg4),
+                        Size = sizeof(int)
+                    };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }

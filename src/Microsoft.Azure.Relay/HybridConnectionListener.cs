@@ -49,7 +49,7 @@ namespace Microsoft.Azure.Relay
             this.TokenProvider = tokenProvider;
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = RelayConstants.DefaultOperationTimeout;
-            this.proxy = WebRequest.DefaultWebProxy;
+            this.proxy = DefaultWebProxy.Instance;
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
@@ -116,7 +116,7 @@ namespace Microsoft.Azure.Relay
             this.TokenProvider = builder.CreateTokenProvider();
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = builder.OperationTimeout;
-            this.proxy = WebRequest.DefaultWebProxy;
+            this.proxy = DefaultWebProxy.Instance;
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
@@ -690,7 +690,8 @@ namespace Microsoft.Azure.Relay
 
                     RelayEventSource.Log.ObjectConnecting(this.listener);
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
-                    webSocket.Options.Proxy = this.listener.Proxy;
+                    DefaultWebProxy.ConfigureProxy(webSocket.Options, this.listener.Proxy);
+
                     webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
                     webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
 
@@ -715,10 +716,10 @@ namespace Microsoft.Azure.Relay
                     RelayEventSource.Log.ObjectConnected(this.listener);
                     return webSocket.WebSocket;
                 }
-                catch (WebSocketException wsException)
+                catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
                 {
                     throw RelayEventSource.Log.ThrowingException(
-                        WebSocketExceptionHelper.ConvertToRelayContract(wsException, this.listener.TrackingContext, webSocket.Response), this.listener);
+                        WebSocketExceptionHelper.ConvertToRelayContract(exception, this.listener.TrackingContext, webSocket.Response), this.listener);
                 }
             }
 

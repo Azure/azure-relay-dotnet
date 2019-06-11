@@ -41,18 +41,23 @@ namespace Microsoft.Azure.Relay
 #if NETSTANDARD
             if (!useBuiltInWebSocket)
             {
-                return new Microsoft.Azure.Relay.WebSockets.ClientWebSocket();
+                if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
+                {
+                    return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
+                }
+
+                return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
             }
 #endif // NETSTANDARD
 
-            return new FrameworkClientWebSocketProxy(new System.Net.WebSockets.ClientWebSocket());
+            return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
         }
 
-        class FrameworkClientWebSocketProxy : IClientWebSocket
+        class FrameworkClientWebSocket : IClientWebSocket
         {
             readonly System.Net.WebSockets.ClientWebSocket client;
 
-            public FrameworkClientWebSocketProxy(System.Net.WebSockets.ClientWebSocket client)
+            public FrameworkClientWebSocket(System.Net.WebSockets.ClientWebSocket client)
             {
                 this.client = client;
                 this.Options = new FrameworkClientWebSocketOptions(this.client.Options);
@@ -76,6 +81,7 @@ namespace Microsoft.Azure.Relay
                 {
                     this.options = options;
                 }
+
                 public IWebProxy Proxy
                 {
                     get { return this.options.Proxy; }
