@@ -124,17 +124,22 @@ namespace Microsoft.Azure.Relay
         }
 
         /// <summary>
-        /// Raised when the Listener is attempting to reconnect with ServiceBus after a connection loss.
+        /// Raised when the Listener is attempting to reconnect with ServiceBus after a connection loss. 
+        /// Check LastError for more details.
         /// </summary>
         public event EventHandler Connecting;
 
         /// <summary>
-        /// Raised when the Listener has successfully connected with ServiceBus
+        /// Raised when the Listener has successfully connected or reconnected with ServiceBus.
+        /// LastError will be null at this point.
         /// </summary>
         public event EventHandler Online;
         
         /// <summary>
-        /// Raised when the Listener will no longer be attempting to (re)connect with ServiceBus.
+        /// Raised when the Listener will no longer be attempting to reconnect with ServiceBus.
+        /// Reasons include user-initiated listener close or the HybridConnection management object
+        /// was deleted (e.g. via portal or ARM).
+        /// Check LastError for more details when this event is raised unexpectedly.
         /// </summary>
         public event EventHandler Offline;
 
