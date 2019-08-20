@@ -282,36 +282,36 @@ namespace Microsoft.Azure.Relay.UnitTests
             // Allow more than two connections to a destination when using HttpWebRequests
             ServicePointManager.DefaultConnectionLimit = 200;
 
-            Func<Uri, TokenProvider, IEnumerable<int>, CancellationToken, Task> sendBatchFunc = async (httpUri, tokenProvider, indexes, cancelToken) =>
-            {
-                try
+            await LoadBalancedListenersCore(
+                endpointTestType,
+                async (httpUri, tokenProvider, indexes, cancelToken) =>
                 {
-                    foreach (var index in indexes)
+                    try
                     {
-                        var httpRequest = (HttpWebRequest)WebRequest.Create(httpUri);
-                        using (var abortRegistration = cancelToken.Register(() => httpRequest.Abort()))
+                        foreach (var index in indexes)
                         {
-                            httpRequest.Method = HttpMethod.Get.Method;
-                            await AddAuthorizationHeader(tokenProvider, httpRequest.Headers, httpUri);
-
-                            using (var httpResponse = (HttpWebResponse)(await httpRequest.GetResponseAsync()))
-                            using (var responseStream = httpResponse.GetResponseStream())
+                            var httpRequest = (HttpWebRequest)WebRequest.Create(httpUri);
+                            using (var abortRegistration = cancelToken.Register(() => httpRequest.Abort()))
                             {
-                                Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+                                httpRequest.Method = HttpMethod.Get.Method;
+                                await AddAuthorizationHeader(tokenProvider, httpRequest.Headers, httpUri);
+
+                                using (var httpResponse = (HttpWebResponse)(await httpRequest.GetResponseAsync()))
+                                using (var responseStream = httpResponse.GetResponseStream())
+                                {
+                                    Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+                                }
                             }
                         }
                     }
-                }
-                catch (WebException webException)
-                {
-                    HttpStatusCode? status = (webException.Response as HttpWebResponse)?.StatusCode;
-                    string messageIndexes = indexes.First() + "-" + indexes.Last();
-                    TestUtility.Log($"Messages {messageIndexes} Error: {status} {webException}");
-                    throw;
-                }
-            };
-
-            await LoadBalancedListenersCore(endpointTestType, sendBatchFunc);
+                    catch (WebException webException)
+                    {
+                        HttpStatusCode? status = (webException.Response as HttpWebResponse)?.StatusCode;
+                        string messageIndexes = indexes.First() + "-" + indexes.Last();
+                        TestUtility.Log($"Messages {messageIndexes} Error: {status} {webException}");
+                        throw;
+                    }
+                });
         }
 
         [Theory, DisplayTestMethodName]
@@ -323,26 +323,26 @@ namespace Microsoft.Azure.Relay.UnitTests
             {
                 client.DefaultRequestHeaders.ExpectContinue = false;
 
-                Func<Uri, TokenProvider, IEnumerable<int>, CancellationToken, Task> sendBatchFunc = async (httpUri, tokenProvider, indexes, cancelToken) =>
-                {
-                    foreach (var index in indexes)
+                await LoadBalancedListenersCore(
+                    endpointTestType,
+                    async (httpUri, tokenProvider, indexes, cancelToken) =>
                     {
-                        using (var getRequest = new HttpRequestMessage(HttpMethod.Get, httpUri))
+                        foreach (var index in indexes)
                         {
-                            if (endpointTestType != EndpointTestType.Unauthenticated)
+                            using (var getRequest = new HttpRequestMessage(HttpMethod.Get, httpUri))
                             {
-                                await AddAuthorizationHeader(tokenProvider, getRequest, httpUri);
-                            }
+                                if (endpointTestType != EndpointTestType.Unauthenticated)
+                                {
+                                    await AddAuthorizationHeader(tokenProvider, getRequest, httpUri);
+                                }
 
-                            using (HttpResponseMessage response = await client.SendAsync(getRequest, cancelToken))
-                            {
-                                Assert.True(response.IsSuccessStatusCode, "Response should have succeeded");
+                                using (HttpResponseMessage response = await client.SendAsync(getRequest, cancelToken))
+                                {
+                                    Assert.True(response.IsSuccessStatusCode, "Response should have succeeded");
+                                }
                             }
                         }
-                    }
-                };
-
-                await LoadBalancedListenersCore(endpointTestType, sendBatchFunc);
+                    });
             }
         }
 
