@@ -274,13 +274,83 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Fact, DisplayTestMethodName]
+        async Task LoadBalancedListeners_WebRequest()
+        {
+            EndpointTestType endpointTestType = EndpointTestType.Authenticated;
+
+            // Allow more than two connections to a destination when using HttpWebRequests
+            ServicePointManager.DefaultConnectionLimit = 200;
+
+            Func<Uri, TokenProvider, IEnumerable<int>, CancellationToken, Task> sendBatchFunc = async (httpUri, tokenProvider, indexes, cancelToken) =>
+            {
+                try
+                {
+                    foreach (var index in indexes)
+                    {
+                        var httpRequest = (HttpWebRequest)WebRequest.Create(httpUri);
+                        using (var abortRegistration = cancelToken.Register(() => httpRequest.Abort()))
+                        {
+                            httpRequest.Method = HttpMethod.Get.Method;
+                            await AddAuthorizationHeader(tokenProvider, httpRequest.Headers, httpUri);
+
+                            using (var httpResponse = (HttpWebResponse)(await httpRequest.GetResponseAsync()))
+                            using (var responseStream = httpResponse.GetResponseStream())
+                            {
+                                Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+                            }
+                        }
+                    }
+                }
+                catch (WebException webException)
+                {
+                    HttpStatusCode? status = (webException.Response as HttpWebResponse)?.StatusCode;
+                    string messageIndexes = indexes.First() + "-" + indexes.Last();
+                    TestUtility.Log($"Messages {messageIndexes} Error: {status} {webException}");
+                    throw;
+                }
+            };
+
+            await LoadBalancedListenersCore(endpointTestType, sendBatchFunc);
+        }
+
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
-        async Task LoadBalancedListeners(EndpointTestType endpointTestType)
+        async Task LoadBalancedListeners_HttpClient(EndpointTestType endpointTestType)
+        {
+            var httpHandler = new HttpClientHandler() { MaxConnectionsPerServer = 200 };
+            using (var client = new HttpClient(httpHandler))
+            {
+                client.DefaultRequestHeaders.ExpectContinue = false;
+
+                Func<Uri, TokenProvider, IEnumerable<int>, CancellationToken, Task> sendBatchFunc = async (httpUri, tokenProvider, indexes, cancelToken) =>
+                {
+                    foreach (var index in indexes)
+                    {
+                        using (var getRequest = new HttpRequestMessage(HttpMethod.Get, httpUri))
+                        {
+                            if (endpointTestType != EndpointTestType.Unauthenticated)
+                            {
+                                await AddAuthorizationHeader(tokenProvider, getRequest, httpUri);
+                            }
+
+                            using (HttpResponseMessage response = await client.SendAsync(getRequest, cancelToken))
+                            {
+                                Assert.True(response.IsSuccessStatusCode, "Response should have succeeded");
+                            }
+                        }
+                    }
+                };
+
+                await LoadBalancedListenersCore(endpointTestType, sendBatchFunc);
+            }
+        }
+
+        async Task LoadBalancedListenersCore(EndpointTestType endpointTestType, Func<Uri, TokenProvider, IEnumerable<int>, CancellationToken, Task> sendBatchFunc)
         {
             HybridConnectionListener listener1 = null;
             HybridConnectionListener listener2 = null;
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
             try
             {
                 listener1 = this.GetHybridConnectionListener(endpointTestType);
@@ -293,9 +363,14 @@ namespace Microsoft.Azure.Relay.UnitTests
                     listener1.OpenAsync(cts.Token),
                     listener2.OpenAsync(cts.Token));
 
-                const int TotalExpectedRequestCount = 50;
-                long listenerRequestCount1 = 0;
-                long listenerRequestCount2 = 0;
+                // ParallelBatches=50; BatchSize=100; Total = 2*ParallelBatches*BatchSize; // Makes for a nice throughput test which takes 10-30 seconds
+                // NOTE: Quickly creating ~16K HttpWebRequests on .NET Core can easily run out of ephemeral ports (many sockets in TIME_WAIT state).
+                const int ParallelBatches = 5;
+                const int BatchSize = 10;
+                const int TotalRequestCount = 2 * ParallelBatches * BatchSize;
+
+                int listenerRequestCount1 = 0;
+                int listenerRequestCount2 = 0;
 
                 listener1.RequestHandler = async (context) =>
                 {
@@ -312,43 +387,31 @@ namespace Microsoft.Azure.Relay.UnitTests
                 };
 
                 Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
-                await Enumerable.Range(0, TotalExpectedRequestCount).ParallelBatchAsync(
-                    batchSize: 10,
-                    parallelTasksCount: 10,
+                var tokenProvider = endpointTestType == EndpointTestType.Authenticated ? listener1.TokenProvider : null;
+                var stopwatch = Stopwatch.StartNew();
+                await Enumerable.Range(0, TotalRequestCount).ParallelBatchAsync(
+                    BatchSize,
+                    ParallelBatches,
                     asyncTask: async (indexes) =>
                     {
-                        string messageIndexes = string.Join(",", indexes);
-                        TestUtility.Log($"Messages {messageIndexes} starting");
-                        try
-                        {
-                            foreach (var index in indexes)
-                            {
-                                var httpRequest = (HttpWebRequest)WebRequest.Create(hybridHttpUri);
-                                using (var abortRegistration = cts.Token.Register(() => httpRequest.Abort()))
-                                {
-                                    httpRequest.Method = HttpMethod.Get.Method;
-                                    await AddAuthorizationHeader(connectionString, httpRequest.Headers, hybridHttpUri);
+                        // Yield the thread starting each batch to allow more parallelism
+                        await Task.Yield();
 
-                                    using (var httpResponse = (HttpWebResponse)(await httpRequest.GetResponseAsync()))
-                                    {
-                                        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
-                                    }
-                                }
-                            }
-                        }
-                        catch (WebException webException)
-                        {
-                            TestUtility.Log($"Messages {messageIndexes} Error: {webException}");
-                            throw;
-                        }
-
-                        TestUtility.Log($"Messages {messageIndexes} complete");
+                        // Verbose Tracing if troubleshooting is needed
+                        //string messageIndexes = indexes.First() + "-" + indexes.Last();
+                        //TestUtility.Log($"Messages {messageIndexes} starting");
+                        await sendBatchFunc(hybridHttpUri, tokenProvider, indexes, cts.Token);
+                        //TestUtility.Log($"Messages {messageIndexes} complete");
                     });
 
+                stopwatch.Stop();
+                int totalRequests = listenerRequestCount1 + listenerRequestCount2;
+                double sendRate = totalRequests / stopwatch.Elapsed.TotalSeconds;
+                TestUtility.Log($"===== Total Request Count: {totalRequests} in {stopwatch.Elapsed} ({sendRate:N2}/sec, {connectionString.EntityPath}, {TestUtility.RuntimeFramework})");
                 TestUtility.Log($"Listener1 Request Count: {listenerRequestCount1}");
                 TestUtility.Log($"Listener2 Request Count: {listenerRequestCount2}");
 
-                Assert.Equal(TotalExpectedRequestCount, listenerRequestCount1 + listenerRequestCount2);
+                Assert.Equal(TotalRequestCount, listenerRequestCount1 + listenerRequestCount2);
                 Assert.True(listenerRequestCount1 > 0, "Listener 1 should have received some of the events.");
                 Assert.True(listenerRequestCount2 > 0, "Listener 2 should have received some of the events.");
 
@@ -779,97 +842,29 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact, DisplayTestMethodName]
-        async Task SmallRequestSmallResponseParallel()
-        {            
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
-            HybridConnectionListener listener = null;
-            try
-            {
-                var endpointTestType = EndpointTestType.Unauthenticated;
-                listener = this.GetHybridConnectionListener(endpointTestType);
-                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
-                Uri endpointUri = new UriBuilder(connectionString.Endpoint)
-                {
-                    Scheme = Uri.UriSchemeHttps, Path = connectionString.EntityPath
-                }.Uri;
-
-                byte[] responseBytes = Encoding.UTF8.GetBytes("{ \"a\" : true }");
-                listener.RequestHandler = async (context) =>
-                {
-                    try
-                    {
-                        context.Response.StatusCode = HttpStatusCode.OK;
-                        context.Response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                        await context.Response.CloseAsync();
-                    }
-                    catch (Exception e)
-                    {
-                        TestUtility.Log($"ERROR: {e}");
-                        throw;
-                    }
-                };
-
-                TestUtility.Log($"Opening {listener}");
-                await listener.OpenAsync(cts.Token);
-
-                string sasToken = string.Empty;
-                var tokenProvider = CreateTokenProvider(connectionString);
-                if (tokenProvider != null)
-                {
-                    sasToken = (await tokenProvider.GetTokenAsync(endpointUri.AbsoluteUri, TimeSpan.FromMinutes(30))).TokenString;
-                }
-
-                const int ParallelCount = 5; // 50 * 400 gets good throughput but requires warmup time to ramp up the threadpool
-                const int MessageCount = 10; // 400;
-
-                TestUtility.Log("Warmup start");
-                var sendTasks = new List<Task>();
-                var stopwatch = new Stopwatch();
-                stopwatch.Restart();
-                for (int i = 0; i < ParallelCount; i++)
-                {
-                    var task = Task.Run(() => SendAsync(endpointUri, sasToken, MessageCount / 2, cts.Token));
-                    sendTasks.Add(task);
-                }
-                await Task.WhenAll(sendTasks);
-                stopwatch.Stop();
-                TestUtility.Log($"Warmup completed in {stopwatch.Elapsed}");
-
-                TestUtility.Log($"Start timing now");
-                sendTasks = new List<Task>();
-                stopwatch.Restart();
-                for (int i = 0; i < ParallelCount; i++)
-                {
-                    var task = Task.Run(() => SendAsync(endpointUri, sasToken, MessageCount, cts.Token));
-                    sendTasks.Add(task);
-                }
-
-                await Task.WhenAll(sendTasks);
-                stopwatch.Stop();
-                TimeSpan elapsed = stopwatch.Elapsed;
-                double messagesPerSecond = (ParallelCount * MessageCount) / elapsed.TotalSeconds;
-                TestUtility.Log($"Tasks Completed in {elapsed} seconds. Senders: {ParallelCount}, Messages: {ParallelCount * MessageCount} ({messagesPerSecond} msgs/sec, {connectionString.EntityPath})");
-
-                TestUtility.Log($"Closing {listener}");
-                await listener.CloseAsync(cts.Token);
-                listener = null;
-            }
-            finally
-            {
-                cts.Dispose();
-                await this.SafeCloseAsync(listener);
-            }
-        }
-
         static Task AddAuthorizationHeader(RelayConnectionStringBuilder connectionString, HttpRequestMessage request, Uri resource)
         {
-            return AddAuthorizationHeader(connectionString, resource, (t) => request.Headers.Add("ServiceBusAuthorization", t));
+            var tokenProvider = CreateTokenProvider(connectionString);
+            return AddAuthorizationHeader(tokenProvider, request, resource);
         }
 
-        static Task AddAuthorizationHeader(RelayConnectionStringBuilder connectionString, WebHeaderCollection headers, Uri resource)
+        static Task AddAuthorizationHeader(TokenProvider tokenProvider, HttpRequestMessage request, Uri resource)
         {
-            return AddAuthorizationHeader(connectionString, resource, (t) => headers.Add("ServiceBusAuthorization", t));
+            return AddAuthorizationHeader(tokenProvider, resource, (req, t) => req.Headers.Add("ServiceBusAuthorization", t), request);
+        }
+
+        static Task AddAuthorizationHeader(TokenProvider tokenProvider, WebHeaderCollection headers, Uri resource)
+        {
+            return AddAuthorizationHeader(tokenProvider, resource, (h, t) => h.Add("ServiceBusAuthorization", t), headers);
+        }
+
+        static async Task AddAuthorizationHeader<T>(TokenProvider tokenProvider, Uri resource, Action<T, string> addHeader, T value)
+        {
+            if (tokenProvider != null)
+            {
+                var token = await tokenProvider.GetTokenAsync(resource.AbsoluteUri, TimeSpan.FromMinutes(20));
+                addHeader(value, token.TokenString);
+            }
         }
 
         static TokenProvider CreateTokenProvider(RelayConnectionStringBuilder connectionString)
@@ -885,16 +880,6 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
 
             return tokenProvider;
-        }
-
-        static async Task AddAuthorizationHeader(RelayConnectionStringBuilder connectionString, Uri resource, Action<string> addHeader)
-        {
-            TokenProvider tokenProvider = CreateTokenProvider(connectionString);
-            if (tokenProvider != null)
-            {
-                var token = await tokenProvider.GetTokenAsync(resource.AbsoluteUri, TimeSpan.FromMinutes(20));
-                addHeader(token.TokenString);
-            }
         }
 
         static async Task SendAsync(Uri httpUri, string sasToken, int messageCount, CancellationToken cancelToken)

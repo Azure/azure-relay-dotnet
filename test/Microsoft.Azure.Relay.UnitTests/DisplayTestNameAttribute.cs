@@ -4,14 +4,13 @@
 namespace Microsoft.Azure.Relay.UnitTests
 {
     using System.Reflection;
-    using Microsoft.Extensions.PlatformAbstractions;
     using Xunit.Sdk;
 
     public class DisplayTestMethodNameAttribute : BeforeAfterTestAttribute
     {
         public override void Before(MethodInfo methodUnderTest)
         {
-            TestUtility.Log($"Begin {methodUnderTest.DeclaringType}.{methodUnderTest.Name} on {PlatformServices.Default.Application.RuntimeFramework.ToString()}");
+            TestUtility.Log($"Begin {methodUnderTest.DeclaringType}.{methodUnderTest.Name}({TestUtility.RuntimeFramework})");
             base.Before(methodUnderTest);
         }
 
