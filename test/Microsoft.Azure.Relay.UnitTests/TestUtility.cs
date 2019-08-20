@@ -5,14 +5,30 @@ namespace Microsoft.Azure.Relay.UnitTests
 {
     using System;
     using System.Diagnostics;
+    using System.Reflection;
+    using System.Runtime.Versioning;
     using System.Security.Cryptography;
 
     static class TestUtility
     {
+        public static readonly string RuntimeFramework = GetRuntimeFramework();
+
+        static string GetRuntimeFramework()
+        {
+            string runtimeFramework = "Unknown";
+            var targetFrameworkAttribute = (TargetFrameworkAttribute)Assembly.GetExecutingAssembly().GetCustomAttribute(typeof(TargetFrameworkAttribute));
+            if (targetFrameworkAttribute != null)
+            {
+                runtimeFramework = targetFrameworkAttribute.FrameworkName;
+            }
+
+            return runtimeFramework;
+        }
+
         internal static void Log(string message)
         {
             var formattedMessage = $"{DateTime.Now.TimeOfDay}: {message}";
-            Debug.WriteLine(formattedMessage);
+            Trace.WriteLine(formattedMessage);
             Console.WriteLine(formattedMessage);
         }
 
