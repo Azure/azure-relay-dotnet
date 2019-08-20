@@ -881,33 +881,5 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             return tokenProvider;
         }
-
-        static async Task SendAsync(Uri httpUri, string sasToken, int messageCount, CancellationToken cancelToken)
-        {
-            using (var client = new HttpClient { BaseAddress = httpUri })
-            {
-                client.DefaultRequestHeaders.ExpectContinue = false;
-
-                for (int i = 0; i < messageCount; i++)
-                {
-                    using (var getRequest = new HttpRequestMessage())
-                    {
-                        getRequest.Method = HttpMethod.Get;
-
-                        if (!string.IsNullOrEmpty(sasToken))
-                        {
-                            getRequest.Headers.Add("ServiceBusAuthorization", sasToken);
-                        }
-
-                        //LogRequest(getRequest, client);
-                        using (HttpResponseMessage response = await client.SendAsync(getRequest, cancelToken))
-                        {
-                            //LogResponse(response);
-                            Assert.True(response.IsSuccessStatusCode, "Response should have succeeded");
-                        }
-                    }
-                }
-            }
-        }
     }
 }
