@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Reflection;
+    using System.Runtime.InteropServices;
 
     static class HybridConnectionConstants
     {
@@ -24,11 +25,13 @@ namespace Microsoft.Azure.Relay
         public const string SasKey = QueryStringKeyPrefix + "sas-key"; // sb-hc-sas-key
 
         public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromMinutes(3.5);
-        public static readonly string ClientAgent = "azure-relay-dotnet/" + LookupFileVersion();
 
-        static string LookupFileVersion()
+        // e.g. "azure-relay-dotnet/2.0.1.0 (Microsoft Windows NT 10.0.18363.0; .NET Core 4.6.28008.01)"
+        public static readonly string ClientAgent = $"azure-relay-dotnet/{GetFileVersion()} ({Environment.OSVersion}; {PlatformHelpers.GetRuntimeFramework()})";
+
+        static string GetFileVersion()
         {
-            var a = typeof(HybridConnectionConstants).GetTypeInfo().Assembly;
+            var a = Assembly.GetExecutingAssembly();
             var attribute = a.GetCustomAttribute<AssemblyFileVersionAttribute>();
             return attribute.Version;
         }
@@ -43,6 +46,8 @@ namespace Microsoft.Azure.Relay
 
         public static class Headers
         {
+            // ClientWebSocket on .NET Framework doesn't allow us to set User-Agent header because it's a property
+            // on HttpWebRequest and cannot be added via the generic Add(string, string) mechanism.
             public const string RelayUserAgent = "Relay-User-Agent";
             public const string SecWebSocketExtensions = "Sec-WebSocket-Extensions";
             public const string SecWebSocketKey = "Sec-WebSocket-Key";

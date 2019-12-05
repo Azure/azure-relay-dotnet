@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.IO;
+    using System.Runtime.InteropServices;
 
     static class PlatformHelpers
     {
@@ -25,6 +26,16 @@ namespace Microsoft.Azure.Relay
 #endif
 
             return buffer;
+        }
+
+        public static string GetRuntimeFramework()
+        {
+#if NET451 || NET452 || NET46 || NET461 || NET462 || NET47
+            return RuntimeEnvironment.GetSystemVersion();
+#else
+            // Only available on .NET Framework starting with 4.7.1 (also netstandard1.1 and later)
+            return RuntimeInformation.FrameworkDescription;
+#endif
         }
     }
 }
