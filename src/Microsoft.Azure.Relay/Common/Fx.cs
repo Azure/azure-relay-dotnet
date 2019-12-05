@@ -31,14 +31,9 @@ namespace Microsoft.Azure.Relay
         {
             while (exception != null)
             {
-                // FYI, CallbackException is-a FatalException
-                if (
-                    //exception is FatalException ||
-#if NET45
-                    (exception is OutOfMemoryException && !(exception is InsufficientMemoryException)) ||
+                if (exception is AccessViolationException ||
                     exception is ThreadAbortException ||
-                    exception is AccessViolationException ||
-#endif
+                    (exception is OutOfMemoryException && !(exception is InsufficientMemoryException)) ||
                     exception is SEHException)
                 {
                     return true;

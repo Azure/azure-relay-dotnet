@@ -6,14 +6,14 @@ namespace Microsoft.Azure.Relay
     using System;
     using System.IO;
 
-    static class PlatformExtensions
+    static class PlatformHelpers
     {
         public static ArraySegment<byte> GetArraySegment(this MemoryStream memoryStream)
         {
             Fx.Assert(memoryStream != null, "memoryStream is required");
             
             ArraySegment<byte> buffer;
-#if NET45
+#if NET45 || NET451 || NET452
             buffer = new ArraySegment<byte>(memoryStream.GetBuffer(), 0, (int)memoryStream.Length);
 #else
             // .NET 4.6 and .NET Core added MemoryStream.TryGetBuffer()
