@@ -529,7 +529,15 @@ namespace Microsoft.Azure.Relay
                 }
                 finally
                 {
-                    await this.connection.CloseAsync().ConfigureAwait(false);
+                    try
+                    {
+                        await this.connection.CloseAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception closeException) when (!Fx.IsFatal(closeException))
+                    {
+                        RelayEventSource.Log.HandledExceptionAsWarning(this, closeException);
+                    }
+
                     this.closed = true;
                 }
             }

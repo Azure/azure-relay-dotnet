@@ -15,12 +15,7 @@ namespace Microsoft.Azure.Relay
         DateTime deadline;
         bool deadlineSet;
 
-        public TimeoutHelper(TimeSpan timeout) :
-            this(timeout, false)
-        {
-        }
-
-        public TimeoutHelper(TimeSpan timeout, bool startTimeout)
+        TimeoutHelper(TimeSpan timeout, bool startTimeout)
         {
             Fx.Assert(timeout >= TimeSpan.Zero, "timeout must be non-negative");
 
@@ -30,8 +25,18 @@ namespace Microsoft.Azure.Relay
 
             if (startTimeout && !this.deadlineSet)
             {
-                this.SetDeadline();
+                this.Start();
             }
+        }
+
+        public static TimeoutHelper CreateAndStart(TimeSpan timeout)
+        {
+            return new TimeoutHelper(timeout, true);
+        }
+
+        public static TimeoutHelper CreateOnly(TimeSpan timeout)
+        {
+            return new TimeoutHelper(timeout, false);
         }
 
         public TimeSpan OriginalTimeout
@@ -109,7 +114,7 @@ namespace Microsoft.Azure.Relay
         {
             if (!this.deadlineSet)
             {
-                this.SetDeadline();
+                this.Start();
                 return this.originalTimeout;
             }
             else if (this.deadline == DateTime.MaxValue)
@@ -135,11 +140,13 @@ namespace Microsoft.Azure.Relay
             return this.originalTimeout - this.RemainingTime();
         }
 
-        void SetDeadline()
+        public void Start()
         {
-            Fx.Assert(!this.deadlineSet, "TimeoutHelper deadline set twice.");
-            this.deadline = DateTime.UtcNow + this.originalTimeout;
-            this.deadlineSet = true;
+            if (!this.deadlineSet)
+            {
+                this.deadline = DateTime.UtcNow + this.originalTimeout;
+                this.deadlineSet = true;
+            }
         }
 
         public static void ThrowIfNegativeArgument(TimeSpan timeout)
