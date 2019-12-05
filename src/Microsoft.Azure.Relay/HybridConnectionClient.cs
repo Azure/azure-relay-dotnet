@@ -159,7 +159,8 @@ namespace Microsoft.Azure.Relay
         {
             TrackingContext trackingContext = CreateTrackingContext(this.Address);
             string traceSource = nameof(HybridConnectionClient) + "(" + trackingContext + ")";
-            var timeoutHelper = new TimeoutHelper(this.OperationTimeout);
+            // todo - Check if timeout helper needs to be started here.
+            var timeoutHelper = TimeoutHelper.CreateOnly(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
             var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
