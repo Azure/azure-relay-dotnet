@@ -77,10 +77,9 @@ namespace Microsoft.Azure.Relay
                 if (disposing)
                 {
                     this.asyncSemaphore.Dispose();
-#if NET45
+
                     // This is only disposing the Task...
                     this.lockRelease.Dispose();
-#endif
                 }
 
                 this.disposed = true;

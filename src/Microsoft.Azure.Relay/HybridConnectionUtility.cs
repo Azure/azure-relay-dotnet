@@ -8,7 +8,7 @@ namespace Microsoft.Azure.Relay
     using System.Collections.Specialized;
     using System.Net;
     using System.Text;
-#if NET45
+#if NETFRAMEWORK
     using System.Web;
 #else
     // NETSTANDARD
@@ -53,7 +53,7 @@ namespace Microsoft.Azure.Relay
             }.Uri;
         }
 
-#if NET45
+#if NETFRAMEWORK
         public static NameValueCollection ParseQueryString(string queryString)
         {
             return HttpUtility.ParseQueryString(queryString);

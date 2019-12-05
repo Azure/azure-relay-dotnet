@@ -454,7 +454,7 @@ namespace Microsoft.Azure.Relay
                 }
             }
 
-#if NET45
+#if NETFRAMEWORK
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 return this.WriteAsync(buffer, offset, count).ToAsyncResult(callback, state);
@@ -464,7 +464,7 @@ namespace Microsoft.Azure.Relay
             {
                 TaskEx.EndAsyncResult(asyncResult);
             }
-#endif // NET45
+#endif // NETFRAMEWORK
 
             public override string ToString()
             {

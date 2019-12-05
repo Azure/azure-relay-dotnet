@@ -65,7 +65,7 @@ namespace Microsoft.Azure.Relay
             return this.ReadAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-#if NET45
+#if NETFRAMEWORK
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return this.ReadAsync(buffer, offset, count).ToAsyncResult(callback, state);
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.Relay
         {
             return TaskEx.EndAsyncResult<int>(asyncResult);
         }
-#endif // NET45
+#endif // NETFRAMEWORK
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancelToken)
         {
