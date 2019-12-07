@@ -1,0 +1,61 @@
+environment:
+  host:
+    os: 'windows'
+    flavor: 'server'
+    version: '2019'
+  runtime:
+    provider: 'appcontainer'
+    image: 'cdpxwinrs5.azurecr.io/global/vse2019/16.3.7:latest'
+    source_mode: 'link'
+
+version:
+  name: 'DefaultVersion'
+  major: 2
+  minor: 1
+  system: 'RevisionCounter'
+  exclude_commit: true
+
+signing_options:
+  profile: 'external_distribution'
+
+restore:
+  commands:
+    - !!defaultcommand
+      name: 'Restore Packages'
+      command: 'restore.cmd'
+
+build:
+  commands:
+    - !!buildcommand
+      name: 'Build'
+      command: 'build.cmd'
+      logs:
+        - include:
+            - 'src/**/*.log'
+      artifacts:
+        - from: 'src/Microsoft.Azure.Relay/bin'
+          to: 'Microsoft.Azure.Relay'
+          include: 
+            - '**/*'
+
+package:
+  commands:
+    - !!buildcommand
+      name: 'Create Nuget Packages'
+      command: 'package.cmd'
+      fail_on_stderr: true
+      artifacts:
+        - from: 'src/Microsoft.Azure.Relay/bin'
+          include:
+            - '**/*.nupkg'
+
+#test:
+#  commands:
+#   - !!testcommand
+#     name: 'Run CSharp Tests'
+#     command: 'test.cmd'
+#     testresults:
+#       - title: 'CSharp UnitTests'
+#         type: 'vstest'
+#         include:
+#           - '**/*.trx'

@@ -12,20 +12,18 @@
     <DebugType>full</DebugType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>Microsoft.Azure.Relay</AssemblyName>
-    <AssemblyOriginatorKeyFile>../../build/keyfile.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
     <PackageId>Microsoft.Azure.Relay</PackageId>
     <PackageTags>Azure;Relay;.NET;Web socket;websocket;hybrid connection;hybrid connections;ServiceBus;Service Bus</PackageTags>
     <PackageReleaseNotes>https://github.com/Azure/azure-relay-dotnet/releases</PackageReleaseNotes>
-    <PackageIconUrl>https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/relay.png</PackageIconUrl>
+    <PackageIcon>relay.png</PackageIcon>
     <PackageProjectUrl>https://github.com/Azure/azure-relay-dotnet</PackageProjectUrl>
-    <PackageLicenseUrl>https://raw.githubusercontent.com/Azure/azure-relay-dotnet/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>true</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
     <Version>2.0.1</Version>
+    <IsPackable>True</IsPackable>
   </PropertyGroup>
 
   <!-- .NET Framework specific -->
@@ -59,5 +57,9 @@
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\relay.png" Pack="true" PackagePath="\"/>
+  </ItemGroup>    
 
 </Project>
