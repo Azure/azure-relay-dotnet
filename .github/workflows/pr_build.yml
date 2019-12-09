@@ -27,23 +27,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Setup .NET Core 2.2.402
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '2.2.402'
-    - run: dotnet --info
     - name: Setup .NET Core 3.0.100
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '3.0.100'
     - run: dotnet --info
-    - name: copy .NET Core 2.2.402
-      run: |
-        rsync -a ${DOTNET_ROOT}/../../2.2.402/x64/shared/ $DOTNET_ROOT/shared
-    - run: dotnet --info
-    - run: ls
-    - name: Restore
-      run: ./restore.sh
+    - run: ls -l
+    #- name: Restore
+    #  run: ./restore.sh
     - name: Build
       run: ./build.sh
     - name: Package
