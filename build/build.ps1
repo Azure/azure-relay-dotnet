@@ -200,6 +200,8 @@ function Delete-AzureResources
     Write-Host "Completed deleting Azure resources"
 }
 
+dotnet --info
+
 Build-Solution
 if (-Not $canDeploy -and -Not [bool][Environment]::GetEnvironmentVariable($connectionStringVariableName)) {
     return
