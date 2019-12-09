@@ -6,7 +6,7 @@ branches:
 skip_tags: true
 matrix:
   fast_finish: true 
-image: Visual Studio 2017
+image: Visual Studio 2019
 environment:
   azure-relay-dotnet/ClientSecret:
     secure: /8H7C81iNS+gVi7LhJCEOPUlNaa30y4KcY4nw/g2C4HGxOv6SrcroyDvMnqD+5GN
