@@ -5,7 +5,7 @@ $configuration = if ($CONFIGURATION -ne $null) { $CONFIGURATION  } else { 'Debug
 $platform = if ($PLATFORM -ne $null) { $PLATFORM } else { 'Any CPU' }
 $projectFolder = if ($ENV:APPVEYOR_BUILD_FOLDER -ne $null) { "$ENV:APPVEYOR_BUILD_FOLDER" } else { $(Get-Location).path }
 $buildFolder = $projectFolder + '\build\'
-$runtime = if ($ENV:DotNetRunTime -ne $null) { $ENV:DotNetRunTime } else { 'netcoreapp1.0' }
+$runtime = if ($ENV:DotNetRunTime -ne $null) { $ENV:DotNetRunTime } else { 'netcoreapp2.1' }
 $artifactsFolder = $buildFolder + 'artifacts\'
 $appProject = $projectFolder + '\src\Microsoft.Azure.Relay\Microsoft.Azure.Relay.csproj'
 $testProject = $projectFolder + '\test\Microsoft.Azure.Relay.UnitTests\Microsoft.Azure.Relay.UnitTests.csproj'
@@ -199,6 +199,8 @@ function Delete-AzureResources
 
     Write-Host "Completed deleting Azure resources"
 }
+
+dotnet --info
 
 Build-Solution
 if (-Not $canDeploy -and -Not [bool][Environment]::GetEnvironmentVariable($connectionStringVariableName)) {

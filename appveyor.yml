@@ -6,7 +6,7 @@ branches:
 skip_tags: true
 matrix:
   fast_finish: true 
-image: Visual Studio 2017
+image: Visual Studio 2019
 environment:
   azure-relay-dotnet/ClientSecret:
     secure: /8H7C81iNS+gVi7LhJCEOPUlNaa30y4KcY4nw/g2C4HGxOv6SrcroyDvMnqD+5GN
@@ -16,7 +16,7 @@ environment:
     secure: c+H140oRJfHtmFHZxSRLWocv5AU0q33X7kgMcTcXxhJvtVhk2WAk1dRQkSN+SyoA
   matrix:
     # First build
-    - DotNetRunTime: netcoreapp1.0
+    - DotNetRunTime: netcoreapp2.1
       azure-relay-dotnet/CodeCovSecret:
         secure: NAlk4Em1NARlJqd8aan0jD8SW8iE86quYwiBi2ngs5Dfl0gYuwDuZaSkpoFFf2Cz
     # Second build
@@ -26,7 +26,7 @@ skip_commits:
   files:
     - '**/*.md'
 artifacts:
-- path: .\build\artifacts\*
+- path: '**\Microsoft.Azure.Relay*.dll'
 build_script:
 - ps: .\build\build.ps1
 test: off
