@@ -35,13 +35,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Setup .NET Core 2.2.402
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '2.2.402'
     - name: Setup .NET Core 3.0.100
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '3.0.100'
+    - name: copy .NET Core 2.2.402
+      run: |
+        rsync -a ${DOTNET_ROOT}/../../2.2.402/x64/shared/ $DOTNET_ROOT/shared
     - run: dotnet --info
-    - run: ls -l
-    - run: chmod a+rx *.sh
+    - name: Configure Execute Permission
+      run: chmod a+rx *.sh
     - run: ls -l
     - name: Restore
       run: ./restore.sh
