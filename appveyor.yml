@@ -26,7 +26,7 @@ skip_commits:
   files:
     - '**/*.md'
 artifacts:
-- path: 'src\Microsoft.Azure.Relay\bin\*.dll'
+- path: '**\*.dll'
 build_script:
 - ps: .\build\build.ps1
 test: off

@@ -6,7 +6,8 @@
     <AssemblyTitle>Microsoft.Azure.Relay</AssemblyTitle>
     <Authors>Microsoft</Authors>
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
-    <TargetFrameworks>netstandard2.0;net451</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(TargetFrameworks);net451</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>full</DebugType>
