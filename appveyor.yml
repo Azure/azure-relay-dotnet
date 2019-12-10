@@ -15,13 +15,9 @@ environment:
   azure-relay-dotnet/AppId:
     secure: c+H140oRJfHtmFHZxSRLWocv5AU0q33X7kgMcTcXxhJvtVhk2WAk1dRQkSN+SyoA
   matrix:
-    # First build
     - DotNetRunTime: netcoreapp2.1
       azure-relay-dotnet/CodeCovSecret:
         secure: NAlk4Em1NARlJqd8aan0jD8SW8iE86quYwiBi2ngs5Dfl0gYuwDuZaSkpoFFf2Cz
-    # Second build
-    - DotNetRunTime: net46
-      azure-relay-dotnet/SkipCodeCoverage: true
 skip_commits:
   files:
     - '**/*.md'
