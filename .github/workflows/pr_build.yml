@@ -1,6 +1,14 @@
 name: azure-relay-dotnet
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
 
 jobs:
   build-windows:
@@ -33,8 +41,10 @@ jobs:
         dotnet-version: '3.0.100'
     - run: dotnet --info
     - run: ls -l
-    #- name: Restore
-    #  run: ./restore.sh
+    - run: chmod a+rx *.sh
+    - run: ls -l
+    - name: Restore
+      run: ./restore.sh
     - name: Build
       run: ./build.sh
     - name: Package
