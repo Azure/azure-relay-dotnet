@@ -25,6 +25,11 @@ jobs:
       run: .\build.cmd
     - name: Package
       run: .\package.cmd
+    - name: Test
+      run: .\test.cmd
+      env:
+        RELAY_CONNECTION_STRING: ${{ secrets.RELAY_CONNECTION_STRING }}
+
   build-nix:
     strategy:
       matrix:

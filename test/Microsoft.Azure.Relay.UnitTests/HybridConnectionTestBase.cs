@@ -44,7 +44,11 @@ namespace Microsoft.Azure.Relay.UnitTests
             var envConnectionString = Environment.GetEnvironmentVariable(Constants.ConnectionStringEnvironmentVariable);
             if (string.IsNullOrWhiteSpace(envConnectionString))
             {
-                throw new InvalidOperationException($"'{Constants.ConnectionStringEnvironmentVariable}' environment variable was not found!");
+                envConnectionString = Environment.GetEnvironmentVariable(Constants.LegacyConnectionStringEnvironmentVariable);
+                if (string.IsNullOrWhiteSpace(envConnectionString))
+                {
+                    throw new InvalidOperationException($"'{Constants.ConnectionStringEnvironmentVariable}' environment variable was not found!");
+                }
             }
 
             // Validate the connection string
