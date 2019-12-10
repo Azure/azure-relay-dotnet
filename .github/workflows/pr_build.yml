@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-windows:
-    name: Build 'azure-relay-dotnet' on windows-latest
+    name: Build on windows-latest
 
     runs-on: 'windows-latest'
 
@@ -25,16 +25,12 @@ jobs:
       run: .\build.cmd
     - name: Package
       run: .\package.cmd
-    - name: Test
-      run: .\test.cmd
-      env:
-        RELAY_CONNECTION_STRING: ${{ secrets.RELAY_CONNECTION_STRING }}
 
   build-nix:
     strategy:
       matrix:
         platform: [ 'ubuntu-latest', 'macos-latest' ]
-    name: Build 'azure-relay-dotnet' on ${{ matrix.platform }}
+    name: Build on ${{ matrix.platform }}
 
     runs-on: ${{ matrix.platform }}
 
