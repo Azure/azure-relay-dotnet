@@ -40,10 +40,10 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - run: dotnet --info
-    - name: Setup .NET Core 3.0.100
+    - name: Setup .NET Core 3.1.401
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '3.0.100'
+        dotnet-version: '3.1.401'
     - run: dotnet --info
     - name: Restore
       run: ./restore.sh
