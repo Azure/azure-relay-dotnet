@@ -10,6 +10,24 @@ namespace Microsoft.Azure.Relay.UnitTests
 
     static class EnumerableExtensions
     {
+        public static void ForEach<T>(this IEnumerable<T> items, Action<T> action)
+        {
+            foreach (T item in items)
+            {
+                action(item);
+            }
+        }
+
+        public static void ForEach<T>(this IEnumerable<T> items, Action<T, int> action)
+        {
+            int i = 0;
+            foreach (T item in items)
+            {
+                action(item, i);
+                i++;
+            }
+        }
+
         public static async Task ParallelBatchAsync<TSource>(this IEnumerable<TSource> sources, int batchSize, int parallelTasksCount, Func<IEnumerable<TSource>, Task> asyncTask)
         {
             List<Task> tasks = new List<Task>();
@@ -34,7 +52,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 tasks.Add(asyncTask(batch));
                 if (tasks.Count == parallelTasksCount)
                 {
-                    await Task.WhenAll(tasks.ToArray());
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
                     tasks.Clear();
                 }
 
@@ -43,8 +61,27 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             if (tasks.Count > 0)
             {
-                await Task.WhenAll(tasks.ToArray());
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
+        }
+
+        public static Task ParallelForEachAsync<TSource>(this IEnumerable<TSource> sources, Func<TSource, Task> asyncTask)
+        {
+            var tasks = new List<Task>();
+            foreach (TSource source in sources)
+            {
+                try
+                {
+                    Task task = asyncTask(source);
+                    tasks.Add(task);
+                }
+                catch (Exception e)
+                {
+                    tasks.Add(Task.FromException(e));
+                }
+            }
+
+            return Task.WhenAll(tasks);
         }
     }
 }
