@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Relay.UnitTests
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Http;
@@ -511,12 +512,11 @@ namespace Microsoft.Azure.Relay.UnitTests
                     new { Original = "?sb-hc-id=1", Output = "" },
                     new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" },
                     new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" },
-                    new { Original = "?sb-hc-undefined=true", Output = "" },                    
+                    new { Original = "?sb-hc-undefined=true", Output = "" },
                     new { Original = "? Key =  Value With Space ", Output = "?+Key+=++Value+With+Space" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
                     new { Original = "?key='value'", Output = "?key=%27value%27" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
                     new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
                     new { Original = "?key=<value>", Output = "?key=%3cvalue%3e" },
-#if PENDING_SERVICE_UPDATE
                     new { Original = "?foo=bar&", Output = "?foo=bar&" },
                     new { Original = "?&foo=bar", Output = "?foo=bar" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
                     new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" },
@@ -530,7 +530,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                     new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
                     new { Original = "?&+&", Output = "?&+&" },
                     new { Original = "?%2f%3a%3d%26", Output = "?%2f%3a%3d%26" },
-#endif
+                    new { Original = "?api-version=abc", Output = "?api-version=abc" },
                 };
 
                 RelayedHttpListenerContext actualRequestContext = null;
@@ -729,7 +729,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 {
                     client.DefaultRequestHeaders.ExpectContinue = false;
 
-                    HttpStatusCode[] expectedStatusCodes = new HttpStatusCode[]
+                    var expectedStatusCodes = new HttpStatusCode[]
                     {
                         HttpStatusCode.Accepted, HttpStatusCode.Ambiguous, HttpStatusCode.BadGateway, HttpStatusCode.BadRequest, HttpStatusCode.Conflict,
                         /*HttpStatusCode.Continue,*/ HttpStatusCode.Created, HttpStatusCode.ExpectationFailed, HttpStatusCode.Forbidden,
@@ -842,6 +842,182 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task AllowedListeners(EndpointTestType endpointTestType)
+        {
+            const int ListenerCount = 3;
+
+            RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+            Uri endpointUri = connectionString.Endpoint;
+            Uri httpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+            var tokenProvider = CreateTokenProvider(connectionString);
+
+            var listenerInfos = new List<ListenerInfo>();
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var httpClient = new HttpClient { BaseAddress = httpUri };
+            httpClient.DefaultRequestHeaders.ExpectContinue = false;
+            try
+            {
+                for (int i = 0; i < ListenerCount; i++)
+                {
+                    HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);
+                    var listenerInfo = new ListenerInfo(listener, i);
+
+                    listenerInfos.Add(listenerInfo);
+                    listener.RequestHandler = async (context) =>
+                    {
+                        listenerInfo.IncrementRequestCount();
+                        byte[] responseBytes = Encoding.ASCII.GetBytes($"Listener{listenerInfo.Index} response. RequestCount:{listenerInfo.RequestCount}");
+                        context.Response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                        await context.Response.CloseAsync();
+                    };
+                }
+
+                TestUtility.Log("Opening HybridConnectionListeners");
+                await listenerInfos.ParallelForEachAsync(info => info.Listener.OpenAsync(cts.Token));
+
+                // Send to each specific listenerId
+                for (int i = 0; i < listenerInfos.Count; i++)
+                {
+                    var listenerInfo = listenerInfos[i];
+                    for (int j = 0; j <= i; j++)
+                    {
+                        // Send 1 to listener 0, 2 to listener 1, etc.
+                        using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, new[] { listenerInfo.Listener.TrackingContext.ActivityId }, null, cts.Token))
+                        {
+                            VerifyResponse(response, HttpStatusCode.OK, "OK", true);
+                        }
+                    }
+                }
+
+                DisplayListenerInvocationCounts(listenerInfos);
+
+                for (int i = 0; i < listenerInfos.Count; i++)
+                {
+                    var listener = listenerInfos[i];
+                    Assert.Equal(i + 1, listener.RequestCount);
+                }
+
+                TestUtility.Log("Send to a ListenerId which doesn't exist");
+                using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, new[] { Guid.NewGuid() }, null, cts.Token))
+                {
+                    VerifyResponse(response, HttpStatusCode.NotFound, "None of the connected listeners meet the AllowedListeners/DisallowedListeners criteria");
+                }
+
+                TestUtility.Log("Send allowing only the first 2 listeners");
+                IEnumerable<ListenerInfo> firstTwoListeners = listenerInfos.Take(2);
+                int firstTwoCountBefore = firstTwoListeners.Sum(l => l.RequestCount);
+                IEnumerable<Guid> allowedListeners = firstTwoListeners.Select(l => l.Listener.TrackingContext.ActivityId);
+                using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, allowedListeners, null, cts.Token))
+                {
+                    VerifyResponse(response, HttpStatusCode.OK, "OK", true);
+                }
+
+                DisplayListenerInvocationCounts(listenerInfos);
+                int firstTwoCountAfter = firstTwoListeners.Sum(l => l.RequestCount);
+                Assert.Equal(firstTwoCountBefore + 1, firstTwoCountAfter); // "Single sent message should have gone to one of the first 2 listeners"
+            }
+            finally
+            {
+                cts.Dispose();
+                httpClient.Dispose();
+                if (listenerInfos.Count > 0)
+                {
+                    await listenerInfos.ParallelForEachAsync(info => SafeCloseAsync(info.Listener));
+                }
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task DisallowedListeners(EndpointTestType endpointTestType)
+        {
+            const int ListenerCount = 3;
+            RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+            Uri endpointUri = connectionString.Endpoint;
+            Uri httpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+            var tokenProvider = CreateTokenProvider(connectionString);
+
+            var listenerInfos = new List<ListenerInfo>();
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var httpClient = new HttpClient { BaseAddress = httpUri };
+            httpClient.DefaultRequestHeaders.ExpectContinue = false;
+            try
+            {
+                for (int i = 0; i < ListenerCount; i++)
+                {
+                    HybridConnectionListener listener = this.GetHybridConnectionListener(endpointTestType);
+                    var listenerInfo = new ListenerInfo(listener, i);
+
+                    listenerInfos.Add(listenerInfo);
+                    listener.RequestHandler = async (context) =>
+                    {
+                        listenerInfo.IncrementRequestCount();
+                        byte[] responseBytes = Encoding.ASCII.GetBytes($"Listener{listenerInfo.Index} response. RequestCount:{listenerInfo.RequestCount}");
+                        context.Response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                        await context.Response.CloseAsync();
+                    };
+                }
+
+                TestUtility.Log("Opening HybridConnectionListeners");
+                await listenerInfos.ParallelForEachAsync(info => info.Listener.OpenAsync(cts.Token));
+                var allListenerIds = new HashSet<Guid>(listenerInfos.Select(l => l.Listener.TrackingContext.ActivityId));
+
+                // Send to each specific listenerId by excluding all the others
+                for (int i = 0; i < listenerInfos.Count; i++)
+                {
+                    ListenerInfo listener = listenerInfos[i];
+                    Guid currentListenerId = listener.Listener.TrackingContext.ActivityId;
+                    IEnumerable<Guid> otherListenerIDs = allListenerIds.Except(new[] { currentListenerId });
+                    for (int j = 0; j <= i; j++)
+                    {
+                        // Send 1 to listener 0, 2 to listener 1, etc.
+                        using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, null, otherListenerIDs, cts.Token))
+                        {
+                            VerifyResponse(response, HttpStatusCode.OK, "OK", true);
+                        }
+                    }
+                }
+
+                DisplayListenerInvocationCounts(listenerInfos);
+
+                for (int i = 0; i < listenerInfos.Count; i++)
+                {
+                    var listener = listenerInfos[i];
+                    Assert.Equal(i + 1, listener.RequestCount); // $"{listener.Listener} Invocation count is not correct"
+                }
+
+                TestUtility.Log("Send disallowing all ListenerIDs");
+                using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, null, allListenerIds, cts.Token))
+                {
+                    VerifyResponse(response, HttpStatusCode.NotFound, "None of the connected listeners meet the AllowedListeners/DisallowedListeners criteria");
+                }
+
+                TestUtility.Log("Send disallowing the first listener");
+                IEnumerable<ListenerInfo> listenersOtherThanFirst = listenerInfos.Skip(1);
+                int otherThanFirstCountBefore = listenersOtherThanFirst.Sum(l => l.RequestCount);
+                TestUtility.Log($"DisallowedListeners = \"{listenerInfos[0].Listener.TrackingContext.ActivityId}\"");
+                using (HttpResponseMessage response = await SendToListenerAsync(httpClient, tokenProvider, null, disallowedListenerIDs: new[] { listenerInfos[0].Listener.TrackingContext.ActivityId }, cts.Token))
+                {
+                    VerifyResponse(response, HttpStatusCode.OK, "OK", true);
+                }
+
+                DisplayListenerInvocationCounts(listenerInfos);
+                int otherThanFirstCountAfter = listenersOtherThanFirst.Sum(l => l.RequestCount);
+                Assert.Equal(otherThanFirstCountBefore + 1, otherThanFirstCountAfter); // "Single sent message should have gone to a listener other than the first";
+            }
+            finally
+            {
+                cts.Dispose();
+                httpClient.Dispose();
+                if (listenerInfos != null && listenerInfos.Count > 0)
+                {
+                    await listenerInfos.ParallelForEachAsync(info => SafeCloseAsync(info.Listener));
+                }
+            }
+        }
+
         static Task AddAuthorizationHeader(RelayConnectionStringBuilder connectionString, HttpRequestMessage request, Uri resource)
         {
             var tokenProvider = CreateTokenProvider(connectionString);
@@ -880,6 +1056,32 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
 
             return tokenProvider;
+        }
+
+        static async Task<HttpResponseMessage> SendToListenerAsync(HttpClient httpClient, TokenProvider tokenProvider, IEnumerable<Guid> allowedListenerIDs, IEnumerable<Guid> disallowedListenerIDs, CancellationToken cancelToken)
+        {
+            var request = new HttpRequestMessage();
+            await AddAuthorizationHeader(tokenProvider, request, httpClient.BaseAddress);
+            request.Method = HttpMethod.Get;
+
+            if (allowedListenerIDs != null)
+            {
+                // ***** Specify Guids of listeners to attempt when connecting this client/request *****
+                // ***** If more than one is specified order is not guaranteed                     *****
+                request.Headers.Add("Microsoft-Relay-AllowedListeners", string.Join(",", allowedListenerIDs));
+            }
+
+            if (disallowedListenerIDs != null)
+            {
+                // ***** Specify Guids of listeners to NOT consider when connecting this client/request *****
+                request.Headers.Add("Microsoft-Relay-DisallowedListeners", string.Join(",", disallowedListenerIDs));
+            }
+
+            LogRequest(request, httpClient);
+
+            HttpResponseMessage response = await httpClient.SendAsync(request, cancelToken).ConfigureAwait(false);
+            LogResponse(response);
+            return response;
         }
     }
 }

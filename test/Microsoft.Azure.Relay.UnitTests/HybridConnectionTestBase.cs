@@ -354,5 +354,50 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
 #endif // NET46
         }
+
+        protected void VerifyResponse(
+            HttpResponseMessage response,
+            HttpStatusCode expectedStatusCode,
+            string expectedStatusDescription = "",
+            bool exactMatchDescription = false)
+        {
+            Assert.Equal(expectedStatusCode, response.StatusCode);
+
+            if (!string.IsNullOrEmpty(expectedStatusDescription))
+            {
+                if (exactMatchDescription)
+                {
+                    Assert.Equal(expectedStatusDescription, response.ReasonPhrase, ignoreCase: true);
+                }
+                else
+                {
+                    Assert.Contains(expectedStatusDescription, response.ReasonPhrase, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+        }
+
+        protected static void DisplayListenerInvocationCounts(IEnumerable<ListenerInfo> listeners)
+        {
+            listeners.ForEach(listenerInfo => TestUtility.Log($"{listenerInfo.Listener}, Invocation count: {listenerInfo.RequestCount}"));
+        }
+
+        protected class ListenerInfo
+        {
+            int requestCount;
+
+            public ListenerInfo(HybridConnectionListener listener, int index)
+            {
+                this.Listener = listener;
+                this.Index = index;
+            }
+
+            public HybridConnectionListener Listener { get; }
+
+            public int Index { get; }
+
+            public int RequestCount => this.requestCount;
+
+            public void IncrementRequestCount() => Interlocked.Increment(ref this.requestCount);
+        }
     }
 }
