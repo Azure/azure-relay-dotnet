@@ -97,6 +97,7 @@ namespace Microsoft.Azure.Relay
 
             // TokenProvider won't return a token which is within 5min of expiring so we don't have to pad here.
             interval = interval < RelayConstants.ClientMinimumTokenRefreshInterval ? RelayConstants.ClientMinimumTokenRefreshInterval : interval;
+            interval = TimeoutHelper.Min(interval, TimeoutHelper.MaxWait);
 
             RelayEventSource.Log.TokenRenewScheduled(interval, this.listener);
             this.renewTimer.Change(interval, Timeout.InfiniteTimeSpan);
