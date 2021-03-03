@@ -412,7 +412,8 @@ namespace Microsoft.Azure.Relay
                 var listenerCommand = ListenerCommand.ReadObject(commandBuffer);
                 if (listenerCommand.Accept != null)
                 {
-                    await this.OnAcceptCommandAsync(listenerCommand.Accept).ConfigureAwait(false);
+                    // Don't block the pump waiting for the rendezvous
+                    this.OnAcceptCommandAsync(listenerCommand.Accept).Fork(this);
                 }
                 else if (listenerCommand.Request != null)
                 {
@@ -463,8 +464,7 @@ namespace Microsoft.Azure.Relay
                     }
                 }
 
-                // Don't block the pump waiting for the rendezvous
-                this.CompleteAcceptAsync(listenerContext, rendezvousUri, shouldAccept).Fork(this);
+                await this.CompleteAcceptAsync(listenerContext, rendezvousUri, shouldAccept).ConfigureAwait(false);
             }
             catch (Exception exception) when (!Fx.IsFatal(exception))
             {
