@@ -140,6 +140,11 @@ namespace Microsoft.Azure.Relay
         public bool UseBuiltInClientWebSocket { get; set; }
 
         /// <summary>
+        /// Websocket's keep-alive interval.
+        /// </summary>
+        public TimeSpan KeepAliveInterval { get; set; }
+
+        /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         int ConnectionBufferSize { get; set; }
@@ -167,7 +172,7 @@ namespace Microsoft.Azure.Relay
             try
             {
                 DefaultWebProxy.ConfigureProxy(webSocket.Options, this.Proxy);
-                webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+                webSocket.Options.KeepAliveInterval = this.KeepAliveInterval;
                 webSocket.Options.SetBuffer(this.ConnectionBufferSize, this.ConnectionBufferSize);
                 webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
 
@@ -280,6 +285,7 @@ namespace Microsoft.Azure.Relay
             this.OperationTimeout = operationTimeout;
             this.Proxy = DefaultWebProxy.Instance;
             this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
     }
 }
