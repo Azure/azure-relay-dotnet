@@ -222,6 +222,11 @@ namespace Microsoft.Azure.Relay
         public TimeSpan KeepAliveInterval { get; set; }
 
         /// <summary>
+        /// Custom ClientWebSocket Implementation.
+        /// </summary>
+        public IClientWebSocket CustomClientWebSocket { get; set; }
+
+        /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         internal int ConnectionBufferSize { get; }
@@ -690,8 +695,15 @@ namespace Microsoft.Azure.Relay
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
                 this.listener.ThrowIfDisposed();
-
-                var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
+                IClientWebSocket webSocket;
+                if (this.listener.CustomClientWebSocket == null)
+                {
+                    webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
+                }
+                else
+                {
+                    webSocket = this.listener.CustomClientWebSocket;
+                }
                 try
                 {
                     var connectDelay = ConnectDelayIntervals[this.connectDelayIndex];

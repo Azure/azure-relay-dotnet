@@ -145,6 +145,11 @@ namespace Microsoft.Azure.Relay
         public TimeSpan KeepAliveInterval { get; set; }
 
         /// <summary>
+        /// Custom ClientWebSocket Implementation.
+        /// </summary>
+        public IClientWebSocket CustomClientWebSocket { get; set; }
+
+        /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
         /// </summary>
         int ConnectionBufferSize { get; set; }
@@ -168,7 +173,15 @@ namespace Microsoft.Azure.Relay
             var timeoutHelper = TimeoutHelper.CreateOnly(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
-            var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
+            IClientWebSocket webSocket;
+            if (this.CustomClientWebSocket == null)
+            {
+                webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket);
+            }
+            else
+            {
+                webSocket = this.CustomClientWebSocket;
+            }
             try
             {
                 DefaultWebProxy.ConfigureProxy(webSocket.Options, this.Proxy);
