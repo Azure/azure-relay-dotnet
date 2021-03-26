@@ -75,23 +75,42 @@ namespace Microsoft.Azure.Relay
         void SetRequestHeader(string name, string value);
     }
 
+    /// <summary>
+    /// Client WebSocket Factory interface.
+    /// </summary>
+    public interface IClientWebSocketFactory
+    {
+        /// <summary>
+        /// Create a ClientWebSocket.
+        /// </summary>
+        /// <returns></returns>
+        IClientWebSocket Create();
+    }
+
     static class ClientWebSocketFactory
     {
-        public static IClientWebSocket Create(bool useBuiltInWebSocket)
+        public static IClientWebSocket Create(bool useBuiltInWebSocket, IClientWebSocketFactory customClientWebSocketFactory)
         {
-#if NETSTANDARD
-            if (!useBuiltInWebSocket)
+            if (customClientWebSocketFactory != null)
             {
-                if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
-                {
-                    return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
-                }
-
-                return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
+                return customClientWebSocketFactory.Create();
             }
+            else
+            {
+#if NETSTANDARD
+                if (!useBuiltInWebSocket)
+                {
+                    if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
+                    {
+                        return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
+                    }
+
+                    return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
+                }
 #endif // NETSTANDARD
 
-            return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
+                return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
+            }
         }
 
         class FrameworkClientWebSocket : IClientWebSocket
