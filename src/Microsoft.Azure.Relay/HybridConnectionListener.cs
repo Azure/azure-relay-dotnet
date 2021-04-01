@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Relay
         readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
         IWebProxy proxy;
+        bool useBuiltInClientWebSocket;
         string cachedToString;
         TrackingContext trackingContext;
         bool openCalled;
@@ -53,7 +54,8 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
-            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
             this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
 
@@ -121,7 +123,8 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
-            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
             this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
 
@@ -212,9 +215,29 @@ namespace Microsoft.Azure.Relay
 
         /// <summary>
         /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// If a custom <see cref="ClientWebSocketFactory"/> is configured then this property is ignored.
         /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool UseBuiltInClientWebSocket { get; set; }
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public bool UseBuiltInClientWebSocket
+        {
+            get
+            {
+                return this.useBuiltInClientWebSocket;
+            }
+            set
+            {
+                this.useBuiltInClientWebSocket = value;
+
+                // If a custom ClientWebSocketFactory has not been configured then switch to our proper implementation
+                if (object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.Default) ||
+                    object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn))
+                {
+                    this.ClientWebSocketFactory = value ?
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn :
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
+                }
+            }
+        }
 
         /// <summary>
         /// Websocket's keep-alive interval.
@@ -225,7 +248,7 @@ namespace Microsoft.Azure.Relay
         /// Custom ClientWebSocket Implementation.
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public IClientWebSocketFactory CustomClientWebSocketFactory { get; set; }
+        public IClientWebSocketFactory ClientWebSocketFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
@@ -696,9 +719,7 @@ namespace Microsoft.Azure.Relay
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
                 this.listener.ThrowIfDisposed();
-                var webSocket = ClientWebSocketFactory.Create(
-                    this.listener.UseBuiltInClientWebSocket,
-                    this.listener.CustomClientWebSocketFactory);
+                var webSocket = this.listener.ClientWebSocketFactory.Create();
                 try
                 {
                     var connectDelay = ConnectDelayIntervals[this.connectDelayIndex];

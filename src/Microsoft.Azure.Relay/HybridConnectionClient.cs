@@ -18,6 +18,7 @@ namespace Microsoft.Azure.Relay
     {
         const int DefaultConnectionBufferSize = 64 * 1024;
         static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(70);
+        bool useBuiltInClientWebSocket;
 
         /// <summary>
         /// Create a new HybridConnectionClient instance for initiating HybridConnections where no client authentication is required.
@@ -135,9 +136,29 @@ namespace Microsoft.Azure.Relay
 
         /// <summary>
         /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// If a custom <see cref="ClientWebSocketFactory"/> is configured then this property is ignored.
         /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool UseBuiltInClientWebSocket { get; set; }
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public bool UseBuiltInClientWebSocket
+        {
+            get
+            {
+                return this.useBuiltInClientWebSocket;
+            }
+            set
+            {
+                this.useBuiltInClientWebSocket = value;
+
+                // If a custom ClientWebSocketFactory has not been configured then switch to our proper implementation
+                if (object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.Default) ||
+                    object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn))
+                {
+                    this.ClientWebSocketFactory = value ? 
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn : 
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
+                }
+            }
+        }
 
         /// <summary>
         /// Websocket's keep-alive interval.
@@ -148,7 +169,7 @@ namespace Microsoft.Azure.Relay
         /// Custom ClientWebSocketFactory Implementation.
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public IClientWebSocketFactory CustomClientWebSocketFactory { get; set; }
+        public IClientWebSocketFactory ClientWebSocketFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
@@ -174,9 +195,7 @@ namespace Microsoft.Azure.Relay
             var timeoutHelper = TimeoutHelper.CreateOnly(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
-            var webSocket = ClientWebSocketFactory.Create(
-                this.UseBuiltInClientWebSocket,
-                this.CustomClientWebSocketFactory);
+            var webSocket = this.ClientWebSocketFactory.Create();
             try
             {
                 DefaultWebProxy.ConfigureProxy(webSocket.Options, this.Proxy);
@@ -292,7 +311,8 @@ namespace Microsoft.Azure.Relay
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = operationTimeout;
             this.Proxy = DefaultWebProxy.Instance;
-            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
             this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
     }
