@@ -118,8 +118,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
-        [Fact]
-        [DisplayTestMethodName]
+        [Fact, DisplayTestMethodName]
         async Task CustomWebSocketTest()
         {
             HybridConnectionListener listener = null;
@@ -221,7 +220,6 @@ namespace Microsoft.Azure.Relay.UnitTests
 
                 TestUtility.Log($"Closing {listener}");
                 await listener.CloseAsync(TimeSpan.FromSeconds(10));
-                listener = null;
             }
         }
 
