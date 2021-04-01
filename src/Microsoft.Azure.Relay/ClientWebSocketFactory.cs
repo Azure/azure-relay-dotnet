@@ -87,30 +87,32 @@ namespace Microsoft.Azure.Relay
         IClientWebSocket Create();
     }
 
-    static class ClientWebSocketFactory
+    sealed class ClientWebSocketFactory : IClientWebSocketFactory
     {
-        public static IClientWebSocket Create(bool useBuiltInWebSocket, IClientWebSocketFactory customClientWebSocketFactory)
-        {
-            if (customClientWebSocketFactory != null)
-            {
-                return customClientWebSocketFactory.Create();
-            }
-            else
-            {
-#if NETSTANDARD
-                if (!useBuiltInWebSocket)
-                {
-                    if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
-                    {
-                        return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
-                    }
+        public static readonly ClientWebSocketFactory Default = new ClientWebSocketFactory(false);
+        public static readonly ClientWebSocketFactory DefaultBuiltIn = new ClientWebSocketFactory(true);
+        readonly bool useBuiltInWebSocket;
 
-                    return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
+        private ClientWebSocketFactory(bool useBuiltInWebSocket)
+        {
+            this.useBuiltInWebSocket = useBuiltInWebSocket;
+        }
+
+        public IClientWebSocket Create()
+        {
+#if NETSTANDARD
+            if (!this.useBuiltInWebSocket)
+            {
+                if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
+                {
+                    return new Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket();
                 }
+
+                return new Microsoft.Azure.Relay.WebSockets.NetStandard20.ClientWebSocket();
+            }
 #endif // NETSTANDARD
 
-                return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
-            }
+            return new FrameworkClientWebSocket(new System.Net.WebSockets.ClientWebSocket());
         }
 
         class FrameworkClientWebSocket : IClientWebSocket
@@ -126,7 +128,7 @@ namespace Microsoft.Azure.Relay
             public IClientWebSocketOptions Options { get; }
 
             public HttpResponseMessage Response { get { return null; } }
-            
+
             public WebSocket WebSocket { get { return this.client; } }
 
             public Task ConnectAsync(Uri uri, CancellationToken cancellationToken)
@@ -158,7 +160,7 @@ namespace Microsoft.Azure.Relay
                 {
                     this.options.AddSubProtocol(subProtocol);
                 }
-               
+
                 public void SetBuffer(int receiveBufferSize, int sendBufferSize)
                 {
                     this.options.SetBuffer(receiveBufferSize, sendBufferSize);

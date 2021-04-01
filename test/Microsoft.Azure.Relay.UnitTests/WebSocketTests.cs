@@ -127,7 +127,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 EndpointTestType endpointTestType = EndpointTestType.Authenticated;
                 listener = GetHybridConnectionListener(endpointTestType);
                 CustomClientWebSocketFactory factory = new CustomClientWebSocketFactory();
-                listener.CustomClientWebSocketFactory = factory;
+                listener.ClientWebSocketFactory = factory;
                 await TestRawWebSocket(listener, endpointTestType);
                 Assert.True(factory.WasCreateCalled);
             }
