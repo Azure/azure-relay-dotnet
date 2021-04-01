@@ -130,7 +130,7 @@ namespace Microsoft.Azure.Relay.UnitTests
                 CustomClientWebSocketFactory factory = new CustomClientWebSocketFactory();
                 listener.CustomClientWebSocketFactory = factory;
                 await TestRawWebSocket(listener, endpointTestType);
-                Assert.True(factory.IsCreatedCalled);
+                Assert.True(factory.WasCreateCalled);
             }
             finally
             {

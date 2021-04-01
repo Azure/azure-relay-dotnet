@@ -224,6 +224,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Custom ClientWebSocket Implementation.
         /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public IClientWebSocketFactory CustomClientWebSocketFactory { get; set; }
 
         /// <summary>
@@ -695,7 +696,8 @@ namespace Microsoft.Azure.Relay
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
                 this.listener.ThrowIfDisposed();
-                var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket,
+                var webSocket = ClientWebSocketFactory.Create(
+                    this.listener.UseBuiltInClientWebSocket,
                     this.listener.CustomClientWebSocketFactory);
                 try
                 {

@@ -254,7 +254,8 @@ namespace Microsoft.Azure.Relay
             if (this.rendezvousWebSocket == null)
             {                
                 RelayEventSource.Log.HybridHttpCreatingRendezvousConnection(this.TrackingContext);
-                var clientWebSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket,
+                var clientWebSocket = ClientWebSocketFactory.Create(
+                    this.listener.UseBuiltInClientWebSocket,
                     this.listener.CustomClientWebSocketFactory);
                 DefaultWebProxy.ConfigureProxy(clientWebSocket.Options, this.listener.Proxy);
                 this.rendezvousWebSocket = clientWebSocket.WebSocket;

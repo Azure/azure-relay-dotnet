@@ -147,6 +147,7 @@ namespace Microsoft.Azure.Relay
         /// <summary>
         /// Custom ClientWebSocketFactory Implementation.
         /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public IClientWebSocketFactory CustomClientWebSocketFactory { get; set; }
 
         /// <summary>
@@ -173,7 +174,9 @@ namespace Microsoft.Azure.Relay
             var timeoutHelper = TimeoutHelper.CreateOnly(this.OperationTimeout);
 
             RelayEventSource.Log.ObjectConnecting(traceSource, trackingContext);
-            var webSocket = ClientWebSocketFactory.Create(this.UseBuiltInClientWebSocket, this.CustomClientWebSocketFactory);
+            var webSocket = ClientWebSocketFactory.Create(
+                this.UseBuiltInClientWebSocket,
+                this.CustomClientWebSocketFactory);
             try
             {
                 DefaultWebProxy.ConfigureProxy(webSocket.Options, this.Proxy);
