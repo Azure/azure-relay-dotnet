@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Relay
         readonly InputQueue<HybridConnectionStream> connectionInputQueue;
         readonly ControlConnection controlConnection;
         IWebProxy proxy;
+        bool useBuiltInClientWebSocket;
         string cachedToString;
         TrackingContext trackingContext;
         bool openCalled;
@@ -53,7 +54,9 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
-            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
+            this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
 
         /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> using the specified connection string.</summary>
@@ -120,7 +123,9 @@ namespace Microsoft.Azure.Relay
             this.TrackingContext = TrackingContext.Create(this.Address);
             this.connectionInputQueue = new InputQueue<HybridConnectionStream>();
             this.controlConnection = new ControlConnection(this);
-            this.UseBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
+            this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
+            this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
 
         /// <summary>
@@ -134,7 +139,7 @@ namespace Microsoft.Azure.Relay
         /// LastError will be null at this point.
         /// </summary>
         public event EventHandler Online;
-        
+
         /// <summary>
         /// Raised when the Listener will no longer be attempting to reconnect with ServiceBus.
         /// Reasons include user-initiated listener close or the HybridConnection management object
@@ -210,9 +215,40 @@ namespace Microsoft.Azure.Relay
 
         /// <summary>
         /// Controls whether the ClientWebSocket from .NET Core or a custom implementation is used.
+        /// If a custom <see cref="ClientWebSocketFactory"/> is configured then this property is ignored.
         /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool UseBuiltInClientWebSocket { get; set; }
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public bool UseBuiltInClientWebSocket
+        {
+            get
+            {
+                return this.useBuiltInClientWebSocket;
+            }
+            set
+            {
+                this.useBuiltInClientWebSocket = value;
+
+                // If a custom ClientWebSocketFactory has not been configured then switch to our proper implementation
+                if (object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.Default) ||
+                    object.ReferenceEquals(this.ClientWebSocketFactory, Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn))
+                {
+                    this.ClientWebSocketFactory = value ?
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.DefaultBuiltIn :
+                        Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Websocket's keep-alive interval.
+        /// </summary>
+        public TimeSpan KeepAliveInterval { get; set; }
+
+        /// <summary>
+        /// Custom ClientWebSocket Implementation.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public IClientWebSocketFactory ClientWebSocketFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the connection buffer size.  Default value is 64K.
@@ -403,7 +439,7 @@ namespace Microsoft.Azure.Relay
                     throw RelayEventSource.Log.ThrowingException(new InvalidOperationException(SR.ObjectIsReadOnly), this);
                 }
             }
-        }       
+        }
 
         async Task OnCommandAsync(ArraySegment<byte> commandBuffer, WebSocket webSocket)
         {
@@ -683,8 +719,7 @@ namespace Microsoft.Azure.Relay
             async Task<WebSocket> ConnectAsync(CancellationToken cancellationToken)
             {
                 this.listener.ThrowIfDisposed();
-
-                var webSocket = ClientWebSocketFactory.Create(this.listener.UseBuiltInClientWebSocket);
+                var webSocket = this.listener.ClientWebSocketFactory.Create();
                 try
                 {
                     var connectDelay = ConnectDelayIntervals[this.connectDelayIndex];
@@ -697,7 +732,7 @@ namespace Microsoft.Azure.Relay
                     webSocket.Options.SetBuffer(this.bufferSize, this.bufferSize);
                     DefaultWebProxy.ConfigureProxy(webSocket.Options, this.listener.Proxy);
 
-                    webSocket.Options.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+                    webSocket.Options.KeepAliveInterval = this.listener.KeepAliveInterval;
                     webSocket.Options.SetRequestHeader(HybridConnectionConstants.Headers.RelayUserAgent, HybridConnectionConstants.ClientAgent);
 
                     var token = await this.tokenRenewer.GetTokenAsync().ConfigureAwait(false);

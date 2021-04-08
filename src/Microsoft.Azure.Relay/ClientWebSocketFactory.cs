@@ -10,36 +10,98 @@ namespace Microsoft.Azure.Relay
     using System.Threading;
     using System.Threading.Tasks;
 
-    interface IClientWebSocket
+    /// <summary>
+    /// Client WebSocket Interface.
+    /// </summary>
+    public interface IClientWebSocket
     {
+        /// <summary>
+        /// Client Websocket Options.
+        /// </summary>
         IClientWebSocketOptions Options { get; }
 
+        /// <summary>
+        /// Http Response Message.
+        /// </summary>
         HttpResponseMessage Response { get; }
 
+        /// <summary>
+        /// Websocket object.
+        /// </summary>
         WebSocket WebSocket { get; }
 
+        /// <summary>
+        /// Connect to a WebSocket server as an asynchronous operation.
+        /// </summary>
+        /// <param name="uri">The URI of the WebSocket server to connect to.</param>
+        /// <param name="cancellationToken">A cancellation token used to propagate notification that the operation should be canceled.</param>
+        /// <returns></returns>
         Task ConnectAsync(Uri uri, CancellationToken cancellationToken);
     }
 
-    interface IClientWebSocketOptions
+    /// <summary>
+    /// Client Websocket Options interface.
+    /// </summary>
+    public interface IClientWebSocketOptions
     {
+        /// <summary>
+        /// Gets or sets the proxy for WebSocket requests.
+        /// </summary>
         IWebProxy Proxy { get; set; }
 
+        /// <summary>
+        /// Gets or sets the WebSocket protocol keep-alive interval.
+        /// </summary>
         TimeSpan KeepAliveInterval { get; set; }
 
+        /// <summary>
+        /// Adds a sub-protocol to be negotiated during the WebSocket connection handshake.
+        /// </summary>
+        /// <param name="subProtocol">The WebSocket sub-protocol to add.</param>
         void AddSubProtocol(string subProtocol);
 
+        /// <summary>
+        /// Sets the client buffer parameters.
+        /// </summary>
+        /// <param name="receiveBufferSize">The size, in bytes, of the client receive buffer.</param>
+        /// <param name="sendBufferSize">The size, in bytes, of the client send buffer.</param>
         void SetBuffer(int receiveBufferSize, int sendBufferSize);
 
+        /// <summary>
+        /// Creates a HTTP request header and its value.
+        /// </summary>
+        /// <param name="name">The name of the HTTP header.</param>
+        /// <param name="value">The value of the HTTP header.</param>
         void SetRequestHeader(string name, string value);
     }
 
-    static class ClientWebSocketFactory
+    /// <summary>
+    /// Client WebSocket Factory interface.
+    /// </summary>
+    public interface IClientWebSocketFactory
     {
-        public static IClientWebSocket Create(bool useBuiltInWebSocket)
+        /// <summary>
+        /// Create a ClientWebSocket.
+        /// </summary>
+        /// <returns></returns>
+        IClientWebSocket Create();
+    }
+
+    sealed class ClientWebSocketFactory : IClientWebSocketFactory
+    {
+        public static readonly ClientWebSocketFactory Default = new ClientWebSocketFactory(false);
+        public static readonly ClientWebSocketFactory DefaultBuiltIn = new ClientWebSocketFactory(true);
+        readonly bool useBuiltInWebSocket;
+
+        private ClientWebSocketFactory(bool useBuiltInWebSocket)
+        {
+            this.useBuiltInWebSocket = useBuiltInWebSocket;
+        }
+
+        public IClientWebSocket Create()
         {
 #if NETSTANDARD
-            if (!useBuiltInWebSocket)
+            if (!this.useBuiltInWebSocket)
             {
                 if (Microsoft.Azure.Relay.WebSockets.NetCore21.ClientWebSocket.IsSupported())
                 {
@@ -66,7 +128,7 @@ namespace Microsoft.Azure.Relay
             public IClientWebSocketOptions Options { get; }
 
             public HttpResponseMessage Response { get { return null; } }
-            
+
             public WebSocket WebSocket { get { return this.client; } }
 
             public Task ConnectAsync(Uri uri, CancellationToken cancellationToken)
@@ -98,7 +160,7 @@ namespace Microsoft.Azure.Relay
                 {
                     this.options.AddSubProtocol(subProtocol);
                 }
-               
+
                 public void SetBuffer(int receiveBufferSize, int sendBufferSize)
                 {
                     this.options.SetBuffer(receiveBufferSize, sendBufferSize);
