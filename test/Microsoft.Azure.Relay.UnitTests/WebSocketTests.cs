@@ -26,48 +26,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             try
             {
                 listener = GetHybridConnectionListener(endpointTestType);
-
-                var clientWebSocket = new ClientWebSocket();
-                var wssUri = await GetWebSocketConnectionUri(endpointTestType);
-
-                using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
-                {
-                    TestUtility.Log($"Opening {listener}");
-                    await listener.OpenAsync(cancelSource.Token);
-
-                    await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
-
-                    var listenerStream = await listener.AcceptConnectionAsync();
-
-                    TestUtility.Log("Client and Listener are connected!");
-                    Assert.Null(clientWebSocket.SubProtocol);
-
-                    byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-                    await clientWebSocket.SendAsync(new ArraySegment<byte>(sendBuffer), WebSocketMessageType.Binary, true, cancelSource.Token);
-                    TestUtility.Log($"clientWebSocket wrote {sendBuffer.Length} bytes");
-
-                    byte[] readBuffer = new byte[sendBuffer.Length];
-                    await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
-                    Assert.Equal(sendBuffer, readBuffer);
-
-                    TestUtility.Log("Calling clientStream.CloseAsync");
-                    var clientStreamCloseTask = clientWebSocket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "From Test Code", cancelSource.Token);
-                    TestUtility.Log("Reading from listenerStream");
-                    int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
-                    TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
-                    Assert.Equal(0, bytesRead);
-
-                    TestUtility.Log("Calling listenerStream.CloseAsync");
-                    var listenerStreamCloseTask = listenerStream.CloseAsync(cancelSource.Token);
-                    await listenerStreamCloseTask;
-                    TestUtility.Log("Calling listenerStream.CloseAsync completed");
-                    await clientStreamCloseTask;
-                    TestUtility.Log("Calling clientStream.CloseAsync completed");
-
-                    TestUtility.Log($"Closing {listener}");
-                    await listener.CloseAsync(TimeSpan.FromSeconds(10));
-                    listener = null;
-                }
+                await TestRawWebSocket(listener, endpointTestType);
             }
             finally
             {
@@ -159,6 +118,25 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Fact, DisplayTestMethodName]
+        async Task CustomWebSocketTest()
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                EndpointTestType endpointTestType = EndpointTestType.Authenticated;
+                listener = GetHybridConnectionListener(endpointTestType);
+                CustomClientWebSocketFactory factory = new CustomClientWebSocketFactory();
+                listener.ClientWebSocketFactory = factory;
+                await TestRawWebSocket(listener, endpointTestType);
+                Assert.True(factory.WasCreateCalled);
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
         async Task<bool> TestAcceptHandler(RelayedHttpListenerContext listenerContext)
         {
             string delayString = listenerContext.Request.Headers[TestAcceptHandlerDelayHeader];
@@ -199,6 +177,50 @@ namespace Microsoft.Azure.Relay.UnitTests
 
             TestUtility.Log($"Test AcceptHandler: {listenerContext.Request.Url} {(int)listenerContext.Response.StatusCode}: {listenerContext.Response.StatusDescription} returning {result}");
             return result;
+        }
+
+        async Task TestRawWebSocket(HybridConnectionListener listener, EndpointTestType endpointTestType)
+        {
+            var clientWebSocket = new ClientWebSocket();
+            var wssUri = await GetWebSocketConnectionUri(endpointTestType);
+
+            using (var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+            {
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(cancelSource.Token);
+
+                await clientWebSocket.ConnectAsync(wssUri, cancelSource.Token);
+
+                var listenerStream = await listener.AcceptConnectionAsync();
+
+                TestUtility.Log("Client and Listener are connected!");
+                Assert.Null(clientWebSocket.SubProtocol);
+
+                byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+                await clientWebSocket.SendAsync(new ArraySegment<byte>(sendBuffer), WebSocketMessageType.Binary, true, cancelSource.Token);
+                TestUtility.Log($"clientWebSocket wrote {sendBuffer.Length} bytes");
+
+                byte[] readBuffer = new byte[sendBuffer.Length];
+                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
+                Assert.Equal(sendBuffer, readBuffer);
+
+                TestUtility.Log("Calling clientStream.CloseAsync");
+                var clientStreamCloseTask = clientWebSocket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "From Test Code", cancelSource.Token);
+                TestUtility.Log("Reading from listenerStream");
+                int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
+                Assert.Equal(0, bytesRead);
+
+                TestUtility.Log("Calling listenerStream.CloseAsync");
+                var listenerStreamCloseTask = listenerStream.CloseAsync(cancelSource.Token);
+                await listenerStreamCloseTask;
+                TestUtility.Log("Calling listenerStream.CloseAsync completed");
+                await clientStreamCloseTask;
+                TestUtility.Log("Calling clientStream.CloseAsync completed");
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+            }
         }
 
         /// <summary>
