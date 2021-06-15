@@ -86,7 +86,9 @@ namespace Microsoft.Azure.Relay
                 this.CheckDisposedOrReadOnly();
                 if (value == null)
                 {
-                    throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(nameof(value)), this.Context);
+                    // reset the status description back to an unset state
+                    this.statusDescription = null;
+                    return;
                 }
 
                 // Need to verify the status description doesn't contain any control characters except HT.

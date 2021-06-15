@@ -275,6 +275,65 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task AllowNullStatusDescription(EndpointTestType endpointTestType)
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListener(endpointTestType);
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(cts.Token);
+
+                HttpStatusCode expectedStatusCode = HttpStatusCode.Created;
+                listener.RequestHandler = (context) =>
+                {
+                    TestUtility.Log("HybridConnectionListener.RequestHandler invoked with Request:");
+                    TestUtility.Log($"{context.Request.HttpMethod} {context.Request.Url}");
+                    context.Request.Headers.AllKeys.ToList().ForEach((k) => TestUtility.Log($"{k}: {context.Request.Headers[k]}"));
+                    TestUtility.Log(StreamToString(context.Request.InputStream));
+
+                    context.Response.StatusDescription = "TestStatusDescription";
+                    context.Response.StatusCode = expectedStatusCode;
+                    // reset the status description
+                    context.Response.StatusDescription = null;
+                    context.Response.Close();
+                };
+
+                Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+                using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                {
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    var getRequest = new HttpRequestMessage();
+                    await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
+                    getRequest.Method = HttpMethod.Get;
+                    LogRequest(getRequest, client);
+                    using (HttpResponseMessage response = await client.SendAsync(getRequest, cts.Token))
+                    {
+                        LogResponse(response, showBody: false);
+                        Assert.Equal(expectedStatusCode, response.StatusCode);
+                        Assert.Equal("Created", response.ReasonPhrase);
+                        string responseContent = await response.Content.ReadAsStringAsync();
+                    }
+                }
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(cts.Token);
+                listener = null;
+            }
+            finally
+            {
+                cts.Dispose();
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
         [Fact, DisplayTestMethodName]
         async Task LoadBalancedListeners_WebRequest()
         {
