@@ -137,5 +137,52 @@ namespace Microsoft.Azure.Relay.UnitTests
             Assert.Equal(TimeSpan.FromMinutes(1), connectionStringBuilder.OperationTimeout);
             Assert.Null(connectionStringBuilder.SharedAccessSignature);
         }
+
+        [Fact]
+        [DisplayTestMethodName]
+        public void ManagedIdentityConnectionStringTest()
+        {
+            string connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;Authentication=Managed Identity";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            Type managedIdentityTokenProviderType = TokenProvider.CreateManagedIdentityTokenProvider().GetType();
+            var connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Equal(RelayConnectionStringBuilder.AuthenticationType.ManagedIdentity, connectionStringBuilder.Authentication);
+            HybridConnectionListener listener = new HybridConnectionListener(connectionString);
+            Assert.Equal(managedIdentityTokenProviderType, listener.TokenProvider.GetType());
+            HybridConnectionClient client = new HybridConnectionClient(connectionString);
+            Assert.Equal(managedIdentityTokenProviderType, client.TokenProvider.GetType());
+
+            connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;Authentication=ManagedIdentity";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Equal(RelayConnectionStringBuilder.AuthenticationType.ManagedIdentity, connectionStringBuilder.Authentication);
+            listener = new HybridConnectionListener(connectionString);
+            Assert.Equal(managedIdentityTokenProviderType, listener.TokenProvider.GetType());
+            client = new HybridConnectionClient(connectionString);
+            Assert.Equal(managedIdentityTokenProviderType, client.TokenProvider.GetType());
+
+            connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;Authentication=Garbage";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Equal(RelayConnectionStringBuilder.AuthenticationType.Other, connectionStringBuilder.Authentication);
+
+            // We should not be allowing intergers to be parsed as a valid AuthenticationType value
+            connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;Authentication=1";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Equal(RelayConnectionStringBuilder.AuthenticationType.Other, connectionStringBuilder.Authentication);
+
+            // Do not allow SharedAccessKeyName/SharedAccessKey to co-exist with AuthenticationType.ManagedIdentity
+            connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SomeKeyString;Authentication=Managed Identity";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Throws<ArgumentException>(() => connectionStringBuilder.ToString());
+
+            // Do not allow SharedAccessSignature to co-exist with AuthenticationType.ManagedIdentity
+            connectionString = "Endpoint=sb://contoso.servicebus.windows.net/;EntityPath=hc1;SharedAccessSignature=SomeKeySignature;Authentication=Managed Identity";
+            TestUtility.Log("Testing connectionstring: " + connectionString);
+            connectionStringBuilder = new RelayConnectionStringBuilder(connectionString);
+            Assert.Throws<ArgumentException>(() => connectionStringBuilder.ToString());
+        }
     }
 }
