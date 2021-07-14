@@ -222,8 +222,8 @@
   <data name="ConnectionStringMustIncludeEntityPath" xml:space="preserve">
     <value>{0} name should be specified as EntityPath in connectionString.</value>
   </data>
-  <data name="ConnectionStringMustIncludeTokenProviderSettings" xml:space="preserve">
-    <value>The connectionString must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey.</value>
+  <data name="CannotCreateTokenProviderFromConnectionString" xml:space="preserve">
+    <value>TokenProvider could not be created from the connectionString. If AAD TokenProvider should be used, please use the overload which takes a TokenProvider.</value>
   </data>
   <data name="ConnectionStringMustNotIncludeEntityPath" xml:space="preserve">
     <value>{0} name should not be specified as EntityPath in the connectionString while using this overload. Instead, use the 'path' parameter.</value>
