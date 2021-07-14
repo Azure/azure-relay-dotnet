@@ -29,30 +29,6 @@ namespace Microsoft.Azure.Relay
         // e.g. "azure-relay-dotnet/2.0.1.0 (Microsoft Windows NT 10.0.18363.0; .NET Core 4.6.28008.01)"
         public static readonly string ClientAgent = $"azure-relay-dotnet/{GetFileVersion()} ({Environment.OSVersion}; {PlatformHelpers.GetRuntimeFramework()})";
 
-        // HybridConnections shoebox logging operation names
-        public const string ShoeboxOperationNamePrefix = "Microsoft.Relay/HybridConnections";
-        public const string AuthorizationFailed = ShoeboxOperationNamePrefix + "/AuthorizationFailed";
-        public const string InvalidSasToken = ShoeboxOperationNamePrefix + "/InvalidSasToken";
-        public const string ListenerAcceptingConnection = ShoeboxOperationNamePrefix + "/ListenerAcceptingConnection";
-        public const string ListenerAcceptingConnectionTimeout = ShoeboxOperationNamePrefix + "/ListenerAcceptingConnectionTimeout";
-        public const string ListenerAcceptingHttpRequestFailed = ShoeboxOperationNamePrefix + "/ListenerAcceptingHttpRequestFailed";
-        public const string ListenerAcceptingRequestTimeout = ShoeboxOperationNamePrefix + "/ListenerAcceptingRequestTimeout";
-        public const string ListenerClosingFromExpiredToken = ShoeboxOperationNamePrefix + "/ListenerClosingFromExpiredToken";
-        public const string ListenerRejectedConnection = ShoeboxOperationNamePrefix + "/ListenerRejectedConnection";
-        public const string ListenerReturningHttpResponse = ShoeboxOperationNamePrefix + "/ListenerReturningHttpResponse";
-        public const string ListenerReturningHttpResponseFailed = ShoeboxOperationNamePrefix + "/ListenerReturningHttpResponseFailed";
-        public const string ListenerSentHttpResponse = ShoeboxOperationNamePrefix + "/ListenerSentHttpResponse";
-        public const string ListenerUnregistered = ShoeboxOperationNamePrefix + "/ListenerUnregistered";
-        public const string ListenerUnresponsive = ShoeboxOperationNamePrefix + "/ListenerUnresponsive";
-        public const string MessageSendingToListener = ShoeboxOperationNamePrefix + "/MessageSendingToListener";
-        public const string MessageSentToListener = ShoeboxOperationNamePrefix + "/MessageSentToListener";
-        public const string NewListenerRegistered = ShoeboxOperationNamePrefix + "/NewListenerRegistered";
-        public const string NewSenderRegistering = ShoeboxOperationNamePrefix + "/NewSenderRegistering";
-        public const string ProcessingRequestFailed = ShoeboxOperationNamePrefix + "/ProcessingRequestFailed";
-        public const string SenderConnectionClosed = ShoeboxOperationNamePrefix + "/SenderConnectionClosed";
-        public const string SenderListenerConnectionEstablished = ShoeboxOperationNamePrefix + "/SenderListenerConnectionEstablished";
-        public const string SenderSentHttpRequest = ShoeboxOperationNamePrefix + "/SenderSentHttpRequest";
-
         static string GetFileVersion()
         {
             var a = Assembly.GetExecutingAssembly();
