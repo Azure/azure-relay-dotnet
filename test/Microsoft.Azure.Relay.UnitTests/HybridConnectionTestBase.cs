@@ -334,7 +334,7 @@ namespace Microsoft.Azure.Relay.UnitTests
         {
             // TODO: Error details aren't available in .NET Core due to issue:
             // https://github.com/dotnet/corefx/issues/13773
-#if NET46
+#if NETFRAMEWORK
             Assert.NotNull(webSocketException.InnerException);
 
             Assert.IsAssignableFrom<WebException>(webSocketException.InnerException);
@@ -352,7 +352,7 @@ namespace Microsoft.Azure.Relay.UnitTests
             {
                 Assert.Contains(expectedStatusDescription, httpWebResponse.StatusDescription);
             }
-#endif // NET46
+#endif // NETFRAMEWORK
         }
 
         protected void VerifyResponse(

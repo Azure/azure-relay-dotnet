@@ -7,7 +7,7 @@
     <Authors>Microsoft</Authors>
     <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(TargetFrameworks);net451</TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(TargetFrameworks);net461</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>full</DebugType>
@@ -23,28 +23,15 @@
     <GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>true</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
-    <Version>2.0.2</Version>
+    <Version>3.0.0-preview</Version>
     <IsPackable>True</IsPackable>
   </PropertyGroup>
 
   <!-- .NET Framework specific -->
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net451' ">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net451' ">
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Web" />
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
     <Compile Remove="WebSockets\**\*.cs" />
   </ItemGroup>
   
-  <!-- .NET Standard specific -->
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="1.0.0" />
-  </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Strings.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -60,7 +47,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\relay.png" Pack="true" PackagePath="\"/>
+    <None Include="..\..\relay.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.2.3" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="1.0.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.7.1" />
   </ItemGroup>    
 
 </Project>
