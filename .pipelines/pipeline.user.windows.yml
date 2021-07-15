@@ -10,7 +10,7 @@ environment:
 
 version:
   name: 'DefaultVersion'
-  major: 2
+  major: 3
   minor: 0
   system: 'RevisionCounter'
   exclude_commit: true
