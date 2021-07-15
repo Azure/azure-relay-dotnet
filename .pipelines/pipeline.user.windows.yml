@@ -14,6 +14,7 @@ version:
   minor: 0
   system: 'RevisionCounter'
   exclude_commit: true
+  assembly_version: 'majorminoronly' # e.g. {major}.{minor}.0.0
 
 signing_options:
   profile: 'external_distribution'
