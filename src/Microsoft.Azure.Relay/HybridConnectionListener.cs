@@ -59,7 +59,10 @@ namespace Microsoft.Azure.Relay
             this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
         }
 
-        /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> using the specified connection string.</summary>
+        /// <summary>
+        /// Creates a new instance of <see cref="HybridConnectionListener" /> using the specified connection string. 
+        /// Use this overload only when AAD is not the method of authentication.
+        /// </summary>
         /// <param name="connectionString">The connection string to use.  This connection string must include the EntityPath property.</param>
         /// <returns>The newly created <see cref="HybridConnectionListener" /> instance.</returns>
         /// <exception cref="System.ArgumentException">Thrown when the format of the <paramref name="connectionString" /> parameter is incorrect.</exception>
@@ -68,9 +71,11 @@ namespace Microsoft.Azure.Relay
         {
         }
 
-        /// <summary>Creates a new instance of <see cref="HybridConnectionListener" /> from a connection string and
-        /// the specified HybridConection path. Use this overload only when the connection string does not use the 
-        /// <see cref="RelayConnectionStringBuilder.EntityPath" /> property.</summary> 
+        /// <summary>
+        /// Creates a new instance of <see cref="HybridConnectionListener" /> from a connection string and the specified HybridConection path. 
+        /// Use this overload only when the connection string does not use the <see cref="RelayConnectionStringBuilder.EntityPath" /> property,
+        /// and AAD is not the method of authentication.
+        /// </summary> 
         /// <param name="connectionString">The connection string used. This connection string must not include the EntityPath property.</param>
         /// <param name="path">The path to the HybridConnection.</param>
         /// <returns>The created <see cref="HybridConnectionListener" />.</returns>
@@ -116,7 +121,6 @@ namespace Microsoft.Azure.Relay
             }
 
             this.Address = new Uri(builder.Endpoint, builder.EntityPath);
-            this.TokenProvider = builder.CreateTokenProvider();
             this.ConnectionBufferSize = DefaultConnectionBufferSize;
             this.OperationTimeout = builder.OperationTimeout;
             this.proxy = DefaultWebProxy.Instance;
@@ -126,6 +130,12 @@ namespace Microsoft.Azure.Relay
             this.useBuiltInClientWebSocket = HybridConnectionConstants.DefaultUseBuiltInClientWebSocket;
             this.ClientWebSocketFactory = Microsoft.Azure.Relay.ClientWebSocketFactory.Default;
             this.KeepAliveInterval = HybridConnectionConstants.KeepAliveInterval;
+
+            this.TokenProvider = builder.CreateTokenProvider();
+            if (this.TokenProvider == null)
+            {
+                throw RelayEventSource.Log.Argument(nameof(connectionString), SR.CannotCreateTokenProviderFromConnectionString, this);
+            }
         }
 
         /// <summary>

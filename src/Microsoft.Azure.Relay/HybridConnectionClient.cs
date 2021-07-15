@@ -97,11 +97,7 @@ namespace Microsoft.Azure.Relay
                 builder.EntityPath = path;
             }
 
-            TokenProvider tokenProvider = null;
-            if (!string.IsNullOrEmpty(builder.SharedAccessSignature) || !string.IsNullOrEmpty(builder.SharedAccessKeyName))
-            {
-                tokenProvider = builder.CreateTokenProvider();
-            }
+            TokenProvider tokenProvider = builder.CreateTokenProvider();
 
             TimeSpan connectTimeout = DefaultConnectTimeout;
             if (builder.OperationTimeout != RelayConstants.DefaultOperationTimeout)

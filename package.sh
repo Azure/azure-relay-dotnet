@@ -19,8 +19,8 @@ else
   BuildConfiguration="Debug"
 fi
 
-echo "dotnet pack '${scriptroot}/Microsoft.Azure.Relay.sln' --no-build --no-dependencies --no-restore /p:Version=${CDP_PACKAGE_VERSION_SEMANTIC:-1.0.0.0-dev} --configuration ${BuildConfiguration}"
-dotnet pack "${scriptroot}/Microsoft.Azure.Relay.sln" --no-build --no-dependencies --no-restore /p:Version=${CDP_PACKAGE_VERSION_SEMANTIC:-1.0.0.0-dev} --configuration ${BuildConfiguration}
+echo "dotnet pack '${scriptroot}/Microsoft.Azure.Relay.sln' --no-build --no-dependencies --no-restore /p:Version=${CDP_PACKAGE_VERSION_SEMANTIC:-3.0.0-preview} --configuration ${BuildConfiguration}"
+dotnet pack "${scriptroot}/Microsoft.Azure.Relay.sln" --no-build --no-dependencies --no-restore /p:Version=${CDP_PACKAGE_VERSION_SEMANTIC:-3.0.0-preview} --configuration ${BuildConfiguration}
 
 if [ $? -eq 0 ]
 then

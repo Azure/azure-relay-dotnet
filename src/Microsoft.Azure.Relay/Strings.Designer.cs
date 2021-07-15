@@ -106,6 +106,15 @@ namespace Microsoft.Azure.Relay {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to TokenProvider could not be created from the connectionString. If AAD TokenProvider should be used, please use the overload which takes a TokenProvider..
+        /// </summary>
+        internal static string CannotCreateTokenProviderFromConnectionString {
+            get {
+                return ResourceManager.GetString("CannotCreateTokenProviderFromConnectionString", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &apos;{0}&apos; contained character &apos;{1}&apos; which is not allowed because it is reserved in the Uri scheme..
         /// </summary>
         internal static string CharacterReservedForUriScheme {
@@ -120,15 +129,6 @@ namespace Microsoft.Azure.Relay {
         internal static string ConnectionStringMustIncludeEntityPath {
             get {
                 return ResourceManager.GetString("ConnectionStringMustIncludeEntityPath", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The connectionString must include either SharedAccessSignature or both SharedAccessKeyName and SharedAccessKey..
-        /// </summary>
-        internal static string ConnectionStringMustIncludeTokenProviderSettings {
-            get {
-                return ResourceManager.GetString("ConnectionStringMustIncludeTokenProviderSettings", resourceCulture);
             }
         }
         

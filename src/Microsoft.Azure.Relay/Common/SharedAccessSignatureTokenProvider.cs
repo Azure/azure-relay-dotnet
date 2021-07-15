@@ -129,30 +129,36 @@ namespace Microsoft.Azure.Relay
         }
 
         /// <summary>
-        /// A WCF SecurityToken that wraps a Shared Access Signature
+        /// A WCF <see cref="SecurityToken"/> that wraps a Shared Access Signature
         /// </summary>
         class SharedAccessSignatureToken : SecurityToken
         {
-            public const int MaxKeyNameLength = 256;
-            public const int MaxKeyLength = 256;
-            public const string SharedAccessSignature = "SharedAccessSignature";
-            public const string SignedResource = "sr";
-            public const string Signature = "sig";
-            public const string SignedKeyName = "skn";
-            public const string SignedExpiry = "se";
-            public const string SignedResourceFullFieldName = SharedAccessSignature + " " + SignedResource;
-            public const string SasKeyValueSeparator = "=";
-            public const string SasPairSeparator = "&";
+            static readonly Func<string, string> Decoder = WebUtility.UrlDecode;
+            internal const int MaxKeyNameLength = 256;
+            internal const int MaxKeyLength = 256;
+            internal const string SharedAccessSignature = "SharedAccessSignature";
+            internal const string SignedResource = "sr";
+            internal const string Signature = "sig";
+            internal const string SignedKeyName = "skn";
+            internal const string SignedExpiry = "se";
+            internal const string SignedResourceFullFieldName = SharedAccessSignature + " " + SignedResource;
+            internal const string SasKeyValueSeparator = "=";
+            internal const string SasPairSeparator = "&";
+            readonly string audience;
+            readonly string rawToken;
+            readonly DateTime expiresAtUtc;
 
-            public SharedAccessSignatureToken(string tokenString)
-                : base(
-                      tokenString,
-                      audienceFieldName: SignedResourceFullFieldName,
-                      expiresOnFieldName: SignedExpiry,
-                      keyValueSeparator: SasKeyValueSeparator,
-                      pairSeparator: SasPairSeparator)
+            internal SharedAccessSignatureToken(string tokenString)
             {
+                this.rawToken = tokenString;
+                GetExpirationDateAndAudienceFromToken(tokenString, out this.expiresAtUtc, out this.audience);
             }
+
+            public override string Audience => this.audience;
+
+            public override DateTime ExpiresAtUtc => this.expiresAtUtc;
+
+            public override string TokenString  => this.rawToken;
 
             internal static void Validate(string sharedAccessSignature)
             {
@@ -219,6 +225,41 @@ namespace Microsoft.Azure.Relay
                 }
 
                 return parsedFields;
+            }
+
+            void GetExpirationDateAndAudienceFromToken(string tokenString, out DateTime expiresOn, out string audience)
+            {
+                string expiresIn;
+                IDictionary<string, string> decodedToken = Decode(tokenString, Decoder, Decoder, SasKeyValueSeparator, SasPairSeparator);
+                if (!decodedToken.TryGetValue(SignedExpiry, out expiresIn))
+                {
+                    throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingExpiresOn);
+                }
+
+                if (!decodedToken.TryGetValue(SignedResourceFullFieldName, out audience))
+                {
+                    throw RelayEventSource.Log.Argument(nameof(tokenString), SR.TokenMissingAudience);
+                }
+
+                expiresOn = EpochTime + TimeSpan.FromSeconds(double.Parse(expiresIn, CultureInfo.InvariantCulture));
+            }
+
+            static IDictionary<string, string> Decode(string tokenString, Func<string, string> keyDecoder, Func<string, string> valueDecoder, string keyValueSeparator, string pairSeparator)
+            {
+                IDictionary<string, string> dictionary = new Dictionary<string, string>();
+                IEnumerable<string> valueEncodedPairs = tokenString.Split(new string[] { pairSeparator }, StringSplitOptions.None);
+                foreach (string valueEncodedPair in valueEncodedPairs)
+                {
+                    string[] pair = valueEncodedPair.Split(new string[] { keyValueSeparator }, StringSplitOptions.None);
+                    if (pair.Length != 2)
+                    {
+                        throw RelayEventSource.Log.Argument(nameof(tokenString), SR.InvalidEncoding);
+                    }
+
+                    dictionary.Add(keyDecoder(pair[0]), valueDecoder(pair[1]));
+                }
+
+                return dictionary;
             }
         }
     }
