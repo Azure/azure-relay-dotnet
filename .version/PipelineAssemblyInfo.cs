@@ -5,5 +5,5 @@
 // This is a CDP xPlat pipeline generated file. Do not modify. This will be replaced with the actual versions in the actual Pipeline.
 using System.Reflection;
 [assembly: AssemblyVersion("3.0.0.0")]
-[assembly: AssemblyFileVersion("3.0.0.0")]
+[assembly: AssemblyFileVersion("3.0.0.1")]
 [assembly: AssemblyInformationalVersion("3.0.0-preview")]
