@@ -13,6 +13,7 @@ version:
   major: 3
   minor: 0
   system: 'RevisionCounter'
+  tag: 'preview'
   exclude_commit: true
   assembly_version: 'majorminoronly' # e.g. {major}.{minor}.0.0
 
