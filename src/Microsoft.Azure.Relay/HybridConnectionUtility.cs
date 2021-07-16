@@ -5,16 +5,10 @@ namespace Microsoft.Azure.Relay
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.Specialized;
     using System.Net;
     using System.Text;
-#if NETFRAMEWORK
-    using System.Web;
-#else
-    // NETSTANDARD
     using Microsoft.AspNetCore.WebUtilities;
     using Microsoft.Extensions.Primitives;
-#endif
 
     static class HybridConnectionUtility
     {
@@ -53,17 +47,10 @@ namespace Microsoft.Azure.Relay
             }.Uri;
         }
 
-#if NETFRAMEWORK
-        public static NameValueCollection ParseQueryString(string queryString)
-        {
-            return HttpUtility.ParseQueryString(queryString);
-        }
-#else
         public static IDictionary<string, StringValues> ParseQueryString(string queryString)
         {
             return QueryHelpers.ParseQuery(queryString);
         }
-#endif
 
         /// <summary>
         /// Filters out any query string values which start with the 'sb-hc-' prefix.  The returned string never

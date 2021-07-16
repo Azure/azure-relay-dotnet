@@ -10,10 +10,18 @@ environment:
 
 version:
   name: 'DefaultVersion'
-  major: 2
+  major: 3
   minor: 0
-  system: 'RevisionCounter'
   exclude_commit: true
+  assembly_version: 'majorminoronly' # e.g. {major}.{minor}.0.0
+  tag: 'preview'    # Remove this for non-preview packages
+  system: 'custom'
+
+versioning:
+  commands:
+    - !!defaultcommand
+      name: 'Generate Version'
+      command: 'versioning.cmd'
 
 signing_options:
   profile: 'external_distribution'

@@ -13,6 +13,7 @@ namespace Microsoft.Azure.Relay
     /// </summary> 
     public class RelayConnectionStringBuilder
     {
+        const string AuthenticationConfigName = "Authentication";
         const string TraceSource = nameof(RelayConnectionStringBuilder);
         const string EndpointConfigName = "Endpoint";
         const string EntityPathConfigName = "EntityPath";
@@ -20,10 +21,28 @@ namespace Microsoft.Azure.Relay
         const string SharedAccessKeyNameConfigName = "SharedAccessKeyName";
         const string SharedAccessKeyConfigName = "SharedAccessKey";
         const string SharedAccessSignatureConfigName = "SharedAccessSignature";
+        const string ManagedIdentityAuthenticationType = "Managed Identity";
         const char KeyValueSeparator = '=';
         const char KeyValuePairDelimiter = ';';
         Uri endpoint;
         TimeSpan operationTimeout;
+        AuthenticationType authType = AuthenticationType.Other;
+
+        /// <summary>
+        /// The type of authentication method that Relay will use to authenticate its operations.
+        /// </summary>
+        public enum AuthenticationType
+        {
+            /// <summary>
+            /// All other types of authentication method aside from System Managed Identity.
+            /// </summary>
+            Other,
+
+            /// <summary>
+            /// Authentication method that will be done using System Managed Identity.
+            /// </summary>
+            ManagedIdentity
+        }
 
         /// <summary>Initializes a new instance of the <see cref="RelayConnectionStringBuilder" /> class.</summary>
         public RelayConnectionStringBuilder()
@@ -54,6 +73,15 @@ namespace Microsoft.Azure.Relay
             }
 
             this.ParseConnectionString(connectionString);
+        }
+
+        /// <summary>
+        /// Enables Azure Active Directory Managed Identity authentication when set to ServiceBusConnectionStringBuilder.AuthenticationType.ManagedIdentity
+        /// </summary>
+        public AuthenticationType Authentication
+        {
+            get => this.authType;
+            set => this.authType = value;
         }
 
         /// <summary>Gets or sets the Relay namespace address.</summary>
@@ -148,9 +176,17 @@ namespace Microsoft.Azure.Relay
                 connectionStringBuilder.Append($"{OperationTimeoutConfigName}{KeyValueSeparator}{this.OperationTimeout.ToString(null, CultureInfo.InvariantCulture)}{KeyValuePairDelimiter}");
             }
 
+            if (this.Authentication == AuthenticationType.ManagedIdentity)
+            {
+                connectionStringBuilder.Append($"{AuthenticationConfigName}{KeyValueSeparator}{ManagedIdentityAuthenticationType}{KeyValuePairDelimiter}");
+            }
+
             return connectionStringBuilder.ToString();
         }
 
+        /// <summary>
+        /// Return a new <see cref="TokenProvider"/> based on the connection string, or null if it's unable to create one.
+        /// </summary>
         internal TokenProvider CreateTokenProvider()
         {
             TokenProvider tokenProvider = null;
@@ -162,9 +198,9 @@ namespace Microsoft.Azure.Relay
             {
                 tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(this.SharedAccessKeyName, this.SharedAccessKey);
             }
-            else
+            else if (this.Authentication == AuthenticationType.ManagedIdentity)
             {
-                throw RelayEventSource.Log.Argument("connectionString", SR.ConnectionStringMustIncludeTokenProviderSettings, TraceSource);
+                tokenProvider = TokenProvider.CreateManagedIdentityTokenProvider();
             }
 
             return tokenProvider;
@@ -208,6 +244,23 @@ namespace Microsoft.Azure.Relay
                     SR.GetString(SR.ArgumentInvalidCombination, SharedAccessKeyNameConfigName + "," + SharedAccessKeyConfigName),
                     TraceSource);
             }
+
+            // Validate that the user has not specified the authentication type to be ManagedIdentity and also providing SAS values.
+            if (this.Authentication == AuthenticationType.ManagedIdentity)
+            {
+                if (!string.IsNullOrWhiteSpace(this.SharedAccessKey))
+                {
+                    throw new ArgumentException(string.Format(SR.ArgumentInvalidCombination, $"{AuthenticationConfigName}, {nameof(SharedAccessKey)}"));
+                }
+                else if (!string.IsNullOrWhiteSpace(this.SharedAccessKeyName))
+                {
+                    throw new ArgumentException(string.Format(SR.ArgumentInvalidCombination, $"{AuthenticationConfigName}, {nameof(SharedAccessKeyName)}"));
+                }
+                else if (!string.IsNullOrWhiteSpace(this.SharedAccessSignature))
+                {
+                    throw new ArgumentException(string.Format(SR.ArgumentInvalidCombination, $"{AuthenticationConfigName}, {nameof(SharedAccessSignature)}"));
+                }
+            }
         }
 
         void ParseConnectionString(string connectionString)
@@ -226,7 +279,15 @@ namespace Microsoft.Azure.Relay
                 }
 
                 string value = keyAndValue[1];
-                if (key.Equals(EndpointConfigName, StringComparison.OrdinalIgnoreCase))
+                if (key.Equals(AuthenticationConfigName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = value.Replace(" ", string.Empty);
+                    if (int.TryParse(value, out _) || !Enum.TryParse(value, true, out this.authType))
+                    {
+                        this.authType = AuthenticationType.Other;
+                    }
+                }
+                else if (key.Equals(EndpointConfigName, StringComparison.OrdinalIgnoreCase))
                 {
                     Uri endpoint;
                     if (!Uri.TryCreate(value, UriKind.Absolute, out endpoint))
