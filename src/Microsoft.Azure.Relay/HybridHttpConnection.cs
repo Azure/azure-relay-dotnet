@@ -56,8 +56,18 @@ namespace Microsoft.Azure.Relay
 
         TrackingContext GetTrackingContext()
         {
-            var queryParameters = HybridConnectionUtility.ParseQueryString(this.rendezvousAddress.Query);
-            string trackingId = queryParameters[HybridConnectionConstants.Id];
+            string trackingId = string.Empty;
+            HybridConnectionUtility.ReadAndFilterQueryString(
+                this.rendezvousAddress.Query,
+                (key, value) =>
+                {
+                    if (!string.IsNullOrEmpty(key) && string.Equals(key, HybridConnectionConstants.Id))
+                    {
+                        trackingId = value;
+                    }
+
+                    return false;
+                });
 
             string path = this.rendezvousAddress.LocalPath;
             if (path.StartsWith(HybridConnectionConstants.HybridConnectionRequestUri, StringComparison.OrdinalIgnoreCase))

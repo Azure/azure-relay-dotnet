@@ -566,30 +566,34 @@ namespace Microsoft.Azure.Relay.UnitTests
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var queryStringTests = new[]
-                {
+                {                    
+                    new { Original = "?a=1&a=2", Output = "?a=1&a=2" },
+                    new { Original = "?a=1&a=2&", Output = "?a=1&a=2&" },
+                    new { Original = "?&&&", Output = "?&&&" },
                     new { Original = "?foo=bar", Output = "?foo=bar" },
-                    new { Original = "?sb-hc-id=1", Output = "" },
-                    new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" },
-                    new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" },
-                    new { Original = "?sb-hc-undefined=true", Output = "" },
-                    new { Original = "? Key =  Value With Space ", Output = "?+Key+=++Value+With+Space" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?key='value'", Output = "?key=%27value%27" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?sb-hc-id=1", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-undefined=true", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" }, // sb-hc-.* is NOT stripped (does NOT have equals)
+                    new { Original = "?key='value'", Output = "?key=%27value%27" },
+                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" },
                     new { Original = "?key=<value>", Output = "?key=%3cvalue%3e" },
                     new { Original = "?foo=bar&", Output = "?foo=bar&" },
-                    new { Original = "?&foo=bar", Output = "?foo=bar" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" },
                     new { Original = "?CustomValue", Output = "?CustomValue" },
                     new { Original = "?custom-Value", Output = "?custom-Value" },
                     new { Original = "?custom&value", Output = "?custom&value" },
                     new { Original = "?&custom&value&", Output = "?&custom&value&" },
                     new { Original = "?&&value&&", Output = "?&&value&&" },
                     new { Original = "?+", Output = "?+" },
-                    new { Original = "?%20", Output = "?+" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
+                    new { Original = "?%20", Output = "?+" },
+                    new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" },
                     new { Original = "?&+&", Output = "?&+&" },
                     new { Original = "?%2f%3a%3d%26", Output = "?%2f%3a%3d%26" },
                     new { Original = "?api-version=abc", Output = "?api-version=abc" },
+                    //new { Original = "?&foo=bar", Output = "?&foo=bar" }, // Should work after the next relay cloud service update
+                    //new { Original = "?name=%C3%b8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
+                    //new { Original = "?name=\u00f8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
                 };
 
                 RelayedHttpListenerContext actualRequestContext = null;
