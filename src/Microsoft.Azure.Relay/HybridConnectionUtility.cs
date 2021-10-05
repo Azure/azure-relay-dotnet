@@ -4,11 +4,8 @@
 namespace Microsoft.Azure.Relay
 {
     using System;
-    using System.Collections.Generic;
     using System.Net;
     using System.Text;
-    using Microsoft.AspNetCore.WebUtilities;
-    using Microsoft.Extensions.Primitives;
 
     static class HybridConnectionUtility
     {
@@ -47,43 +44,62 @@ namespace Microsoft.Azure.Relay
             }.Uri;
         }
 
-        public static IDictionary<string, StringValues> ParseQueryString(string queryString)
+        /// <summary>
+        /// Process the QueryString calling a predicate on each parameter/pair. If predicate returns false
+        ///  then remove that parameter from the resulting queryString. The returned string never has '?' at the start.
+        /// </summary>
+        internal static string ReadAndFilterQueryString(string queryString, Func<string, string, bool> predicate)
         {
-            return QueryHelpers.ParseQuery(queryString);
+            var updatedQueryString = new StringBuilder(queryString.Length);
+            string[] queryParameters = queryString.TrimStart(QuestionMark).Split(Ampersand);
+            bool firstPairAlreadyWritten = false;
+            foreach (string queryParameter in queryParameters)
+            {
+                string[] keyAndValue = queryParameter.Split(EqualSign, 2);
+                string key;
+                string value;
+                if (keyAndValue.Length == 2)
+                {
+                    key = WebUtility.UrlDecode(keyAndValue[0]);
+                    value = WebUtility.UrlDecode(keyAndValue[1]);
+                }
+                else
+                {
+                    key = null;
+                    value = WebUtility.UrlDecode(keyAndValue[0]);
+                }
+
+                if (predicate(key, value))
+                {
+                    // Copy as-is to the filtered queryString
+                    if (firstPairAlreadyWritten)
+                    {
+                        updatedQueryString.Append('&');
+                    }
+                    else
+                    {
+                        firstPairAlreadyWritten = true;
+                    }
+
+                    updatedQueryString.Append(queryParameter);
+                }
+            }
+
+            return updatedQueryString.ToString();
         }
 
         /// <summary>
         /// Filters out any query string values which start with the 'sb-hc-' prefix.  The returned string never
         /// has a '?' character at the start.
         /// </summary>
-        public static string FilterQueryString(string queryString)
+        internal static string FilterHybridConnectionQueryParams(string queryString)
         {
-            if (string.IsNullOrEmpty(queryString))
-            {
-                return string.Empty;
-            }
-
-            queryString = queryString.TrimStart(QuestionMark);
-            var queryStringCollection = ParseQueryString(queryString);
-
-            var sb = new StringBuilder(256);
-
-            foreach (string key in queryStringCollection.Keys)
-            {
-                if (key == null || key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix, StringComparison.OrdinalIgnoreCase))
+            return ReadAndFilterQueryString(
+                queryString,
+                (key, value) =>
                 {
-                    continue;
-                }
-
-                if (sb.Length > 0)
-                {
-                    sb.Append('&');
-                }
-
-                sb.Append(WebUtility.UrlEncode(key)).Append('=').Append(WebUtility.UrlEncode(queryStringCollection[key]));
-            }
-
-            return sb.ToString();
+                    return key == null || !key.StartsWith(HybridConnectionConstants.QueryStringKeyPrefix, StringComparison.OrdinalIgnoreCase);
+                });
         }
 
         /// <summary>

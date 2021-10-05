@@ -526,7 +526,7 @@ namespace Microsoft.Azure.Relay
         Uri GenerateAcceptRequestUri(Uri rendezvousUri)
         {
             var requestUri = new UriBuilder(this.Address);
-            requestUri.Query = HybridConnectionUtility.FilterQueryString(rendezvousUri.Query);
+            requestUri.Query = HybridConnectionUtility.FilterHybridConnectionQueryParams(rendezvousUri.Query);
             requestUri.Path = rendezvousUri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
             if (requestUri.Path.StartsWith("$hc/", StringComparison.Ordinal))
             {
