@@ -571,26 +571,33 @@ namespace Microsoft.Azure.Relay.UnitTests
                     new { Original = "?a=1&a=2&", Output = "?a=1&a=2&" },
                     new { Original = "?&&&", Output = "?&&&" },
                     new { Original = "?foo=bar", Output = "?foo=bar" },
+                    new { Original = "?foo=bar&", Output = "?foo=bar&" },
+                    new { Original = "?&foo=bar", Output = "?&foo=bar" },
                     new { Original = "?sb-hc-id=1", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
                     new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
                     new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
-                    new { Original = "?sb-hc-undefined=true", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
                     new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" }, // sb-hc-.* is NOT stripped (does NOT have equals)
-                    new { Original = "?key='value'", Output = "?key=%27value%27" },
-                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" },
-                    new { Original = "?key=<value>", Output = "?key=%3cvalue%3e" },
-                    new { Original = "?foo=bar&", Output = "?foo=bar&" },
+                    new { Original = "?sb-hc-undefined=true", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-whatever=", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-whatever=&foo=bar", Output = "?foo=bar" }, // sb-hc-.*= gets stripped (has equals)
                     new { Original = "?CustomValue", Output = "?CustomValue" },
                     new { Original = "?custom-Value", Output = "?custom-Value" },
                     new { Original = "?custom&value", Output = "?custom&value" },
                     new { Original = "?&custom&value&", Output = "?&custom&value&" },
                     new { Original = "?&&value&&", Output = "?&&value&&" },
                     new { Original = "?+", Output = "?+" },
-                    new { Original = "?%20", Output = "?+" },
-                    new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" },
-                    new { Original = "?&+&", Output = "?&+&" },
+                    new { Original = "?%2B", Output = "?%2B" }, // PLUS
+                    new { Original = "?%20", Output = "?%20" }, // SPACE
+                    new { Original = "? ", Output = string.Empty }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
+                    new { Original = "? Key =  Value With Space ", Output = "?%20Key%20=%20%20Value%20With%20Space" }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
+                    new { Original = "? Not a key value pair ", Output = "?%20Not%20a%20key%20value%20pair" }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
                     new { Original = "?%2f%3a%3d%26", Output = "?%2f%3a%3d%26" },
+                    new { Original = "?key='value'", Output = "?key='value'" },
+                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // WCF HTTP Receiving stack does this before we get it (encoded chars)
+                    new { Original = "?key=<value>", Output = "?key=%3Cvalue%3E" }, // WCF HTTP Receiving stack does this before we get it (encoded chars)
                     new { Original = "?api-version=abc", Output = "?api-version=abc" },
+                    new { Original = "?name=%C3%b8", Output = "?name=%C3%B8" }, // WCF HTTP Receiving stack does this before we get it (casing change)
+                    new { Original = "?name=\u00f8", Output = "?name=%C3%B8" }, // WCF HTTP Receiving stack does this before we get it
                     //new { Original = "?&foo=bar", Output = "?&foo=bar" }, // Should work after the next relay cloud service update
                     //new { Original = "?name=%C3%b8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
                     //new { Original = "?name=\u00f8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
