@@ -171,6 +171,7 @@ In order to run the unit tests, you will need to do the following:
     </a>
 
     *Running the above template will provision a namespace along with the required entities to successfully run the unit tests.*
+    *Alternatively, you can create your own Relay namespace and the following Hybrid Connection entities in it: Authorized and Unauthorized. Toggle client authorization as appropriate for each one.*
 
 1. Add an Environment Variable named `azure-relay-dotnet/connectionstring` and set the value as the connection string of the newly created namespace. **Please note that if you are using Visual Studio, you must restart Visual Studio in order to use new Environment Variables.**
 

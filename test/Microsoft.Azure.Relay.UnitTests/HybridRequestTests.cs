@@ -275,6 +275,65 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
         }
 
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task AllowNullStatusDescription(EndpointTestType endpointTestType)
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListener(endpointTestType);
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(cts.Token);
+
+                HttpStatusCode expectedStatusCode = HttpStatusCode.Created;
+                listener.RequestHandler = (context) =>
+                {
+                    TestUtility.Log("HybridConnectionListener.RequestHandler invoked with Request:");
+                    TestUtility.Log($"{context.Request.HttpMethod} {context.Request.Url}");
+                    context.Request.Headers.AllKeys.ToList().ForEach((k) => TestUtility.Log($"{k}: {context.Request.Headers[k]}"));
+                    TestUtility.Log(StreamToString(context.Request.InputStream));
+
+                    context.Response.StatusDescription = "TestStatusDescription";
+                    context.Response.StatusCode = expectedStatusCode;
+                    // reset the status description
+                    context.Response.StatusDescription = null;
+                    context.Response.Close();
+                };
+
+                Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+                using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                {
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    var getRequest = new HttpRequestMessage();
+                    await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
+                    getRequest.Method = HttpMethod.Get;
+                    LogRequest(getRequest, client);
+                    using (HttpResponseMessage response = await client.SendAsync(getRequest, cts.Token))
+                    {
+                        LogResponse(response, showBody: false);
+                        Assert.Equal(expectedStatusCode, response.StatusCode);
+                        Assert.Equal("Created", response.ReasonPhrase);
+                        string responseContent = await response.Content.ReadAsStringAsync();
+                    }
+                }
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(cts.Token);
+                listener = null;
+            }
+            finally
+            {
+                cts.Dispose();
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
         [Fact, DisplayTestMethodName]
         async Task LoadBalancedListeners_WebRequest()
         {
@@ -507,30 +566,41 @@ namespace Microsoft.Azure.Relay.UnitTests
                 await listener.OpenAsync(TimeSpan.FromSeconds(30));
 
                 var queryStringTests = new[]
-                {
+                {                    
+                    new { Original = "?a=1&a=2", Output = "?a=1&a=2" },
+                    new { Original = "?a=1&a=2&", Output = "?a=1&a=2&" },
+                    new { Original = "?&&&", Output = "?&&&" },
                     new { Original = "?foo=bar", Output = "?foo=bar" },
-                    new { Original = "?sb-hc-id=1", Output = "" },
-                    new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" },
-                    new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" },
-                    new { Original = "?sb-hc-undefined=true", Output = "" },
-                    new { Original = "? Key =  Value With Space ", Output = "?+Key+=++Value+With+Space" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?key='value'", Output = "?key=%27value%27" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?key=<value>", Output = "?key=%3cvalue%3e" },
                     new { Original = "?foo=bar&", Output = "?foo=bar&" },
-                    new { Original = "?&foo=bar", Output = "?foo=bar" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" },
+                    new { Original = "?&foo=bar", Output = "?&foo=bar" },
+                    new { Original = "?sb-hc-id=1", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-id=1&custom=value", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?custom=value&sb-hc-id=1", Output = "?custom=value" }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-undefined", Output = "?sb-hc-undefined" }, // sb-hc-.* is NOT stripped (does NOT have equals)
+                    new { Original = "?sb-hc-undefined=true", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-whatever=", Output = string.Empty }, // sb-hc-.*= gets stripped (has equals)
+                    new { Original = "?sb-hc-whatever=&foo=bar", Output = "?foo=bar" }, // sb-hc-.*= gets stripped (has equals)
                     new { Original = "?CustomValue", Output = "?CustomValue" },
                     new { Original = "?custom-Value", Output = "?custom-Value" },
                     new { Original = "?custom&value", Output = "?custom&value" },
                     new { Original = "?&custom&value&", Output = "?&custom&value&" },
                     new { Original = "?&&value&&", Output = "?&&value&&" },
                     new { Original = "?+", Output = "?+" },
-                    new { Original = "?%20", Output = "?+" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "? Not a key value pair ", Output = "?+Not+a+key+value+pair" }, // HttpUtility.ParseQueryString.ToString() in the cloud service changes this
-                    new { Original = "?&+&", Output = "?&+&" },
+                    new { Original = "?%2B", Output = "?%2B" }, // PLUS
+                    new { Original = "?%20", Output = "?%20" }, // SPACE
+                    new { Original = "? ", Output = string.Empty }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
+                    new { Original = "? Key =  Value With Space ", Output = "?%20Key%20=%20%20Value%20With%20Space" }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
+                    new { Original = "? Not a key value pair ", Output = "?%20Not%20a%20key%20value%20pair" }, // WCF HTTP Receiving stack does this before we get it (removed trailing space)
                     new { Original = "?%2f%3a%3d%26", Output = "?%2f%3a%3d%26" },
+                    new { Original = "?key='value'", Output = "?key='value'" },
+                    new { Original = "?key=\"value\"", Output = "?key=%22value%22" }, // WCF HTTP Receiving stack does this before we get it (encoded chars)
+                    new { Original = "?key=<value>", Output = "?key=%3Cvalue%3E" }, // WCF HTTP Receiving stack does this before we get it (encoded chars)
                     new { Original = "?api-version=abc", Output = "?api-version=abc" },
+                    new { Original = "?name=%C3%b8", Output = "?name=%C3%B8" }, // WCF HTTP Receiving stack does this before we get it (casing change)
+                    new { Original = "?name=\u00f8", Output = "?name=%C3%B8" }, // WCF HTTP Receiving stack does this before we get it
+                    //new { Original = "?&foo=bar", Output = "?&foo=bar" }, // Should work after the next relay cloud service update
+                    //new { Original = "?name=%C3%b8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
+                    //new { Original = "?name=\u00f8", Output = "?name=%c3%b8" },  // Should work after the next relay cloud service update
                 };
 
                 RelayedHttpListenerContext actualRequestContext = null;

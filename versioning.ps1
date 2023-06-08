@@ -1,7 +1,7 @@
 # Update values here as well as in PipelineAssemblyInfo.cs, Microsoft.Azure.Relay.csproj (for development builds)
 $major = "3"
 $minor = "0"
-$patch = "0"
+$patch = "1"
 $revision = $env:CDP_DEFINITION_BUILD_COUNT_DAY
 
 $buildNumber = "$major.$minor.$patch.$revision"

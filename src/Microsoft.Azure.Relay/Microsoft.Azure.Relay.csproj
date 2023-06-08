@@ -23,7 +23,7 @@
     <GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>true</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
-    <Version>3.0.0-preview</Version>
+    <Version>3.0.1</Version>
     <IsPackable>True</IsPackable>
   </PropertyGroup>
 
@@ -52,7 +52,6 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.2.3" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="1.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.7.1" />
   </ItemGroup>    
 

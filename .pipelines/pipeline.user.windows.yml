@@ -13,8 +13,7 @@ version:
   major: 3
   minor: 0
   exclude_commit: true
-  assembly_version: 'majorminoronly' # e.g. {major}.{minor}.0.0
-  tag: 'preview'    # Remove this for non-preview packages
+  assembly_version: 'majorminoronly' # e.g. {major}.{minor}.1.0
   system: 'custom'
 
 versioning:
