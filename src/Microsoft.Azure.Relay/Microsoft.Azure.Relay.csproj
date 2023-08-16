@@ -25,6 +25,8 @@
     <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
     <Version>3.0.1</Version>
     <IsPackable>True</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <!-- .NET Framework specific -->
