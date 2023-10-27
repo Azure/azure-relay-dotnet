@@ -1,4 +1,4 @@
-﻿Param
+Param
 (
     [Parameter(Mandatory=$true, HelpMessage="The ServiceBus namespace. E.g. 'contoso.servicebus.windows.net' or 'contoso'")]
     [string]$Namespace,
@@ -26,11 +26,26 @@ function Get-SBNamespaceInfo
         {
             $Deployment = $Deployment.Substring(7)
         }
+	if ($Deployment.StartsWith("NS-"))
+        {
+            $Deployment = $Deployment.Substring(3)
+        }
 
         $DirectAddresses = @()
         $instances = 0..127
         $ParentDomain = $ns.Substring($ns.IndexOf('.') + 1)
         $GatewayDnsFormat = ("g{{0}}-{0}-sb.{1}" -f $Deployment.ToLowerInvariant(), $ParentDomain)
+        Foreach ($index in $instances)
+        {
+            $address = ($GatewayDnsFormat -f $index)
+            $result = Resolve-DnsName $address -EA SilentlyContinue
+            if ($result -ne $null)
+            {
+                $DirectAddress = ($result | Select-Object Name,IPAddress)
+                $DirectAddresses += $DirectAddress
+            }
+        }
+	$GatewayDnsFormat = ("gv{{0}}-{0}-sb.{1}" -f $Deployment.ToLowerInvariant(), $ParentDomain)
         Foreach ($index in $instances)
         {
             $address = ($GatewayDnsFormat -f $index)
