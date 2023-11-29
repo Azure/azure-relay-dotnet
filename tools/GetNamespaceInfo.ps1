@@ -60,7 +60,7 @@ function Get-SBNamespaceInfo
         $PropertyBag = @{Namespace=$ns;CloudServiceDNS=$CloudServiceDNS;Deployment=$Deployment;CloudServiceVIP=$CloudServiceVIP;GatewayDnsFormat=$GatewayDnsFormat;DirectAddresses=$DirectAddresses}
     }
 
-    $details = New-Object PSObject –Property $PropertyBag
+    $details = New-Object PSObject -Property $PropertyBag
     $details
 }
 
