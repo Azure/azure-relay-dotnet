@@ -20,15 +20,27 @@ function Get-SBNamespaceInfo
     $CloudServiceDNS = (Resolve-DnsName $ns -Type CNAME).NameHost
     if ($CloudServiceDNS)
     {
-        $CloudServiceVIP = (Resolve-DnsName $CloudServiceDNS -Type A).IPAddress
         $Deployment = $CloudServiceDNS.Split('.')[0].ToUpperInvariant()
         if ($Deployment.StartsWith("NS-SB2-"))
         {
+	    $CloudServiceVIP = (Resolve-DnsName $CloudServiceDNS -Type A).IPAddress
+            write-host $CloudServiceVIP
             $Deployment = $Deployment.Substring(7)
-        }
-	if ($Deployment.StartsWith("NS-"))
-        {
-            $Deployment = $Deployment.Substring(3)
+		}
+		else
+		{
+            if ((Resolve-DnsName $CloudServiceDNS -Type A).length -eq 2)
+            {                
+                $CloudServiceDNS = (Resolve-DnsName $ns -Type A)[1].NameHost
+                $Deployment = $CloudServiceDNS.Split('.')[0].ToUpperInvariant()
+                $CloudServiceVIP = (Resolve-DnsName $CloudServiceDNS -Type A)[1].IPAddress
+                $Deployment = $Deployment.Substring(7)
+            }
+    		else
+	    	{
+		    	Write-host "Error on CNAME Lookup"
+    			return			
+            	}
         }
 
         $DirectAddresses = @()
@@ -45,22 +57,11 @@ function Get-SBNamespaceInfo
                 $DirectAddresses += $DirectAddress
             }
         }
-	$GatewayDnsFormat = ("gv{{0}}-{0}-sb.{1}" -f $Deployment.ToLowerInvariant(), $ParentDomain)
-        Foreach ($index in $instances)
-        {
-            $address = ($GatewayDnsFormat -f $index)
-            $result = Resolve-DnsName $address -EA SilentlyContinue
-            if ($result -ne $null)
-            {
-                $DirectAddress = ($result | Select-Object Name,IPAddress)
-                $DirectAddresses += $DirectAddress
-            }
-        }
 
         $PropertyBag = @{Namespace=$ns;CloudServiceDNS=$CloudServiceDNS;Deployment=$Deployment;CloudServiceVIP=$CloudServiceVIP;GatewayDnsFormat=$GatewayDnsFormat;DirectAddresses=$DirectAddresses}
     }
 
-    $details = New-Object PSObject -Property $PropertyBag
+    $details = New-Object PSObject –Property $PropertyBag
     $details
 }
 
