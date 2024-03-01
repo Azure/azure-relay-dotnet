@@ -24,8 +24,14 @@ jobs:
     - run: dotnet --info
     - name: Restore
       run: .\restore.cmd
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: csharp
     - name: Build
       run: .\build.cmd
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
     - name: Package
       run: .\package.cmd
 
@@ -47,7 +53,13 @@ jobs:
     - run: dotnet --info
     - name: Restore
       run: ./restore.sh
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: csharp
     - name: Build
       run: ./build.sh
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
     - name: Package
       run: ./package.sh
