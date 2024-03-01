@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Relay
         {
             get
             {
-                return this.webSocket.State != WebSocketState.CloseReceived && this.webSocket.State != WebSocketState.Closed;
+                return this.webSocket.State != WebSocketState.CloseReceived && this.webSocket.State != WebSocketState.Closed && this.webSocket.State != WebSocketState.Aborted;
             }
         }
 
@@ -36,14 +36,14 @@ namespace Microsoft.Azure.Relay
 
         public override bool CanTimeout
         {
-            get { return this.webSocket.State != WebSocketState.Closed; }
+            get { return this.webSocket.State != WebSocketState.Closed && this.webSocket.State != WebSocketState.Aborted; }
         }
 
         public override bool CanWrite
         {
             get
             {
-                return this.webSocket.State != WebSocketState.CloseSent && this.webSocket.State != WebSocketState.Closed;
+                return this.webSocket.State != WebSocketState.CloseSent && this.webSocket.State != WebSocketState.Closed && this.webSocket.State != WebSocketState.Aborted;
             }
         }
 
