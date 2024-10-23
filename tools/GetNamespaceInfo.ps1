@@ -19,6 +19,12 @@ function Get-SBNamespaceInfo
 
     $PropertyBag = @{Namespace=$ns}
     $CloudServiceDNS = (Resolve-DnsName $ns -Type CNAME).NameHost
+
+    if ($CloudServiceDNS.contains(".privatelink.servicebus"))
+    {
+        $CloudServiceDNS = (Resolve-DnsName $CloudServiceDNS -Type CNAME).NameHost
+    }
+    
     if ($CloudServiceDNS)
     {
         $CloudServiceVIP = (Resolve-DnsName $CloudServiceDNS -Type A).IPAddress
