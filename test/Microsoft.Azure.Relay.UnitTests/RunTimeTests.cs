@@ -63,6 +63,57 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationAndBuiltInClientWebSocketTestPermutations))]
+        async Task HybridConnectionTestWss(EndpointTestType endpointTestType, bool useBuiltInClientWebSocket)
+        {
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListenerWithToken(endpointTestType);
+                listener.UseBuiltInClientWebSocket = useBuiltInClientWebSocket;
+                var client = GetHybridConnectionClientWithToken(endpointTestType);
+                client.UseBuiltInClientWebSocket = useBuiltInClientWebSocket;
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(TimeSpan.FromSeconds(30));
+
+                var clientStream = await client.CreateConnectionAsync();
+                var listenerStream = await listener.AcceptConnectionAsync();
+                TestUtility.Log("Client and Listener HybridStreams are connected!");
+
+                byte[] sendBuffer = this.CreateBuffer(1024, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+                await clientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+                TestUtility.Log($"clientStream wrote {sendBuffer.Length} bytes");
+
+                byte[] readBuffer = new byte[sendBuffer.Length];
+                await this.ReadCountBytesAsync(listenerStream, readBuffer, 0, readBuffer.Length, TimeSpan.FromSeconds(30));
+                Assert.Equal(sendBuffer, readBuffer);
+
+                TestUtility.Log("Calling clientStream.CloseAsync");
+                var clientStreamCloseTask = clientStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                TestUtility.Log("Reading from listenerStream");
+                int bytesRead = await this.SafeReadAsync(listenerStream, readBuffer, 0, readBuffer.Length);
+                TestUtility.Log($"listenerStream.Read returned {bytesRead} bytes");
+                Assert.Equal(0, bytesRead);
+
+                TestUtility.Log("Calling listenerStream.CloseAsync");
+                var listenerStreamCloseTask = listenerStream.CloseAsync(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                await listenerStreamCloseTask;
+                TestUtility.Log("Calling listenerStream.CloseAsync completed");
+                await clientStreamCloseTask;
+                TestUtility.Log("Calling clientStream.CloseAsync completed");
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(TimeSpan.FromSeconds(10));
+                listener = null;
+            }
+            finally
+            {
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
         async Task ClientShutdownTest(EndpointTestType endpointTestType)
         {
