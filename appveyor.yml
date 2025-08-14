@@ -15,7 +15,7 @@ environment:
   azure-relay-dotnet/AppId:
     secure: c+H140oRJfHtmFHZxSRLWocv5AU0q33X7kgMcTcXxhJvtVhk2WAk1dRQkSN+SyoA
   matrix:
-    - DotNetRunTime: netcoreapp2.1
+    - DotNetRunTime: netcoreapp2.2
       azure-relay-dotnet/CodeCovSecret:
         secure: NAlk4Em1NARlJqd8aan0jD8SW8iE86quYwiBi2ngs5Dfl0gYuwDuZaSkpoFFf2Cz
 skip_commits:
