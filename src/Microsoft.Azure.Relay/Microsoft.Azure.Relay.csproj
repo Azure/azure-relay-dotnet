@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>This is the Azure Relay .NET Standard client library for Hybrid Connections. For more information about Relay see https://azure.microsoft.com/en-us/services/service-bus/.
@@ -26,7 +26,9 @@
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <Version>3.0.1</Version>
     <IsPackable>True</IsPackable>
-  </PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>command:workbench.trust.manage
 
   <!-- .NET Framework specific -->
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
