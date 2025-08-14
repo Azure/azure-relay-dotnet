@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>This is the Azure Relay .NET Standard client library for Hybrid Connections. For more information about Relay see https://azure.microsoft.com/en-us/services/service-bus/.
@@ -25,6 +25,8 @@
     <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
     <Version>3.0.1</Version>
     <IsPackable>True</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <!-- .NET Framework specific -->
@@ -51,7 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.2.3" />
+    <PackageReference Include="Azure.Identity" Version="1.10.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.7.1" />
   </ItemGroup>    
 
