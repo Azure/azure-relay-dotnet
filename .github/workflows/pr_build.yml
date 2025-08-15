@@ -44,6 +44,7 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '3.1.401'
+        architecture: 'x64'
     - run: dotnet --info
     - name: Install libssl
       run: sudo apt-get update && sudo apt-get install -y libssl-dev
