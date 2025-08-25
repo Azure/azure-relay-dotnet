@@ -586,7 +586,7 @@ namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
         private static KeyValuePair<string, string> CreateSecKeyAndSecWebSocketAccept()
         {
             string secKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-            using (SHA1 sha = SHA1.Create())
+            using (SHA256 sha = SHA256.Create())
             {
                 return new KeyValuePair<string, string>(
                     secKey,
