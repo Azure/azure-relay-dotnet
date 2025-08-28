@@ -59,7 +59,7 @@ namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
             }
             else
             {
-                algorithm = Md5;
+                algorithm = Sha256;
             }
 
             // Check if nonce is there in challenge
@@ -298,10 +298,11 @@ namespace Microsoft.Azure.Relay.WebSockets.NetStandard20
 
         private static string ComputeHash(string data, string algorithm)
         {
-            // Disable MD5 insecure warning.
-#pragma warning disable CA5351
-            using (HashAlgorithm hash = algorithm.Contains(Sha256) ? SHA256.Create() : (HashAlgorithm)MD5.Create())
-#pragma warning restore CA5351
+            if (!algorithm.Contains(Sha256))
+            {
+                throw new NotSupportedException($"Algorithm '{algorithm}' is not supported. Only SHA-256 based algorithms are implemented.");
+            }
+            using (HashAlgorithm hash = SHA256.Create())
             {
                 byte[] result = hash.ComputeHash(Encoding.UTF8.GetBytes(data));
 
