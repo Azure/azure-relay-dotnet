@@ -65,6 +65,24 @@ namespace Microsoft.Azure.Relay.UnitTests
         }
 
         /// <summary>
+        /// Returns a HybridConnectionClient based on the EndpointTestType (authenticated/unauthenticated).
+        /// </summary>
+        protected HybridConnectionClient GetHybridConnectionClientWithToken(EndpointTestType endpointTestType)
+        {
+            var KeyName = "RootManageSharedAccessKey";
+            var Key = Environment.GetEnvironmentVariable(Constants.RelayKeyEnvironmentVariable);
+            var RelayNamespace = Environment.GetEnvironmentVariable(Constants.RelayNamespaceEnvironmentVariable);
+            var ConnectionName = Constants.AuthenticatedEntityPath;
+            if (endpointTestType == EndpointTestType.Unauthenticated)
+            {
+                ConnectionName = Constants.UnauthenticatedEntityPath;
+            }
+
+            var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(KeyName, Key);
+            return new HybridConnectionClient(new Uri(string.Format("wss://{0}/{1}", RelayNamespace, ConnectionName)), tokenProvider, false);
+        }
+
+        /// <summary>
         /// Returns a HybridConnectionListener based on the EndpointTestType (authenticated/unauthenticated).
         /// </summary>
         protected HybridConnectionListener GetHybridConnectionListener(EndpointTestType endpointTestType)
@@ -81,6 +99,24 @@ namespace Microsoft.Azure.Relay.UnitTests
             }
 
             return new HybridConnectionListener(GetConnectionString(endpointTestType));
+        }
+
+        /// <summary>
+        /// Returns a HybridConnectionListener based on the EndpointTestType (authenticated/unauthenticated).
+        /// </summary>
+        protected HybridConnectionListener GetHybridConnectionListenerWithToken(EndpointTestType endpointTestType)
+        {
+            var KeyName = "RootManageSharedAccessKey";
+            var Key = Environment.GetEnvironmentVariable(Constants.RelayKeyEnvironmentVariable);
+            var RelayNamespace = Environment.GetEnvironmentVariable(Constants.RelayNamespaceEnvironmentVariable);
+            var ConnectionName = Constants.AuthenticatedEntityPath;
+            if (endpointTestType == EndpointTestType.Unauthenticated)
+            {
+                ConnectionName = Constants.UnauthenticatedEntityPath;
+            }
+
+            var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(KeyName, Key);
+            return new HybridConnectionListener(new Uri(string.Format("wss://{0}/{1}", RelayNamespace, ConnectionName)), tokenProvider, false);
         }
 
         public static void LogRequestLine(HttpRequestMessage httpRequest, HttpClient httpClient)

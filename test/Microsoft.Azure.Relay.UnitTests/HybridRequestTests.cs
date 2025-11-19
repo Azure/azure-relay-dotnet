@@ -94,6 +94,80 @@ namespace Microsoft.Azure.Relay.UnitTests
 
         [Theory, DisplayTestMethodName]
         [MemberData(nameof(AuthenticationTestPermutations))]
+        async Task SmallRequestSmallResponseWss(EndpointTestType endpointTestType)
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            HybridConnectionListener listener = null;
+            try
+            {
+                listener = this.GetHybridConnectionListenerWithToken(endpointTestType);
+                RelayConnectionStringBuilder connectionString = GetConnectionStringBuilder(endpointTestType);
+                Uri endpointUri = connectionString.Endpoint;
+
+                string expectedResponse = "{ \"a\" : true }";
+                HttpStatusCode expectedStatusCode = HttpStatusCode.OK;
+                listener.RequestHandler = (context) =>
+                {
+                    TestUtility.Log("HybridConnectionListener.RequestHandler invoked with Request:");
+                    TestUtility.Log($"{context.Request.HttpMethod} {context.Request.Url}");
+                    context.Request.Headers.AllKeys.ToList().ForEach((k) => TestUtility.Log($"{k}: {context.Request.Headers[k]}"));
+                    TestUtility.Log(StreamToString(context.Request.InputStream));
+
+                    context.Response.StatusCode = expectedStatusCode;
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(expectedResponse);
+                    context.Response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                    context.Response.Close();
+                };
+
+                TestUtility.Log($"Opening {listener}");
+                await listener.OpenAsync(cts.Token);
+
+                Uri hybridHttpUri = new UriBuilder("https://", endpointUri.Host, endpointUri.Port, connectionString.EntityPath).Uri;
+                using (var client = new HttpClient { BaseAddress = hybridHttpUri })
+                {
+                    client.DefaultRequestHeaders.ExpectContinue = false;
+
+                    var getRequest = new HttpRequestMessage();
+                    await AddAuthorizationHeader(connectionString, getRequest, hybridHttpUri);
+                    getRequest.Method = HttpMethod.Get;
+                    LogRequest(getRequest, client);
+                    using (HttpResponseMessage response = await client.SendAsync(getRequest, cts.Token))
+                    {
+                        LogResponse(response);
+                        Assert.Equal(expectedStatusCode, response.StatusCode);
+                        Assert.Equal("OK", response.ReasonPhrase);
+                        Assert.Equal(expectedResponse, await response.Content.ReadAsStringAsync());
+                    }
+
+                    var postRequest = new HttpRequestMessage();
+                    await AddAuthorizationHeader(connectionString, postRequest, hybridHttpUri);
+                    postRequest.Method = HttpMethod.Post;
+                    string body = "{  \"a\": 11,   \"b\" :22, \"c\":\"test\",    \"d\":true}";
+                    postRequest.Content = new StringContent(body);
+                    postRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    LogRequest(postRequest, client);
+                    using (HttpResponseMessage response = await client.SendAsync(postRequest, cts.Token))
+                    {
+                        LogResponse(response);
+                        Assert.Equal(expectedStatusCode, response.StatusCode);
+                        Assert.Equal("OK", response.ReasonPhrase);
+                        Assert.Equal(expectedResponse, await response.Content.ReadAsStringAsync());
+                    }
+                }
+
+                TestUtility.Log($"Closing {listener}");
+                await listener.CloseAsync(cts.Token);
+                listener = null;
+            }
+            finally
+            {
+                cts.Dispose();
+                await this.SafeCloseAsync(listener);
+            }
+        }
+
+        [Theory, DisplayTestMethodName]
+        [MemberData(nameof(AuthenticationTestPermutations))]
         async Task SmallRequestLargeResponse(EndpointTestType endpointTestType)
         {
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
