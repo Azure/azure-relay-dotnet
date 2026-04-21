@@ -34,16 +34,23 @@ namespace Microsoft.Azure.Relay
         /// <param name="address">The address on which to listen for HybridConnections.  This address should 
         /// be of the format "sb://contoso.servicebus.windows.net/yourhybridconnection".</param>
         /// <param name="tokenProvider">The TokenProvider for connecting this listener to ServiceBus.</param>
-        public HybridConnectionListener(Uri address, TokenProvider tokenProvider)
+        /// <param name="enforceHybridConnectionScheme">Enforce use of HybridConnectionScheme. Default value is true.
+        /// If set to false, wss uri scheme is enforced.</param>
+        public HybridConnectionListener(Uri address, TokenProvider tokenProvider, bool enforceHybridConnectionScheme = true)
         {
             if (address == null || tokenProvider == null)
             {
                 throw RelayEventSource.Log.ThrowingException(new ArgumentNullException(address == null ? nameof(address) : nameof(tokenProvider)), this);
             }
-            else if (address.Scheme != RelayConstants.HybridConnectionScheme)
+            else if (enforceHybridConnectionScheme && address.Scheme != RelayConstants.HybridConnectionScheme)
             {
                 throw RelayEventSource.Log.ThrowingException(
                     new ArgumentException(SR.InvalidUriScheme.FormatInvariant(address.Scheme, RelayConstants.HybridConnectionScheme), nameof(address)), this);
+            }
+            else if (!enforceHybridConnectionScheme && address.Scheme != UriScheme.Wss)
+            {
+                throw RelayEventSource.Log.ThrowingException(
+                    new ArgumentException(SR.InvalidUriScheme.FormatInvariant(address.Scheme, UriScheme.Wss), nameof(address)), this);
             }
 
             this.Address = address;

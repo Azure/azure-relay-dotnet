@@ -25,9 +25,11 @@ namespace Microsoft.Azure.Relay
         /// </summary>
         /// <param name="address">The address on which to listen for HybridConnections.  This address should 
         /// be of the format "sb://contoso.servicebus.windows.net/yourhybridconnection".</param>
-        public HybridConnectionClient(Uri address)
+        /// <param name="enforceHybridConnectionScheme">Enforce use of HybridConnectionScheme. Default value is true.
+        /// If set to false, wss uri scheme is enforced.</param>
+        public HybridConnectionClient(Uri address, bool enforceHybridConnectionScheme = true)
         {
-            this.Initialize(address, DefaultConnectTimeout, null, tokenProviderRequired: false);
+            this.Initialize(address, DefaultConnectTimeout, null, tokenProviderRequired: false, enforceWssScheme: !enforceHybridConnectionScheme);
         }
 
         /// <summary>
@@ -36,9 +38,11 @@ namespace Microsoft.Azure.Relay
         /// <param name="address">The address on which to listen for HybridConnections.  This address should 
         /// be of the format "sb://contoso.servicebus.windows.net/yourhybridconnection".</param>
         /// <param name="tokenProvider">The TokenProvider for connecting to ServiceBus.</param>
-        public HybridConnectionClient(Uri address, TokenProvider tokenProvider)
+        /// <param name="enforceHybridConnectionScheme">Enforce use of HybridConnectionScheme. Default value is true.
+        /// If set to false, wss uri scheme is enforced.</param>
+        public HybridConnectionClient(Uri address, TokenProvider tokenProvider, bool enforceHybridConnectionScheme = true)
         {
-            this.Initialize(address, DefaultConnectTimeout, tokenProvider, tokenProviderRequired: true);
+            this.Initialize(address, DefaultConnectTimeout, tokenProvider, tokenProviderRequired: true, enforceWssScheme: !enforceHybridConnectionScheme);
         }
 
         /// <summary>Creates a new instance of <see cref="HybridConnectionClient" /> using the specified connection string.</summary>
@@ -287,7 +291,7 @@ namespace Microsoft.Azure.Relay
             return TrackingContext.Create(address);
         }
 
-        void Initialize(Uri address, TimeSpan operationTimeout, TokenProvider tokenProvider, bool tokenProviderRequired)
+        void Initialize(Uri address, TimeSpan operationTimeout, TokenProvider tokenProvider, bool tokenProviderRequired, bool enforceWssScheme = false)
         {
             if (address == null)
             {
@@ -295,7 +299,14 @@ namespace Microsoft.Azure.Relay
             }
             else if (address.Scheme != RelayConstants.HybridConnectionScheme)
             {
-                throw RelayEventSource.Log.Argument(nameof(address), SR.GetString(SR.InvalidUriScheme, address.Scheme, RelayConstants.HybridConnectionScheme), this);
+                if (!enforceWssScheme)
+                {
+                    throw RelayEventSource.Log.Argument(nameof(address), SR.GetString(SR.InvalidUriScheme, address.Scheme, RelayConstants.HybridConnectionScheme), this);
+                }
+                else if (address.Scheme != UriScheme.Wss)
+                {
+                    throw RelayEventSource.Log.Argument(nameof(address), SR.GetString(SR.InvalidUriScheme, address.Scheme, UriScheme.Wss), this);
+                }
             }
             else if (tokenProviderRequired && tokenProvider == null)
             {
