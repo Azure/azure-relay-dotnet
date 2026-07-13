@@ -7,7 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{93B7A5D6-F65
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8222D593-5AD9-401D-B15C-975EDE77153E}"
 	ProjectSection(SolutionItems) = preProject
-		appveyor.yml = appveyor.yml
 		.pipelines\pipeline.user.windows.yml = .pipelines\pipeline.user.windows.yml
 		README.md = README.md
 		versioning.cmd = versioning.cmd
@@ -23,7 +22,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{B3CFC271-C96A-4887-9189-5864B5BFE4B7}"
 	ProjectSection(SolutionItems) = preProject
 		build\azuredeploy.json = build\azuredeploy.json
-		build\build.ps1 = build\build.ps1
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{B4CD2FF5-0BEB-4072-B37B-631EDB8C5CD1}"

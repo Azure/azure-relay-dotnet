@@ -200,7 +200,3 @@ Buildx86retail.dat
 
 # Typescript installed definition files for modules
 **/typings/
-
-#OpenCover
-/build/OpenCoverReport/*
-/build/coverage.xml 
