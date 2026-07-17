@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // Setting ComVisible to false makes the types in this assembly not visible
@@ -11,3 +12,10 @@ using System.Runtime.InteropServices;
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("c1746881-1ba9-4eb6-9507-c849cfe04113")]
+
+[assembly: InternalsVisibleTo("Microsoft.Azure.Relay.UnitTests, PublicKey=" +
+    "0024000004800000940000000602000000240000525341310004000001000100fdf4acac3b2244" +
+    "dd8a96737e5385b31414369dc3e42f371172127252856a0650793e1f5673a16d5d78e2ac852a10" +
+    "4bc51e6f018dca44fdd26a219c27cb2b263956a80620223c8e9c2f8913c3c903e1e453e9e4e840" +
+    "98afdad5f4badb8c1ebe0a7b0a4b57a08454646a65886afe3e290a791ff3260099ce0edf0bdbc" +
+    "cafadfeb6")]
