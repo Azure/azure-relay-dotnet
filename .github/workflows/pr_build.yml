@@ -20,7 +20,7 @@ jobs:
     runs-on: 'windows-latest'
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
     - run: dotnet --info
     - name: Restore
       run: .\restore.cmd
@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1.2.0
     - run: dotnet --info
     - name: Restore
       run: ./restore.sh
