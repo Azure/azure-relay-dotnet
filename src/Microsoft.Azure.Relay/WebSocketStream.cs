@@ -80,6 +80,10 @@ namespace Microsoft.Azure.Relay
                     await this.webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "CloseAsync", linkedCancelSource.Token).ConfigureAwait(false);
                 }
             }
+            catch (ObjectDisposedException exception)
+            {
+                RelayEventSource.Log.HandledExceptionAsWarning(this, exception);
+            }
             catch (Exception exception) when (!Fx.IsFatal(exception))
             {
                 RelayEventSource.Log.HandledExceptionAsWarning(this, exception);
@@ -150,6 +154,10 @@ namespace Microsoft.Azure.Relay
                 {
                     await this.webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Shutdown", linkedCancelSource.Token).ConfigureAwait(false);
                 }
+            }
+            catch (ObjectDisposedException exception)
+            {
+                RelayEventSource.Log.HandledExceptionAsWarning(this, exception);
             }
             catch (Exception exception) when (!WebSocketExceptionHelper.IsRelayContract(exception))
             {
