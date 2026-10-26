@@ -3,7 +3,9 @@ Param
     [Parameter(Mandatory=$true, HelpMessage="The ServiceBus namespace. E.g. 'contoso.servicebus.windows.net' or 'contoso'")]
     [string]$Namespace,
     [Parameter(Mandatory=$false)]
-    [switch]$NoIPs
+    [switch]$NoIPs,
+    [Parameter(Mandatory=$false, HelpMessage="Resolve IPv4 and IPv6 addresses for the dual-stack rendezvous endpoints.")]
+    [switch]$DualStack
 )
     # Get the directory where the script is located
     $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -73,12 +75,21 @@ function Get-SBNamespaceInfo
         $instances = 0..99
         $ParentDomain = $ns.Substring($ns.IndexOf('.') + 1)
         $region = $clusterDNS.Split('.')[1] # Extract the region from the cluster DNS name  
-        $GatewayDnsFormat = ("g{{0}}-{0}-sb.{1}" -f $Deployment.ToLowerInvariant(), $ParentDomain)
+        $GatewayDnsPrefix = "g"
+        $AlternateGatewayDnsPrefix = "gv"
+        $GatewayDnsRecordType = "A"
+        if ($DualStack.IsPresent)
+        {
+            $GatewayDnsPrefix = "gd"
+            $AlternateGatewayDnsPrefix = "gdv"
+            $GatewayDnsRecordType = "A_AAAA"
+        }
+        $GatewayDnsFormat = ("{0}{{0}}-{1}-sb.{2}" -f $GatewayDnsPrefix, $Deployment.ToLowerInvariant(), $ParentDomain)
         $newNodesAdded = $false
         Foreach ($index in $instances)
         {
             $address = ($GatewayDnsFormat -f $index)
-            $result = Resolve-DnsName $address -EA SilentlyContinue
+            $result = Resolve-DnsName $address -Type $GatewayDnsRecordType -EA SilentlyContinue
             if ($result -ne $null)
             {
                 $DirectAddress = ($result | Select-Object Name,IPAddress)
@@ -94,11 +105,11 @@ function Get-SBNamespaceInfo
             }
         }
         $oldGatewayDnsFormat = $GatewayDnsFormat
-	    $GatewayDnsFormat = ("gv{{0}}-{0}-sb.{1}" -f $Deployment.ToLowerInvariant(), $ParentDomain)
+	    $GatewayDnsFormat = ("{0}{{0}}-{1}-sb.{2}" -f $AlternateGatewayDnsPrefix, $Deployment.ToLowerInvariant(), $ParentDomain)
         Foreach ($index in $instances)
         {
         $address = ($GatewayDnsFormat -f $index)
-        $result = Resolve-DnsName $address -EA SilentlyContinue
+        $result = Resolve-DnsName $address -Type $GatewayDnsRecordType -EA SilentlyContinue
             if ($result -ne $null)
             {
                 $GvDirectAddress = ($result | Select-Object Name,IPAddress)
@@ -136,7 +147,7 @@ $newNodesWarning = $SBDetails | Select-Object -Property newNodesAdded
 
 if($checkForNewNodes.checkForNewNodes){
     #Update 
-    Write-Host "Alternate Gateway DNS Format Starting With 'gv...' Detected" -ForegroundColor Yellow
+    Write-Host "Alternate Gateway DNS Format '$($SBDetails.AlternateGatewayDnsFormat)' Detected" -ForegroundColor Yellow
 }
 
 if (!$NoIPs.IsPresent)
@@ -147,7 +158,7 @@ if (!$NoIPs.IsPresent)
     if($checkForNewNodes.checkForNewNodes)
     {
         #Update 
-        Write-Host "Alternate Gateway DNS Format Starting With 'gv...' Detected" -ForegroundColor Yellow
+        Write-Host "Alternate Gateway DNS Format '$($SBDetails.AlternateGatewayDnsFormat)' Detected" -ForegroundColor Yellow
         $SBDetails.GvDirectAddresses | Format-Table
     } 
 }
