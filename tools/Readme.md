@@ -9,6 +9,14 @@ To get a list of the DNS names and IP addresses used for a relay namespace, plea
 1. Download both GetNamespaceInfo.ps1 and RelayRegionalIPRanges.json into the same folder.
    
 2. Run GetNamespaceInfo.ps1 with your target relay namespace (you can also add the endpoint, ex. *namespace*.servicebus.windows.net)
+
+   By default, the script returns IPv4 addresses for the `g` and `gv` rendezvous endpoints. Add `-DualStack` to return both IPv4 and IPv6 addresses for the `gd` and `gdv` dual-stack rendezvous endpoints instead:
+
+   ```powershell
+   .\GetNamespaceInfo.ps1 -Namespace contoso -DualStack
+   ```
+
+   The cluster VIP remains IPv4. The `-NoIPs` switch can be used with either mode to omit the endpoint IP address tables.
 ﻿<p align="center">
   <img width="901" height="399" alt="image" src="https://github.com/user-attachments/assets/36f28e1b-cd1b-40ac-9b1c-4c7cf73090ac" />
 </p>
