@@ -898,5 +898,215 @@
           "172.185.0.32/27"
         ]
       }
+    },
+    {
+      "name": "Relay.AustriaEast",
+      "id": "Relay.AustriaEast",
+      "properties": {
+        "region": "austriaeast",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "74.148.13.80/29",
+          "74.148.14.0/26",
+          "74.148.13.128/25"
+        ]
+      }
+    },
+    {
+      "name": "Relay.BelgiumCentral",
+      "id": "Relay.BelgiumCentral",
+      "properties": {
+        "region": "belgiumcentral",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "74.152.8.224/29",
+          "74.152.9.0/25",
+          "74.152.9.128/26"
+        ]
+      }
+    },
+    {
+      "name": "Relay.ChileCentral",
+      "id": "Relay.ChileCentral",
+      "properties": {
+        "region": "chilecentral",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "68.211.205.0/26",
+          "68.211.204.128/25",
+          "68.211.204.80/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.DenmarkEast",
+      "id": "Relay.DenmarkEast",
+      "properties": {
+        "region": "denmarkeast",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "9.205.217.128/25",
+          "9.205.218.0/26",
+          "9.205.217.56/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.EastUS3",
+      "id": "Relay.EastUS3",
+      "properties": {
+        "region": "eastus3",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "51.57.199.192/26",
+          "51.57.199.16/29",
+          "51.57.204.0/25"
+        ]
+      }
+    },
+    {
+      "name": "Relay.IndiaSouthCentral",
+      "id": "Relay.IndiaSouthCentral",
+      "properties": {
+        "region": "indiasouthcentral",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "172.198.239.168/29",
+          "172.198.245.0/25",
+          "172.198.244.192/26"
+        ]
+      }
+    },
+    {
+      "name": "Relay.IsraelNorthwest",
+      "id": "Relay.IsraelNorthwest",
+      "properties": {
+        "region": "israelnorthwest",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "51.58.166.112/29",
+          "51.58.166.192/26",
+          "51.58.167.128/25"
+        ]
+      }
+    },
+    {
+      "name": "Relay.MalaysiaWest",
+      "id": "Relay.MalaysiaWest",
+      "properties": {
+        "region": "malaysiawest",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "172.197.228.64/26",
+          "172.197.228.128/25",
+          "172.197.228.32/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.NortheastUS5",
+      "id": "Relay.NortheastUS5",
+      "properties": {
+        "region": "northeastus5",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "74.149.7.0/25",
+          "74.149.7.128/26",
+          "74.149.6.80/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SaudiArabiaEast",
+      "id": "Relay.SaudiArabiaEast",
+      "properties": {
+        "region": "saudiarabiaeast",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.197.146.192/26",
+          "48.197.148.0/29",
+          "48.197.147.128/25"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SouthCentralUS2",
+      "id": "Relay.SouthCentralUS2",
+      "properties": {
+        "region": "southcentralus2",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.219.52.0/26",
+          "48.219.47.96/29",
+          "48.219.47.128/25"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SoutheastAsia3",
+      "id": "Relay.SoutheastAsia3",
+      "properties": {
+        "region": "southeastasia3",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.198.155.72/29",
+          "48.198.192.0/25",
+          "48.198.192.128/26"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SoutheastUS3",
+      "id": "Relay.SoutheastUS3",
+      "properties": {
+        "region": "southeastus3",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "74.7.114.128/25",
+          "74.7.114.64/26",
+          "74.7.114.24/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SoutheastUS5",
+      "id": "Relay.SoutheastUS5",
+      "properties": {
+        "region": "southeastus5",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.200.135.128/25",
+          "48.200.135.64/26",
+          "48.200.135.8/29"
+        ]
+      }
+    },
+    {
+      "name": "Relay.SouthwestUS",
+      "id": "Relay.SouthwestUS",
+      "properties": {
+        "region": "southwestus",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.219.91.0/25",
+          "48.219.90.160/29",
+          "48.219.90.192/26"
+        ]
+      }
+    },
+    {
+      "name": "Relay.WestCentralUSFRE",
+      "id": "Relay.WestCentralUSFRE",
+      "properties": {
+        "region": "westcentralusfre",
+        "systemService": "Relay",
+        "addressPrefixes": [
+          "48.196.160.0/25",
+          "48.196.155.88/29",
+          "48.196.159.160/27",
+          "48.196.159.192/27",
+          "48.196.162.64/26"
+        ]
+      }
     }
   ]
